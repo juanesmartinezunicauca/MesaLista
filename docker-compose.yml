@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mesalista-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-mesalista}
+    # C-01: Puerto 5432 NO expuesto al host/LAN — solo accesible internamente por backend
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - mesalista-net
+    # C-03: Health check real — backend espera a que Postgres acepte conexiones
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    # M-04: Límites de recursos para no saturar el PC de caja
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mesalista-backend
+    restart: always
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-mesalista}?schema=public
+      PORT: 3000
+      NODE_ENV: production
+      # C-02: Sin valor por defecto — falla explícitamente si JWT_SECRET no está definido
+      JWT_SECRET: ${JWT_SECRET:?ERROR: JWT_SECRET no definido. Defina la variable en su archivo .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-12h}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+    ports:
+      - "3000:3000"
+    # C-03: Espera a que Postgres esté LISTO (no solo arrancado)
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - mesalista-net
+    # M-04: Límites de recursos
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mesalista-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - mesalista-net
+    # M-04: Límites de recursos
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+
+volumes:
+  postgres_data:
+
+networks:
+  mesalista-net:
+    driver: bridge
