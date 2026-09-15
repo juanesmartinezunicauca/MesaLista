@@ -1,3 +1,4 @@
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
@@ -13,6 +14,18 @@ async function bootstrap() {
 
   // Prefijo global de API — todos los endpoints quedan bajo /api/v1/...
   app.setGlobalPrefix('api/v1');
+
+  // Validación global de DTOs con class-validator
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+    }),
+  );
 
   await app.listen(process.env.PORT ?? 3000);
 }
