@@ -16,3 +16,10 @@ MesaLista/
 ├── backend/       # NestJS 10+, Prisma ORM, PostgreSQL
 └── frontend/      # Angular 17+, SCSS, Standalone Components
 ```
+## Correr frontend
+seguir los siguientes pasos, correr en orden los siguientes comandos en la terminal (ubicarse en la carpeta frontend).
+1. npm install
+2. ng add @angular/material
+   2.1. Darle 'Y'
+   2.2. Escoger el primer tema: Azure/Blue
+3. ng serve  
