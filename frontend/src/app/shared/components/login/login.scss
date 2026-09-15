@@ -1,0 +1,289 @@
+// Variables Corporativas
+$bg-dark: #1A1D20;
+$bg-secondary: #6F6E6E;
+$bg-light: #F9FAFB;
+$accent: #FF6B35;
+$accent-hover: #e05523;
+$text-light: #F3F4F6;
+$text-muted: #9CA3AF;
+$border-subtle: rgba(255, 255, 255, 0.08);
+
+.login-split-container {
+    display: flex;
+    min-height: 100vh;
+    width: 100vw;
+    background-color: $bg-dark;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    overflow: hidden;
+}
+
+// --- PANEL IZQUIERDO: HERO DE MARCA ---
+.brand-panel {
+    flex: 1.1;
+    position: relative;
+    background: linear-gradient(135deg, rgba(26, 29, 32, 0.95), rgba(111, 110, 110, 0.4)),
+        url('https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?q=80&w=1600&auto=format&fit=crop') center/cover no-repeat;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 48px;
+
+    @media (max-width: 960px) {
+        display: none; // En dispositivos móviles/tablets mostramos solo el formulario
+    }
+
+    .brand-content {
+        position: relative;
+        z-index: 2;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .logo-box {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        .brand-icon {
+            color: $accent;
+            font-size: 32px;
+            width: 32px;
+            height: 32px;
+        }
+
+        .brand-name {
+            color: $text-light;
+            font-weight: 700;
+            font-size: 1.5rem;
+            letter-spacing: -0.5px;
+        }
+    }
+
+    .hero-text {
+        max-width: 480px;
+
+        h2 {
+            color: #ffffff;
+            font-size: 2.5rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 16px;
+        }
+
+        p {
+            color: $text-muted;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+    }
+
+    .quote-card {
+        background: rgba(26, 29, 32, 0.7);
+        backdrop-filter: blur(12px);
+        border: 1px solid $border-subtle;
+        border-radius: 12px;
+        padding: 24px;
+        max-width: 480px;
+
+        p {
+            color: $text-light;
+            font-style: italic;
+            margin-bottom: 8px;
+        }
+
+        .quote-author {
+            color: $accent;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+    }
+}
+
+// --- PANEL DERECHO: FORMULARIO DE LOGIN ---
+.form-panel {
+    flex: 1;
+    background-color: $bg-dark;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+
+    .form-wrapper {
+        width: 100%;
+        max-width: 420px;
+        animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .form-header {
+        margin-bottom: 32px;
+
+        h1 {
+            color: $text-light;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        p {
+            color: $text-muted;
+            font-size: 0.95rem;
+        }
+    }
+}
+
+// --- ESTILIZACIÓN Y OVERRIDES DE ANGULAR MATERIAL ---
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    .field-container {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+
+        .custom-label {
+            color: $text-light;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+    }
+
+    .custom-field {
+        width: 100%;
+
+        // --- VARIABLES CSS INTERNAS DE ANGULAR MATERIAL MDC ---
+        --mdc-outlined-text-field-container-shape: 10px;
+        --mdc-outlined-text-field-outline-color: rgba(255, 255, 255, 0.12);
+        --mdc-outlined-text-field-focus-outline-color: #{$accent};
+        --mdc-outlined-text-field-hover-outline-color: #{$bg-secondary};
+
+        // Forzamos el color del texto digitado y del placeholder mediante variables de Material
+        --mdc-outlined-text-field-input-text-color: #{$text-light};
+        --mdc-outlined-text-field-input-text-placeholder-color: #{$text-muted};
+        --mat-form-field-state-layer-color: transparent;
+
+        // --- REGLAS DIRECTAS SOBRE EL ELEMENTO INPUT ---
+        // Esto asegura que el color sea visible incluso si los componentes MDC aplican selectores más específicos
+        input.mat-mdc-input-element {
+            color: $text-light !important;
+            caret-color: $accent !important; // Cambia el color del cursor/cursor intermitente al naranja de acento
+
+            &::placeholder {
+                color: $text-muted !important;
+                opacity: 1;
+            }
+        }
+
+        // Color de los iconos integrados (correo, cerrojo, ojo)
+        .input-icon {
+            color: $text-muted;
+            margin-right: 8px;
+        }
+
+        .visibility-btn {
+            color: $text-muted;
+
+            &:hover {
+                color: $text-light;
+            }
+        }
+    }
+
+    // Opciones: Checkbox & Enlace
+    .form-options {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 4px;
+        margin-bottom: 8px;
+
+        .forgot-link {
+            color: $accent;
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: color 0.2s ease;
+
+            &:hover {
+                color: $accent-hover;
+                text-decoration: underline;
+            }
+        }
+    }
+
+    // Botón Principal
+    .submit-btn {
+        height: 48px;
+        border-radius: 10px !important;
+        background-color: $accent !important;
+        color: #ffffff !important;
+        font-size: 1rem;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        box-shadow: 0 4px 14px rgba(255, 107, 53, 0.3) !important;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+
+        &:hover:not([disabled]) {
+            background-color: $accent-hover !important;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4) !important;
+        }
+
+        &:active:not([disabled]) {
+            transform: translateY(0);
+        }
+
+        &[disabled] {
+            opacity: 0.7;
+            background-color: $bg-secondary !important;
+        }
+
+        .btn-icon {
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+        }
+    }
+}
+
+.form-footer {
+    margin-top: 32px;
+    text-align: center;
+
+    p {
+        color: $text-muted;
+        font-size: 0.875rem;
+
+        a {
+            color: $text-light;
+            font-weight: 600;
+            text-decoration: none;
+            margin-left: 4px;
+
+            &:hover {
+                color: $accent;
+                text-decoration: underline;
+            }
+        }
+    }
+}
+
+// --- ANIMACIONES ---
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

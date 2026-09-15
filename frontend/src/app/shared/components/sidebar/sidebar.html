@@ -1,0 +1,100 @@
+<mat-sidenav-container class="sidenav-container">
+  <!-- Sidebar / Menú Lateral -->
+  <mat-sidenav
+    #sidenav
+    [mode]="sidenavMode()"
+    [opened]="sidenavOpened()"
+    [class.collapsed]="isCollapsed() && !isHandset()"
+    class="app-sidenav"
+  >
+    <div class="sidenav-header">
+      <div class="brand-logo">
+        <mat-icon class="brand-icon">restaurant</mat-icon>
+        @if (!isCollapsed() || isHandset()) {
+          <span class="brand-title">MesaLista</span>
+        }
+      </div>
+      
+      <!-- Botón de colapso interno (solo escritorio) -->
+      <!-- @if (!isHandset()) {
+        <button 
+          mat-icon-button 
+          class="collapse-btn" 
+          (click)="toggleCollapse()"
+          [matTooltip]="isCollapsed() ? 'Expandir menú' : 'Colapsar menú'"
+          matTooltipPosition="right">
+          <mat-icon>{{ isCollapsed() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
+        </button>
+      } -->
+    </div>
+
+    <mat-divider class="divider"></mat-divider>
+
+    <!-- Lista de Navegación -->
+    <mat-nav-list class="nav-list">
+      @for (item of navItems; track item.route) {
+        <a
+          mat-list-item
+          [routerLink]="item.route"
+          routerLinkActive="active-link"
+          (click)="onNavItemClick()"
+          class="nav-item"
+          [matTooltip]="(isCollapsed() && !isHandset()) ? item.label : ''"
+          matTooltipPosition="right"
+        >
+          <mat-icon matListItemIcon class="item-icon">{{ item.icon }}</mat-icon>
+          @if (!isCollapsed() || isHandset()) {
+            <span matListItemTitle class="item-text">{{ item.label }}</span>
+          }
+        </a>
+      }
+    </mat-nav-list>
+
+    <!-- Perfil del usuario al final de la Sidebar -->
+    <div class="user-profile-section">
+      <mat-divider class="divider"></mat-divider>
+      <div class="profile-container">
+        <mat-icon class="profile-icon">account_circle</mat-icon>
+        
+        
+        @if (!isCollapsed() || isHandset()) {
+          <div class="profile-info">
+            <span class="user-name">Luigie Boss</span>
+            <span class="user-role">Administrador</span>
+          </div>
+        }
+
+        <button 
+          mat-icon-button 
+          color="warn" 
+          class="logout-btn" 
+          [matTooltip]="(isCollapsed() && !isHandset()) ? 'Cerrar sesión' : ''"
+          matTooltipPosition="right">
+          <mat-icon>logout</mat-icon>
+        </button>
+      </div>
+    </div>
+  </mat-sidenav>
+
+  <!-- Contenido Principal de la Aplicación -->
+  <mat-sidenav-content class="main-content">
+    <!-- Toolbar Superior -->
+    <mat-toolbar class="app-toolbar">
+      @if (isHandset()) {
+        <button mat-icon-button (click)="sidenav.toggle()" aria-label="Abrir menú">
+          <mat-icon>menu</mat-icon>
+        </button>
+      }
+      <span class="toolbar-title">Panel de Control</span>
+      <span class="toolbar-spacer"></span>
+      <button mat-icon-button aria-label="Notificaciones">
+        <mat-icon>notifications</mat-icon>
+      </button>
+    </mat-toolbar>
+
+    <!-- Área de contenido donde se renderizan las rutas -->
+    <div class="page-container">
+      <router-outlet></router-outlet>
+    </div>
+  </mat-sidenav-content>
+</mat-sidenav-container>
