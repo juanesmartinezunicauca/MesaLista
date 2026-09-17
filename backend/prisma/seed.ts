@@ -45,68 +45,8 @@ async function main() {
     console.log('6 mesas iniciales registradas en base de datos.');
   }
 
-  // 3. Crear productos iniciales si no existen
-  const totalProductos = await prisma.producto.count();
-  if (totalProductos === 0) {
-    await prisma.producto.createMany({
-      data: [
-        {
-          nombre: 'Hamburguesa Clásica',
-          categoria: 'Hamburguesas',
-          precio_venta: 18000,
-          costo: 7500,
-          cantidad_inventario: 30,
-          disponible: true,
-          ingredientes_removibles: 'Cebolla, Tomate, Salsa Especial, Pepinillos',
-        },
-        {
-          nombre: 'Hamburguesa Doble Queso',
-          categoria: 'Hamburguesas',
-          precio_venta: 25000,
-          costo: 11000,
-          cantidad_inventario: 25,
-          disponible: true,
-          ingredientes_removibles: 'Tocineta, Pepinillos, Cebolla Crispy',
-        },
-        {
-          nombre: 'Salchipapa Luigie Especial',
-          categoria: 'Comidas Rápidas',
-          precio_venta: 22000,
-          costo: 9000,
-          cantidad_inventario: 20,
-          disponible: true,
-          ingredientes_removibles: 'Queso Costeño, Salsa Tártara, Ripios',
-        },
-        {
-          nombre: 'Papas Rústicas',
-          categoria: 'Entradas',
-          precio_venta: 9000,
-          costo: 3500,
-          cantidad_inventario: 40,
-          disponible: true,
-          ingredientes_removibles: 'Sal de Ajo, Paprika',
-        },
-        {
-          nombre: 'Cerveza Club Colombia Dorada',
-          categoria: 'Bebidas',
-          precio_venta: 7000,
-          costo: 3800,
-          cantidad_inventario: 50,
-          disponible: true,
-        },
-        {
-          nombre: 'Gaseosa Postobón 400ml',
-          categoria: 'Bebidas',
-          precio_venta: 4500,
-          costo: 2200,
-          cantidad_inventario: 60,
-          disponible: true,
-        },
-      ],
-    });
-    console.log('Catálogo base de productos registrado en base de datos.');
-  }
-
+  // 3. Catálogo de productos: Se deja completamente limpio (0 productos) para registro manual
+  console.log('Mesas y usuario administrador configurados. Catálogo listo y limpio.');
   console.log('Seed completado exitosamente.');
 }
 
