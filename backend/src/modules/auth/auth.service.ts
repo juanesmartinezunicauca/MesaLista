@@ -6,7 +6,7 @@ import { JwtService } from '@nestjs/jwt';
 import { EstadoUsuario } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { UsuariosService } from '../usuarios/usuarios.service';
-import { LoginDto } from './dto';
+import { LoginDto, UpdatePerfilDto } from './dto';
 import {
   AuthResponse,
   AuthUserResponse,
@@ -88,5 +88,15 @@ export class AuthService {
    */
   async obtenerPerfil(id_usuario: number) {
     return this.usuariosService.obtenerPorId(id_usuario);
+  }
+
+  /**
+   * Actualiza los datos del perfil del usuario autenticado (nombre y/o contraseña).
+   */
+  async actualizarPerfil(id_usuario: number, dto: UpdatePerfilDto) {
+    return this.usuariosService.actualizar(id_usuario, {
+      nombre: dto.nombre,
+      password: dto.password,
+    });
   }
 }

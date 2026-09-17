@@ -1,0 +1,522 @@
+@use 'tokens' as *;
+
+.usuarios-container {
+  padding: 24px 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+  font-family: $font-family-base;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+// 1. Encabezado
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background-color: $brand-blue-subtle;
+    color: $brand-blue;
+    border-radius: $radius-full;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  .page-title {
+    margin: 0;
+    font-size: 1.85rem;
+    font-weight: 800;
+    color: $text-primary;
+    letter-spacing: -0.02em;
+  }
+
+  .page-subtitle {
+    margin: 4px 0 0;
+    color: $text-muted;
+    font-size: 0.925rem;
+    max-width: 620px;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .btn-reload {
+      border-radius: $radius-md;
+      color: $text-secondary;
+      border-color: $border-color;
+    }
+
+    .btn-create {
+      background-color: $brand-orange !important;
+      color: #ffffff !important;
+      border-radius: $radius-md;
+      font-weight: 600;
+      padding: 0 20px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: $shadow-orange;
+      transition: background-color $transition-fast, transform $transition-fast;
+
+      &:hover {
+        background-color: $brand-orange-hover !important;
+        transform: translateY(-1px);
+      }
+    }
+  }
+}
+
+// 2. KPIs
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.kpi-card {
+  background: $bg-card;
+  border: 1px solid $border-color;
+  border-radius: $radius-lg;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: $shadow-xs;
+  transition: transform $transition-base, box-shadow $transition-base;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $shadow-md;
+  }
+
+  .kpi-icon-wrapper {
+    width: 44px;
+    height: 44px;
+    border-radius: $radius-md;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    mat-icon {
+      font-size: 22px;
+      width: 22px;
+      height: 22px;
+    }
+  }
+
+  .kpi-content {
+    display: flex;
+    flex-direction: column;
+
+    .kpi-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: $text-primary;
+      line-height: 1.1;
+    }
+
+    .kpi-label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: $text-muted;
+      margin-top: 2px;
+    }
+  }
+
+  &.card-total .kpi-icon-wrapper {
+    background-color: rgba(31, 41, 55, 0.08);
+    color: $text-primary;
+  }
+
+  &.card-admin .kpi-icon-wrapper {
+    background-color: $brand-blue-subtle;
+    color: $brand-blue;
+  }
+
+  &.card-mesero .kpi-icon-wrapper {
+    background-color: $brand-orange-subtle;
+    color: $brand-orange;
+  }
+
+  &.card-cajero .kpi-icon-wrapper {
+    background-color: $color-success-bg;
+    color: $color-success;
+  }
+
+  &.card-cocina .kpi-icon-wrapper {
+    background-color: rgba(139, 92, 246, 0.12);
+    color: #7c3aed;
+  }
+
+  &.card-inactivo .kpi-icon-wrapper {
+    background-color: #f3f4f6;
+    color: #9ca3af;
+  }
+}
+
+// 3. Barra de Búsqueda y Filtros
+.filters-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  background: $bg-card;
+  padding: 14px 18px;
+  border-radius: $radius-lg;
+  border: 1px solid $border-color;
+  box-shadow: $shadow-xs;
+
+  .search-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: $bg-app;
+    border: 1px solid $border-color;
+    border-radius: $radius-md;
+    padding: 0 12px;
+    height: 44px;
+    flex: 1;
+    min-width: 260px;
+    max-width: 420px;
+    transition: border-color $transition-fast, box-shadow $transition-fast;
+
+    &:focus-within {
+      border-color: $brand-blue;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .search-icon {
+      color: $text-muted;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    input {
+      border: none;
+      background: transparent;
+      outline: none;
+      font-size: 0.9rem;
+      color: $text-primary;
+      width: 100%;
+
+      &::placeholder {
+        color: $text-muted;
+      }
+    }
+
+    .btn-clear-search {
+      color: $text-muted;
+      width: 28px;
+      height: 28px;
+      line-height: 28px;
+    }
+  }
+
+  .filters-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+
+    .filter-field {
+      width: 175px;
+      margin-bottom: -1.25em; // Reduce mat-form-field default bottom margin
+    }
+  }
+}
+
+// 4. Grid de Usuarios
+.users-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px;
+}
+
+.user-card {
+  background: $bg-card;
+  border: 1px solid $border-color;
+  border-radius: $radius-lg;
+  padding: 18px 20px 14px;
+  box-shadow: $shadow-xs;
+  transition: transform $transition-base, box-shadow $transition-base, border-color $transition-base;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $shadow-md;
+    border-color: #cbd5e1;
+  }
+
+  &.card-inactive {
+    opacity: 0.65;
+    background-color: #fbfbfb;
+
+    .avatar-circle {
+      filter: grayscale(80%);
+    }
+  }
+
+  .card-top {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .avatar-ring {
+    padding: 2px;
+    border-radius: $radius-full;
+    background: transparent;
+
+    .avatar-circle {
+      width: 46px;
+      height: 46px;
+      border-radius: $radius-full;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: 0.5px;
+    }
+
+    &[data-role='administrador'] .avatar-circle {
+      background: linear-gradient(135deg, $brand-blue 0%, #3b82f6 100%);
+      box-shadow: $shadow-blue;
+    }
+
+    &[data-role='cajero'] .avatar-circle {
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+    }
+
+    &[data-role='mesero'] .avatar-circle {
+      background: linear-gradient(135deg, $brand-orange 0%, #ff8c5a 100%);
+      box-shadow: $shadow-orange;
+    }
+
+    &[data-role='cocina'] .avatar-circle {
+      background: linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%);
+      box-shadow: 0 4px 14px rgba(139, 92, 246, 0.25);
+    }
+  }
+
+  .user-details {
+    flex: 1;
+    min-width: 0;
+
+    .name-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .user-name {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 700;
+      color: $text-primary;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .current-user-tag {
+      font-size: 0.7rem;
+      font-weight: 700;
+      background-color: $brand-blue-subtle;
+      color: $brand-blue;
+      padding: 1px 6px;
+      border-radius: $radius-full;
+    }
+
+    .user-username {
+      font-size: 0.825rem;
+      color: $text-muted;
+      font-family: $font-family-mono;
+      display: block;
+      margin-top: 2px;
+    }
+  }
+
+  .btn-card-menu {
+    color: $text-muted;
+    &:hover {
+      color: $text-primary;
+    }
+  }
+
+  .card-divider {
+    height: 1px;
+    background-color: $border-subtle;
+  }
+
+  .card-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .role-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: $radius-full;
+    font-size: 0.775rem;
+    font-weight: 600;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+
+    &[data-role='administrador'] {
+      background-color: $brand-blue-subtle;
+      color: $brand-blue;
+    }
+
+    &[data-role='cajero'] {
+      background-color: $color-success-bg;
+      color: $color-success;
+    }
+
+    &[data-role='mesero'] {
+      background-color: $brand-orange-subtle;
+      color: $brand-orange;
+    }
+
+    &[data-role='cocina'] {
+      background-color: rgba(139, 92, 246, 0.12);
+      color: #7c3aed;
+    }
+  }
+
+  .status-action-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    .status-text {
+      font-size: 0.775rem;
+      font-weight: 600;
+      color: $text-muted;
+
+      &.text-active {
+        color: $color-success;
+      }
+    }
+
+    .btn-quick-edit {
+      color: $text-muted;
+      width: 32px;
+      height: 32px;
+      line-height: 32px;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
+      &:hover {
+        color: $brand-blue;
+      }
+    }
+  }
+}
+
+// Estados Especiales
+.loading-state,
+.error-state,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  background: $bg-card;
+  border-radius: $radius-lg;
+  border: 1px dashed $border-color;
+}
+
+.loading-state {
+  gap: 12px;
+  color: $text-muted;
+}
+
+.empty-state {
+  .empty-icon-circle {
+    width: 64px;
+    height: 64px;
+    border-radius: $radius-full;
+    background-color: $bg-app;
+    color: $text-muted;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+
+    mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+    }
+  }
+
+  h3 {
+    margin: 0 0 6px;
+    font-size: 1.15rem;
+    color: $text-primary;
+    font-weight: 700;
+  }
+
+  p {
+    margin: 0 0 16px;
+    font-size: 0.875rem;
+    color: $text-muted;
+    max-width: 420px;
+  }
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.menu-item-danger {
+  color: $color-danger !important;
+}

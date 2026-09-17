@@ -19,6 +19,7 @@ import {
   CambiarEstadoMesaDto,
   CreateMesaDto,
   QueryMesaDto,
+  TransferirMesaDto,
   UpdateMesaDto,
 } from './dto';
 import { MesasService } from './mesas.service';
@@ -37,6 +38,17 @@ export class MesasController {
   @Roles(RolUsuario.administrador)
   crear(@Body() createMesaDto: CreateMesaDto) {
     return this.mesasService.crear(createMesaDto);
+  }
+
+  /**
+   * POST /api/v1/mesas/transferir
+   * Transfiere comandas activas de una mesa a otra.
+   */
+  @Post('transferir')
+  @HttpCode(HttpStatus.OK)
+  @Roles(RolUsuario.administrador, RolUsuario.cajero, RolUsuario.mesero)
+  transferir(@Body() transferirMesaDto: TransferirMesaDto) {
+    return this.mesasService.transferirMesa(transferirMesaDto);
   }
 
   /**

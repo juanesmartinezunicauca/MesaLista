@@ -12,6 +12,7 @@ describe('MesasController', () => {
     actualizar: jest.Mock;
     cambiarEstado: jest.Mock;
     eliminar: jest.Mock;
+    transferirMesa: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -22,6 +23,7 @@ describe('MesasController', () => {
       actualizar: jest.fn(),
       cambiarEstado: jest.fn(),
       eliminar: jest.fn(),
+      transferirMesa: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -90,12 +92,18 @@ describe('MesasController', () => {
     expect(res).toEqual(mockRes);
   });
 
-  it('DELETE /mesas/:id debe delegar a service.eliminar', async () => {
-    const mockRes = { mensaje: 'La mesa #1 ha sido eliminada exitosamente.', id_mesa: 1 };
-    service.eliminar.mockResolvedValue(mockRes);
+  it('POST /mesas/transferir debe delegar a service.transferirMesa', async () => {
+    const dto = { id_origen: 1, id_destino: 3 };
+    const mockRes = {
+      mensaje: 'Comandas transferidas de Mesa #1 a Mesa #3 exitosamente.',
+      id_origen: 1,
+      id_destino: 3,
+      pedidos_transferidos: 2,
+    };
+    service.transferirMesa.mockResolvedValue(mockRes);
 
-    const res = await controller.eliminar(1);
-    expect(service.eliminar).toHaveBeenCalledWith(1);
+    const res = await controller.transferir(dto);
+    expect(service.transferirMesa).toHaveBeenCalledWith(dto);
     expect(res).toEqual(mockRes);
   });
 });

@@ -200,6 +200,54 @@
         }
       }
     }
+
+    .empty-catalogo {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+      text-align: center;
+      background-color: $bg-card;
+      border: 1px dashed $border-color;
+      border-radius: $radius-lg;
+      margin: 10px 0;
+
+      mat-icon {
+        font-size: 44px;
+        width: 44px;
+        height: 44px;
+        color: $text-light-muted;
+        margin-bottom: 12px;
+      }
+
+      p {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: $text-secondary;
+        margin: 0 0 6px 0;
+      }
+
+      span {
+        font-size: 0.8125rem;
+        color: $text-muted;
+        max-width: 300px;
+        line-height: 1.4;
+        margin-bottom: 16px;
+      }
+
+      .btn-retry-catalogo {
+        border-color: $brand-blue !important;
+        color: $brand-blue !important;
+        border-radius: $radius-md !important;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+    }
   }
 }
 
@@ -385,6 +433,23 @@
           font-size: 1.3rem;
           font-weight: 800;
           color: $brand-orange;
+        }
+      }
+
+      .total-acumulado-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 0 10px 0;
+        margin-top: -6px;
+        margin-bottom: 8px;
+        font-size: 0.8125rem;
+        color: $text-muted;
+        border-top: 1px dashed $border-subtle;
+
+        .total-acumulado-valor {
+          font-weight: 600;
+          color: $text-secondary;
         }
       }
 

@@ -40,6 +40,7 @@ export class SidebarComponent {
     { icon: 'delivery_dining', label: 'Domicilios', route: '/domicilios' },
     { icon: 'point_of_sale', label: 'Caja', route: '/caja' },
     { icon: 'inventory_2', label: 'Catálogo', route: '/catalogo' },
+    { icon: 'manage_accounts', label: 'Personal', route: '/usuarios' },
     { icon: 'bar_chart', label: 'Reportes', route: '/reportes' }
   ];
 

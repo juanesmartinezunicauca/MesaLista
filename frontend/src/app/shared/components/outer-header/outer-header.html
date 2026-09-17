@@ -10,16 +10,31 @@
     </div>
 
     <button
+      type="button"
       mat-icon-button
       [matMenuTriggerFor]="userMenu"
       aria-label="Menú de usuario"
       class="avatar-btn"
     >
-      <div class="avatar-badge">{{ currentUser().iniciales }}</div>
+      <span class="avatar-badge">{{ currentUser().iniciales }}</span>
     </button>
 
     <mat-menu #userMenu="matMenu" xPosition="before">
-      <button mat-menu-item (click)="onLogout()">
+      <button type="button" mat-menu-item (click)="abrirMiPerfil()">
+        <mat-icon>account_circle</mat-icon>
+        <span>Mi Perfil</span>
+      </button>
+
+      @if (currentUser().rol === 'administrador') {
+        <button type="button" mat-menu-item routerLink="/usuarios">
+          <mat-icon>manage_accounts</mat-icon>
+          <span>Gestión de Personal</span>
+        </button>
+      }
+
+      <mat-divider></mat-divider>
+
+      <button type="button" mat-menu-item (click)="onLogout()">
         <mat-icon color="warn">logout</mat-icon>
         <span>Cerrar sesión</span>
       </button>

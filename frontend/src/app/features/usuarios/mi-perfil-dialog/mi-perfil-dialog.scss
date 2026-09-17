@@ -1,0 +1,201 @@
+@use 'tokens' as *;
+
+.perfil-dialog-container {
+  padding: 4px;
+  min-width: 380px;
+  max-width: 480px;
+  font-family: $font-family-base;
+}
+
+.dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid $border-color;
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.04) 0%, rgba(37, 99, 235, 0.04) 100%);
+  border-radius: $radius-lg $radius-lg 0 0;
+
+  .user-card-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .user-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: $radius-full;
+    background: linear-gradient(135deg, $brand-orange 0%, #ff8c5a 100%);
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: $shadow-orange;
+  }
+
+  .user-name-title {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: $text-primary;
+  }
+
+  .user-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .user-handle {
+    font-size: 0.85rem;
+    color: $text-muted;
+    font-family: $font-family-mono;
+  }
+
+  .role-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: $radius-full;
+    text-transform: capitalize;
+
+    &[data-role='administrador'] {
+      background: rgba(37, 99, 235, 0.12);
+      color: $brand-blue;
+    }
+
+    &[data-role='cajero'] {
+      background: rgba(16, 185, 129, 0.12);
+      color: $color-success;
+    }
+
+    &[data-role='mesero'] {
+      background: rgba(245, 158, 11, 0.12);
+      color: $color-warning;
+    }
+
+    &[data-role='cocina'] {
+      background: rgba(139, 92, 246, 0.12);
+      color: #7c3aed;
+    }
+  }
+
+  .btn-close {
+    color: $text-muted;
+    &:hover {
+      color: $text-primary;
+    }
+  }
+}
+
+.dialog-body {
+  padding: 20px !important;
+  max-height: 70vh;
+}
+
+.feedback-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: $radius-md;
+  font-size: 0.875rem;
+  margin-bottom: 16px;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  &.error-banner {
+    background-color: $color-danger-bg;
+    color: $color-danger;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+
+  &.success-banner {
+    background-color: $color-success-bg;
+    color: $color-success;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+  }
+}
+
+.form-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: $text-primary;
+  margin-top: 4px;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: $brand-blue;
+  }
+
+  .caption-optional {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: $text-muted;
+  }
+}
+
+.divider {
+  height: 1px;
+  background-color: $border-subtle;
+  margin: 6px 0;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.dialog-actions {
+  padding: 12px 20px 16px;
+  border-top: 1px solid $border-color;
+  gap: 10px;
+
+  .btn-save {
+    background-color: $brand-orange !important;
+    color: #ffffff !important;
+    border-radius: $radius-md;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: $shadow-orange;
+
+    &:hover:not(:disabled) {
+      background-color: $brand-orange-hover !important;
+    }
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

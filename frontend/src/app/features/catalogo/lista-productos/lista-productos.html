@@ -83,7 +83,8 @@
       <input
         type="text"
         placeholder="Buscar por nombre o categoría..."
-        [(ngModel)]="busqueda"
+        [ngModel]="busqueda()"
+        (ngModelChange)="busqueda.set($event)"
         class="search-input"
       >
       @if (busqueda()) {
@@ -192,9 +193,9 @@
                 <span class="category-tag">{{ prod.categoria }}</span>
                 <span
                   class="stock-badge"
-                  [ngClass]="obtenerClaseStock(prod.cantidad_inventario)"
+                  [ngClass]="prod.claseStock"
                 >
-                  {{ obtenerEtiquetaStock(prod.cantidad_inventario) }}
+                  {{ prod.etiquetaStock }}
                 </span>
               </div>
 
@@ -252,7 +253,7 @@
               </div>
               <div class="fin-col">
                 <span class="fin-label">Margen</span>
-                <span class="fin-value margin">{{ calcularMargen(prod.precio_venta, prod.costo) }}</span>
+                <span class="fin-value margin">{{ prod.margen }}</span>
               </div>
             </div>
 

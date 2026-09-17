@@ -1,0 +1,148 @@
+<div class="usuario-dialog-container">
+  <form [formGroup]="usuarioForm" (ngSubmit)="guardar()">
+    <div class="dialog-header">
+      <div class="dialog-title-group">
+        <div class="header-icon-badge" [class.badge-edit]="esEdicion()">
+          <mat-icon>{{ esEdicion() ? 'manage_accounts' : 'person_add' }}</mat-icon>
+        </div>
+        <div>
+          <h2 class="dialog-title">{{ esEdicion() ? 'Editar Perfil de Usuario' : 'Nuevo Empleado / Usuario' }}</h2>
+          <span class="dialog-subtitle">
+            {{ esEdicion() ? 'Modifica los permisos y datos del personal' : 'Asigna rol y credenciales para el sistema POS' }}
+          </span>
+        </div>
+      </div>
+      <button type="button" mat-icon-button (click)="cerrar()" class="btn-close" aria-label="Cerrar modal">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <mat-dialog-content class="dialog-body">
+      @if (errorMensaje()) {
+        <div class="feedback-banner error-banner">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ errorMensaje() }}</span>
+        </div>
+      }
+
+      <div class="form-content">
+        <!-- Nombre Completo -->
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Nombre Completo</mat-label>
+          <input matInput type="text" formControlName="nombre" placeholder="Ej. Carlos Mendoza">
+          <mat-icon matPrefix>badge</mat-icon>
+          @if (tieneError('nombre', 'required')) {
+            <mat-error>El nombre es obligatorio.</mat-error>
+          }
+          @if (tieneError('nombre', 'minlength')) {
+            <mat-error>Debe tener al menos 2 caracteres.</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Nombre de Usuario -->
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Nombre de Usuario (Login)</mat-label>
+          <input matInput type="text" formControlName="usuario" placeholder="Ej. cmendoza">
+          <mat-icon matPrefix>alternate_email</mat-icon>
+          <mat-hint>Solo letras, números, puntos, guiones o guión bajo.</mat-hint>
+          @if (tieneError('usuario', 'required')) {
+            <mat-error>El usuario de acceso es obligatorio.</mat-error>
+          }
+          @if (tieneError('usuario', 'minlength')) {
+            <mat-error>Debe tener mínimo 3 caracteres.</mat-error>
+          }
+          @if (tieneError('usuario', 'pattern')) {
+            <mat-error>Formato no válido (sin espacios ni caracteres especiales).</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Rol / Perfil -->
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Rol / Perfil Operativo</mat-label>
+          <mat-select formControlName="rol">
+            @for (r of rolesDisponibles; track r.valor) {
+              <mat-option [value]="r.valor">
+                <div class="role-option-item">
+                  <mat-icon class="option-role-icon">{{ r.icon }}</mat-icon>
+                  <div class="option-role-text">
+                    <span class="role-name">{{ r.label }}</span>
+                    <span class="role-desc">{{ r.desc }}</span>
+                  </div>
+                </div>
+              </mat-option>
+            }
+          </mat-select>
+          <mat-icon matPrefix>supervised_user_circle</mat-icon>
+        </mat-form-field>
+
+        <!-- Contraseña -->
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>{{ esEdicion() ? 'Nueva Contraseña (Opcional)' : 'Contraseña de Acceso' }}</mat-label>
+          <input
+            matInput
+            type="password"
+            [type]="mostrarPassword() ? 'text' : 'password'"
+            formControlName="password"
+            placeholder="Mínimo 6 caracteres"
+          >
+          <mat-icon matPrefix>lock</mat-icon>
+          <button
+            type="button"
+            mat-icon-button
+            matSuffix
+            (click)="toggleMostrarPassword()"
+            [attr.aria-label]="mostrarPassword() ? 'Ocultar contraseña' : 'Ver contraseña'"
+          >
+            <mat-icon>{{ mostrarPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          @if (esEdicion()) {
+            <mat-hint>Dejar vacío si no deseas cambiar la contraseña actual.</mat-hint>
+          }
+          @if (tieneError('password', 'required')) {
+            <mat-error>La contraseña es obligatoria.</mat-error>
+          }
+          @if (tieneError('password', 'minlength')) {
+            <mat-error>La contraseña debe tener al menos 6 caracteres.</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Estado Activo / Inactivo -->
+        <div class="status-toggle-card">
+          <div class="toggle-info">
+            <span class="toggle-title">Estado de la cuenta</span>
+            <span class="toggle-desc">
+              {{ usuarioForm.get('estado')?.value ? 'El usuario puede iniciar sesión en el POS' : 'Acceso bloqueado en el sistema' }}
+            </span>
+          </div>
+          <mat-slide-toggle formControlName="estado" color="primary">
+            <span class="status-pill" [class.pill-active]="usuarioForm.get('estado')?.value">
+              {{ usuarioForm.get('estado')?.value ? 'Activo' : 'Inactivo' }}
+            </span>
+          </mat-slide-toggle>
+        </div>
+      </div>
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="end" class="dialog-actions">
+      <button type="button" mat-button (click)="cerrar()" [disabled]="guardando()">
+        Cancelar
+      </button>
+      <button
+        type="submit"
+        mat-flat-button
+        color="primary"
+        class="btn-confirm"
+        [disabled]="guardando() || usuarioForm.invalid"
+      >
+        @if (guardando()) {
+          <span>Guardando...</span>
+        } @else {
+          <ng-container>
+            <mat-icon>{{ esEdicion() ? 'check' : 'person_add' }}</mat-icon>
+            <span>{{ esEdicion() ? 'Guardar Cambios' : 'Crear Usuario' }}</span>
+          </ng-container>
+        }
+      </button>
+    </mat-dialog-actions>
+  </form>
+</div>

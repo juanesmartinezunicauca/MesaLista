@@ -1,0 +1,10 @@
+{
+  "root": true,
+  "rules": {
+    "attr-case": "off",
+    "no-implicit-input-type": "off",
+    "no-implicit-button-type": "off",
+    "element-required-attributes": "off",
+    "valid-autocomplete": "off"
+  }
+}

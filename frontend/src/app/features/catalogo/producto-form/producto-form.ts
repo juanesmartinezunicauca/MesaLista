@@ -12,8 +12,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDividerModule } from '@angular/material/divider';
 
 import { CatalogoApiService } from '../../../core/services/api/catalogo-api.service';
+import { MesasService } from '../../mesas/services/mesas.service';
 
 interface IngredienteRemovibleConfig {
   id: string;
@@ -36,6 +38,7 @@ interface IngredienteRemovibleConfig {
     MatSlideToggleModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
+    MatDividerModule,
   ],
   templateUrl: './producto-form.html',
   styleUrl: './producto-form.scss',
@@ -45,6 +48,7 @@ export class ProductoFormComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private catalogoApi = inject(CatalogoApiService);
+  private mesasService = inject(MesasService);
 
   productForm: FormGroup;
   isSaving = signal<boolean>(false);
@@ -57,14 +61,10 @@ export class ProductoFormComponent implements OnInit {
   // Nuevo ingrediente a añadir
   nuevoIngredienteInput = signal<string>('');
 
-  // Signal para gestionar la lista de ingredientes removibles de forma reactiva
-  ingredientes = signal<IngredienteRemovibleConfig[]>([
-    { id: '1', nombre: 'Cebolla', activo: true },
-    { id: '2', nombre: 'Tomate', activo: true },
-    { id: '3', nombre: 'Salsa Especial', activo: true },
-    { id: '4', nombre: 'Pepinillos', activo: true },
-  ]);
+  // Signal para gestionar la lista de ingredientes de forma reactiva (inicia limpio para nuevos productos)
+  ingredientes = signal<IngredienteRemovibleConfig[]>([]);
 
+  // Categorías base sugeridas + personalizadas
   categorias = signal<string[]>([
     'Hamburguesas',
     'Comidas Rápidas',
@@ -73,13 +73,17 @@ export class ProductoFormComponent implements OnInit {
     'Postres',
   ]);
 
+  // Modo de creación de categoría personalizada
+  modoNuevaCategoria = signal<boolean>(false);
+  nuevaCategoriaTexto = signal<string>('');
+
   constructor() {
     this.productForm = this.fb.group({
       nombre: ['', [Validators.required]],
       categoria: ['Hamburguesas', [Validators.required]],
-      precio_venta: [0, [Validators.required, Validators.min(0)]],
-      costo: [0, [Validators.required, Validators.min(0)]],
-      cantidad_inventario: [10, [Validators.required, Validators.min(0)]],
+      precio_venta: [null, [Validators.required, Validators.min(0)]],
+      costo: [null, [Validators.required, Validators.min(0)]],
+      cantidad_inventario: [null, [Validators.required, Validators.min(0)]],
       disponible: [true],
     });
   }
@@ -118,6 +122,11 @@ export class ProductoFormComponent implements OnInit {
           disponible: prod.disponible,
         });
 
+        // Asegurar que la categoría del producto figure en la lista si es personalizada
+        if (prod.categoria && !this.categorias().includes(prod.categoria)) {
+          this.categorias.update((cats) => [...cats, prod.categoria].sort());
+        }
+
         if (prod.ingredientes_removibles && prod.ingredientes_removibles.length > 0) {
           const list: IngredienteRemovibleConfig[] = prod.ingredientes_removibles.map(
             (ing, idx) => ({
@@ -145,13 +154,54 @@ export class ProductoFormComponent implements OnInit {
         if (cats && cats.length > 0) {
           // Combinar con existentes para asegurar opciones
           const combinadas = Array.from(new Set([...this.categorias(), ...cats]));
-          this.categorias.set(combinadas);
+          this.categorias.set(combinadas.sort());
         }
       },
       error: () => {
         // Mantiene categorías por defecto si backend no responde
       },
     });
+  }
+
+  activarModoNuevaCategoria(): void {
+    this.modoNuevaCategoria.set(true);
+    this.nuevaCategoriaTexto.set('');
+  }
+
+  cancelarModoNuevaCategoria(): void {
+    this.modoNuevaCategoria.set(false);
+    this.nuevaCategoriaTexto.set('');
+  }
+
+  guardarNuevaCategoria(nombre: string): void {
+    const limpio = nombre.trim();
+    if (!limpio) return;
+
+    // Normalizar primera letra a mayúscula
+    const formateada = limpio.charAt(0).toUpperCase() + limpio.slice(1);
+
+    const existente = this.categorias().find(
+      (c) => c.toLowerCase() === formateada.toLowerCase()
+    );
+
+    const categoriaFinal = existente || formateada;
+
+    if (!existente) {
+      this.categorias.update((cats) => [...cats, formateada].sort());
+    }
+
+    this.productForm.get('categoria')?.setValue(categoriaFinal);
+    this.productForm.get('categoria')?.markAsDirty();
+    this.modoNuevaCategoria.set(false);
+    this.nuevaCategoriaTexto.set('');
+  }
+
+  onCategoriaSelect(val: string): void {
+    if (val === '__CREAR_NUEVA__') {
+      // Revertir temporalmente la selección en el control para no dejar '__CREAR_NUEVA__'
+      this.productForm.get('categoria')?.setValue('');
+      this.activarModoNuevaCategoria();
+    }
   }
 
   // Margen estimado basado en precio_venta y costo canónicos
@@ -197,6 +247,24 @@ export class ProductoFormComponent implements OnInit {
   onSave(): void {
     if (this.productForm.invalid) {
       this.productForm.markAllAsTouched();
+
+      const camposFaltantes: string[] = [];
+      if (this.productForm.get('nombre')?.invalid) camposFaltantes.push('Nombre del producto');
+      if (this.productForm.get('categoria')?.invalid) camposFaltantes.push('Categoría');
+      if (this.productForm.get('cantidad_inventario')?.invalid) camposFaltantes.push('Cantidad en inventario (Stock)');
+      if (this.productForm.get('precio_venta')?.invalid) camposFaltantes.push('Precio de venta');
+      if (this.productForm.get('costo')?.invalid) camposFaltantes.push('Costo');
+
+      const detalle = camposFaltantes.length > 0
+        ? `: falta completar ${camposFaltantes.join(', ')}.`
+        : '. Por favor revisa los campos requeridos en rojo.';
+
+      this.mensajeFeedback.set({
+        tipo: 'error',
+        texto: `No se puede guardar el producto${detalle}`,
+      });
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
@@ -227,6 +295,9 @@ export class ProductoFormComponent implements OnInit {
             texto: `¡Producto "${productoActualizado.nombre}" actualizado exitosamente!`,
           });
 
+          // Sincronizar catálogo de mesas de inmediato
+          this.mesasService.cargarCatalogo();
+
           setTimeout(() => {
             this.router.navigate(['/catalogo']);
           }, 900);
@@ -254,6 +325,9 @@ export class ProductoFormComponent implements OnInit {
             tipo: 'exito',
             texto: `¡Producto "${productoCreado.nombre}" creado exitosamente en el catálogo!`,
           });
+
+          // Sincronizar catálogo de mesas de inmediato
+          this.mesasService.cargarCatalogo();
 
           setTimeout(() => {
             this.router.navigate(['/catalogo']);

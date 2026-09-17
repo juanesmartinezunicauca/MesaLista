@@ -62,6 +62,27 @@ export class AuthService {
   }
 
   /**
+   * Actualiza los datos del perfil propio (nombre y/o contraseña) y sincroniza la sesión
+   */
+  actualizarPerfil(datos: { nombre?: string; password?: string }): Observable<Usuario> {
+    return this.http.patch<Usuario>(`${this.apiUrl}/perfil`, datos).pipe(
+      tap((userActualizado) => {
+        const cur = this.currentUser();
+        if (cur) {
+          const nuevoUsuario: UsuarioSesion = {
+            ...cur,
+            nombre: userActualizado.nombre,
+            usuario: userActualizado.usuario,
+            rol: userActualizado.rol,
+            iniciales: this.generarIniciales(userActualizado.nombre),
+          };
+          this.guardarSesion(this.token() || '', nuevoUsuario);
+        }
+      })
+    );
+  }
+
+  /**
    * Cierra sesión eliminando credenciales y redirigiendo al login
    */
   logout(): void {

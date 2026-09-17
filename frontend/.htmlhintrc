@@ -1,4 +1,5 @@
 {
   "attr-lowercase": false,
-  "alt-require": false
+  "alt-require": false,
+  "input-req-type": false
 }

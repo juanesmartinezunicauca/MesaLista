@@ -91,4 +91,17 @@ export class MesasApiService {
   eliminar(id: number): Observable<{ mensaje: string; id_mesa: number }> {
     return this.http.delete<{ mensaje: string; id_mesa: number }>(`${this.apiUrl}/${id}`);
   }
+
+  /**
+   * Transfiere las comandas activas de una mesa a otra
+   */
+  transferir(
+    id_origen: number,
+    id_destino: number
+  ): Observable<{ mensaje: string; pedidos_transferidos: number }> {
+    return this.http.post<{ mensaje: string; pedidos_transferidos: number }>(
+      `${this.apiUrl}/transferir`,
+      { id_origen, id_destino }
+    );
+  }
 }

@@ -11,6 +11,7 @@ describe('AuthService', () => {
   let usuariosService: {
     obtenerPorUsernameParaAuth: jest.Mock;
     obtenerPorId: jest.Mock;
+    actualizar: jest.Mock;
   };
   let jwtService: {
     sign: jest.Mock;
@@ -32,6 +33,7 @@ describe('AuthService', () => {
     usuariosService = {
       obtenerPorUsernameParaAuth: jest.fn(),
       obtenerPorId: jest.fn(),
+      actualizar: jest.fn(),
     };
 
     jwtService = {
@@ -171,6 +173,32 @@ describe('AuthService', () => {
 
       expect(usuariosService.obtenerPorId).toHaveBeenCalledWith(1);
       expect(resultado).toEqual(perfilMock);
+    });
+  });
+
+  describe('actualizarPerfil', () => {
+    it('debe delegar a usuariosService.actualizar con los datos proporcionados', async () => {
+      const dto = {
+        nombre: 'Carlos Mesero Editado',
+        password: 'nuevapassword123',
+      };
+      const perfilActualizadoMock = {
+        id_usuario: 1,
+        nombre: 'Carlos Mesero Editado',
+        usuario: 'cmesero',
+        rol: RolUsuario.mesero,
+        estado: EstadoUsuario.activo,
+      };
+
+      usuariosService.actualizar.mockResolvedValue(perfilActualizadoMock);
+
+      const resultado = await service.actualizarPerfil(1, dto);
+
+      expect(usuariosService.actualizar).toHaveBeenCalledWith(1, {
+        nombre: dto.nombre,
+        password: dto.password,
+      });
+      expect(resultado).toEqual(perfilActualizadoMock);
     });
   });
 });

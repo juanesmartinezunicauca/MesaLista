@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -11,7 +12,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { CurrentUser } from '../../common/decorators';
 import { JwtAuthGuard } from '../../common/guards';
 import { AuthService } from './auth.service';
-import { LoginDto } from './dto';
+import { LoginDto, UpdatePerfilDto } from './dto';
 
 @Controller('auth')
 export class AuthController {
@@ -36,5 +37,18 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   perfil(@CurrentUser('id_usuario') idUsuario: number) {
     return this.authService.obtenerPerfil(idUsuario);
+  }
+
+  /**
+   * PATCH /api/v1/auth/perfil
+   * Actualiza el perfil del usuario autenticado (nombre y/o contraseña).
+   */
+  @Patch('perfil')
+  @UseGuards(JwtAuthGuard)
+  actualizarPerfil(
+    @CurrentUser('id_usuario') idUsuario: number,
+    @Body() updatePerfilDto: UpdatePerfilDto,
+  ) {
+    return this.authService.actualizarPerfil(idUsuario, updatePerfilDto);
   }
 }

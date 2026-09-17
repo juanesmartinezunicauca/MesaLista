@@ -6,14 +6,14 @@
         <mat-icon>arrow_back</mat-icon>
       </button>
       <div>
-        <h2 class="mesa-titulo">Mesa #{{ mesa.numero }}</h2>
+        <h2 class="mesa-titulo">Mesa #{{ mesaActual().numero }}</h2>
         <span class="subtexto">
-          {{ mesa.pedidos.length > 0 ? 'Agregando Pedido #' + (mesa.pedidos.length + 1) : 'Borrador Inicial - Pedido #1' }}
+          {{ mesaActual().pedidos.length > 0 ? 'Agregando Pedido #' + (mesaActual().pedidos.length + 1) : 'Borrador Inicial - Pedido #1' }}
         </span>
       </div>
     </div>
-    <div class="estado-tag" [class]="mesa.estado_visual">
-      {{ mesa.estado_visual === 'libre' ? 'Verde: Libre' : (mesa.estado_visual === 'en_pedido' ? 'Amarillo: En Pedido' : 'Rojo: Ocupada') }}
+    <div class="estado-tag" [class]="mesaActual().estado_visual">
+      {{ mesaActual().estado_visual === 'libre' ? 'Verde: Libre' : (mesaActual().estado_visual === 'en_pedido' ? 'Amarillo: En Pedido' : 'Rojo: Ocupada') }}
     </div>
   </header>
 
@@ -35,7 +35,7 @@
       </div>
 
       <div class="categories-bar">
-        @for (cat of categorias; track cat) {
+        @for (cat of categorias(); track cat) {
           <button
             class="cat-pill"
             [class.active]="categoriaSeleccionada() === cat"
@@ -62,10 +62,30 @@
             </div>
             <div class="producto-footer">
               <span class="prod-precio">$ {{ prod.precio_venta | number }}</span>
-              <button mat-icon-button class="btn-add" aria-label="Agregar">
+              <button
+                type="button"
+                mat-icon-button
+                class="btn-add"
+                aria-label="Agregar al pedido"
+                (click)="$event.stopPropagation(); clickProducto(prod)"
+              >
                 <mat-icon>add</mat-icon>
               </button>
             </div>
+          </div>
+        } @empty {
+          <div class="empty-catalogo">
+            <mat-icon>inventory_2</mat-icon>
+            <p>No se encontraron productos disponibles</p>
+            @if (categoriaSeleccionada() !== 'Todas') {
+              <span>No hay productos activos en la categoría "{{ categoriaSeleccionada() }}".</span>
+            } @else {
+              <span>No hay productos disponibles para comandar. Verifica en el Catálogo que estén registrados y disponibles.</span>
+            }
+            <button mat-stroked-button class="btn-retry-catalogo" (click)="mesasService.cargarCatalogo()">
+              <mat-icon>refresh</mat-icon>
+              <span>Recargar Catálogo</span>
+            </button>
           </div>
         }
       </div>
@@ -76,19 +96,19 @@
       <div class="panel-card">
         <div class="panel-header">
           <h3>Pedido en Curso</h3>
-          <span class="items-count">{{ mesa.borrador_local.length }} ítem(s)</span>
+          <span class="items-count">{{ mesaActual().borrador_local.length }} ítem(s)</span>
         </div>
 
         <!-- Lista de Ítems en Borrador -->
         <div class="items-list">
-          @if (mesa.borrador_local.length === 0) {
+          @if (mesaActual().borrador_local.length === 0) {
             <div class="empty-draft">
               <mat-icon class="empty-icon">fastfood</mat-icon>
               <p>El borrador está vacío</p>
               <span>Selecciona productos del catálogo para armar el pedido</span>
             </div>
           } @else {
-            @for (item of mesa.borrador_local; track item.id_item) {
+            @for (item of mesaActual().borrador_local; track item.id_item) {
               <div class="draft-item">
                 <div class="item-info">
                   <div class="name-price">
@@ -144,18 +164,25 @@
 
           <div class="total-row">
             <span>Total a despachar:</span>
-            <span class="total-price">$ {{ mesa.total_acumulado | number }} COP</span>
+            <span class="total-price">$ {{ totalPedidoActual() | number }} COP</span>
           </div>
+
+          @if (mesaActual().pedidos.length > 0) {
+            <div class="total-acumulado-info">
+              <span>Total acumulado de la mesa (pedidos despachados + actual):</span>
+              <span class="total-acumulado-valor">$ {{ mesaActual().total_acumulado | number }} COP</span>
+            </div>
+          }
 
           <button
             mat-flat-button
             class="btn-send-kitchen"
-            [disabled]="mesa.borrador_local.length === 0"
+            [disabled]="mesaActual().borrador_local.length === 0"
             (click)="enviarCocina()"
           >
             <mat-icon>soup_kitchen</mat-icon>
             <span>
-              Enviar Pedido a Cocina ({{ mesa.pedidos.length > 0 ? 'Pedido #' + (mesa.pedidos.length + 1) : 'Pedido #1' }})
+              Enviar Pedido a Cocina ({{ mesaActual().pedidos.length > 0 ? 'Pedido #' + (mesaActual().pedidos.length + 1) : 'Pedido #1' }})
             </span>
           </button>
         </div>
