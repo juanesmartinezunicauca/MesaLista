@@ -1,0 +1,270 @@
+<div class="plano-container">
+  @if (vistaActiva() === 'borrador' && mesaActiva()) {
+    <app-borrador-pedido
+      [mesa]="mesaActiva()!"
+      (cerrar)="volverAlPlano()"
+      (pedidoEnviado)="onPedidoEnviado()"
+    ></app-borrador-pedido>
+  } @else if (vistaActiva() === 'detalle' && mesaActiva()) {
+    <app-detalle-mesa
+      [mesa]="mesaActiva()!"
+      (cerrar)="volverAlPlano()"
+      (iniciarNuevoPedido)="abrirNuevoPedido()"
+    ></app-detalle-mesa>
+  } @else {
+    <!-- VISTA PRINCIPAL: TABLERO / PLANO DE MESAS -->
+    <div class="plano-main-view">
+      <!-- 1. HEADER DE LA VISTA -->
+      <header class="plano-header">
+        <div>
+          <h1 class="page-title">Mapa de Mesas</h1>
+          <p class="page-subtitle">Control de disponibilidad, toma de pedidos y facturación del salón</p>
+        </div>
+
+        <button mat-flat-button class="btn-nueva-mesa" (click)="abrirNuevaMesaDialog()">
+          <mat-icon>add</mat-icon>
+          <span>Nueva Mesa</span>
+        </button>
+      </header>
+
+      <!-- 2. BARRA DE MÉTRICAS EN VIVO -->
+      <section class="metricas-banner">
+        <div class="metrica-card">
+          <span class="met-label">Total Mesas</span>
+          <span class="met-valor">{{ mesasService.metricas().total }}</span>
+        </div>
+
+        <div class="metrica-card libre">
+          <div class="dot-label">
+            <span class="status-dot green"></span>
+            <span class="met-label">Libres</span>
+          </div>
+          <span class="met-valor">{{ mesasService.metricas().libres }}</span>
+        </div>
+
+        <div class="metrica-card en_pedido">
+          <div class="dot-label">
+            <span class="status-dot yellow"></span>
+            <span class="met-label">En Pedido (Borrador)</span>
+          </div>
+          <span class="met-valor">{{ mesasService.metricas().enPedido }}</span>
+        </div>
+
+        <div class="metrica-card ocupada">
+          <div class="dot-label">
+            <span class="status-dot red"></span>
+            <span class="met-label">Ocupadas</span>
+          </div>
+          <span class="met-valor">{{ mesasService.metricas().ocupadas }}</span>
+        </div>
+
+        <div class="metrica-card ocupacion">
+          <span class="met-label">% Ocupación</span>
+          <span class="met-valor">{{ mesasService.metricas().porcentajeOcupacion }}%</span>
+        </div>
+      </section>
+
+      <!-- 3. BARRA DE FILTROS Y BÚSQUEDA -->
+      <section class="filtros-bar">
+        <div class="tabs-estados">
+          <button
+            class="tab-btn"
+            [class.active]="mesasService.filtroEstado() === 'todas'"
+            (click)="mesasService.filtroEstado.set('todas')"
+          >
+            Todas ({{ mesasService.mesas().length }})
+          </button>
+
+          <button
+            class="tab-btn libre"
+            [class.active]="mesasService.filtroEstado() === 'libre'"
+            (click)="mesasService.filtroEstado.set('libre')"
+          >
+            <span class="status-dot green"></span>
+            Libres ({{ mesasService.metricas().libres }})
+          </button>
+
+          <button
+            class="tab-btn en_pedido"
+            [class.active]="mesasService.filtroEstado() === 'en_pedido'"
+            (click)="mesasService.filtroEstado.set('en_pedido')"
+          >
+            <span class="status-dot yellow"></span>
+            En Pedido ({{ mesasService.metricas().enPedido }})
+          </button>
+
+          <button
+            class="tab-btn ocupada"
+            [class.active]="mesasService.filtroEstado() === 'ocupada'"
+            (click)="mesasService.filtroEstado.set('ocupada')"
+          >
+            <span class="status-dot red"></span>
+            Ocupadas ({{ mesasService.metricas().ocupadas }})
+          </button>
+        </div>
+
+        <div class="search-input-wrapper">
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-icon matPrefix>search</mat-icon>
+            <input
+              matInput
+              placeholder="Buscar mesa..."
+              type="number"
+              [ngModel]="mesasService.busquedaNumero()"
+              (ngModelChange)="mesasService.busquedaNumero.set($event)"
+            />
+          </mat-form-field>
+        </div>
+      </section>
+
+      <!-- 4. GRID DE TARJETAS DE MESAS -->
+      <section class="mesas-grid">
+        @for (mesa of mesasService.mesasFiltradas(); track mesa.id_mesa) {
+          <div
+            class="mesa-card"
+            [class]="mesa.estado_visual"
+            (click)="clickMesa(mesa)"
+          >
+            <!-- Cabecera de la Tarjeta -->
+            <div class="mesa-card-top">
+              <div class="mesa-badge-numero">
+                <span class="num-label">MESA</span>
+                <span class="num-val">#{{ mesa.numero }}</span>
+              </div>
+
+              <div class="mesa-status-indicator">
+                <span class="indicator-pulse"></span>
+                <span class="indicator-text">
+                  @switch (mesa.estado_visual) {
+                    @case ('libre') { Libre }
+                    @case ('en_pedido') { En Pedido }
+                    @case ('ocupada') { Ocupada }
+                  }
+                </span>
+              </div>
+
+              <!-- Menú contextual de mesa -->
+              <button
+                mat-icon-button
+                [matMenuTriggerFor]="cardMenu"
+                (click)="$event.stopPropagation()"
+                class="more-btn"
+                aria-label="Opciones de mesa"
+              >
+                <mat-icon>more_vert</mat-icon>
+              </button>
+
+              <mat-menu #cardMenu="matMenu">
+                @if (mesa.estado_visual === 'ocupada') {
+                  <button mat-menu-item (click)="abrirTransferirDialog(mesa, $event)">
+                    <mat-icon>swap_horiz</mat-icon>
+                    <span>Transferir pedidos</span>
+                  </button>
+                  <button mat-menu-item (click)="simularFacturacion(mesa, $event)">
+                    <mat-icon>receipt</mat-icon>
+                    <span>Facturar cuenta</span>
+                  </button>
+                }
+                @if (mesa.estado_visual === 'libre') {
+                  <button mat-menu-item (click)="eliminarMesa(mesa, $event)">
+                    <mat-icon color="warn">delete</mat-icon>
+                    <span>Retirar mesa</span>
+                  </button>
+                }
+              </mat-menu>
+            </div>
+
+            <!-- Cuerpo de la Tarjeta según Estado -->
+            <div class="mesa-card-body">
+              @switch (mesa.estado_visual) {
+                @case ('libre') {
+                  <div class="state-content libre-content">
+                    <mat-icon class="state-icon">chair</mat-icon>
+                    <span class="state-msg">Disponible para comensales</span>
+                  </div>
+                }
+
+                @case ('en_pedido') {
+                  <div class="state-content en-pedido-content">
+                    <div class="draft-badge-row">
+                      <mat-icon class="state-icon">pending_actions</mat-icon>
+                      <span class="draft-items-count">{{ mesa.borrador_local.length }} producto(s)</span>
+                    </div>
+                    <span class="draft-warning-tag">Borrador local en caché</span>
+                    <span class="draft-subtotal">Acumulado: $ {{ mesa.total_acumulado | number }}</span>
+                  </div>
+                }
+
+                @case ('ocupada') {
+                  <div class="state-content ocupada-content">
+                    <div class="meta-row">
+                      <mat-icon>person</mat-icon>
+                      <span>{{ mesa.mesero_actual || 'Mesero Asignado' }}</span>
+                    </div>
+                    <div class="meta-row">
+                      <mat-icon>schedule</mat-icon>
+                      <span>{{ mesa.fecha_apertura || 'En atención' }}</span>
+                    </div>
+                    <div class="pedidos-count-row">
+                      <span class="pedidos-badge">{{ mesa.pedidos.length }} pedido(s) enviado(s)</span>
+                    </div>
+                    <div class="total-comanda">
+                      <span class="total-lbl">Total cuenta:</span>
+                      <span class="total-amt">$ {{ mesa.total_acumulado | number }}</span>
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+
+            <!-- Footer con Botones de Acción Rápida -->
+            <div class="mesa-card-footer" (click)="$event.stopPropagation()">
+              @switch (mesa.estado_visual) {
+                @case ('libre') {
+                  <button mat-stroked-button class="btn-primary-action btn-green" (click)="abrirBorradorDirecto(mesa, $event)">
+                    <mat-icon>add_shopping_cart</mat-icon>
+                    <span>Tomar Pedido</span>
+                  </button>
+                }
+
+                @case ('en_pedido') {
+                  <button mat-flat-button class="btn-primary-action btn-yellow" (click)="abrirBorradorDirecto(mesa, $event)">
+                    <mat-icon>edit_note</mat-icon>
+                    <span>Continuar Pedido</span>
+                  </button>
+                }
+
+                @case ('ocupada') {
+                  <div class="dual-actions">
+                    <button mat-stroked-button class="btn-sub-action" (click)="abrirDetalleDirecto(mesa, $event)">
+                      <mat-icon>receipt_long</mat-icon>
+                      <span>Ver Pedidos</span>
+                    </button>
+
+                    <!-- Botón Facturar SOLO visible si está ocupada -->
+                    <button mat-flat-button class="btn-cobrar-quick" (click)="simularFacturacion(mesa, $event)">
+                      <mat-icon>receipt</mat-icon>
+                      <span>Facturar</span>
+                    </button>
+                  </div>
+                }
+              }
+            </div>
+          </div>
+        } @empty {
+          <div class="empty-mesas-state">
+            <div class="empty-icon-box">
+              <mat-icon class="empty-icon">table_restaurant</mat-icon>
+            </div>
+            <h3>No hay mesas registradas</h3>
+            <p>Comienza registrando las mesas de tu restaurante para organizar el salón y gestionar pedidos.</p>
+            <button mat-flat-button class="btn-nueva-mesa" (click)="abrirNuevaMesaDialog()">
+              <mat-icon>add</mat-icon>
+              <span>Registrar Primera Mesa</span>
+            </button>
+          </div>
+        }
+      </section>
+    </div>
+  }
+</div>

@@ -1,1 +1,28 @@
-<p>outer-header works!</p>
+<header class="app-outer-header">
+  <div class="header-left">
+    <span class="view-tag">MesaLista POS</span>
+  </div>
+
+  <div class="user-session-container">
+    <div class="user-meta">
+      <span class="user-name">{{ currentUser().nombre }}</span>
+      <span class="user-role">{{ currentUser().rol }}</span>
+    </div>
+
+    <button
+      mat-icon-button
+      [matMenuTriggerFor]="userMenu"
+      aria-label="Menú de usuario"
+      class="avatar-btn"
+    >
+      <div class="avatar-badge">{{ currentUser().iniciales }}</div>
+    </button>
+
+    <mat-menu #userMenu="matMenu" xPosition="before">
+      <button mat-menu-item (click)="onLogout()">
+        <mat-icon color="warn">logout</mat-icon>
+        <span>Cerrar sesión</span>
+      </button>
+    </mat-menu>
+  </div>
+</header>

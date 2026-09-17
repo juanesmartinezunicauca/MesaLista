@@ -1,0 +1,708 @@
+@use 'tokens' as *;
+@use 'mixins' as *;
+
+.catalogo-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+  padding: 8px 16px 40px 16px;
+  box-sizing: border-box;
+}
+
+// ==========================================
+// 1. HEADER
+// ==========================================
+.catalogo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+
+  @include respond-to('md') {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-info {
+    .header-breadcrumbs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: $text-muted;
+      margin-bottom: 6px;
+
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        color: $brand-blue;
+      }
+    }
+
+    .header-title {
+      font-size: 1.85rem;
+      font-weight: 800;
+      color: $text-primary;
+      letter-spacing: -0.02em;
+      margin: 0 0 6px 0;
+    }
+
+    .header-subtitle {
+      font-size: 0.9375rem;
+      color: $text-secondary;
+      margin: 0;
+      max-width: 650px;
+      line-height: 1.45;
+    }
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+
+    .btn-refresh {
+      border-color: $border-color !important;
+      color: $text-secondary !important;
+      border-radius: $radius-md !important;
+      padding: 0 16px;
+      height: 42px;
+      font-weight: 600;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+
+        &.spin {
+          animation: spin 1s linear infinite;
+        }
+      }
+    }
+
+    .btn-create {
+      background: linear-gradient(135deg, $brand-blue, $brand-blue-dark) !important;
+      color: white !important;
+      border-radius: $radius-md !important;
+      padding: 0 20px;
+      height: 42px;
+      font-weight: 600;
+      box-shadow: $shadow-blue;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform $transition-fast, box-shadow $transition-fast;
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+      }
+    }
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// ==========================================
+// 2. MÉTRICAS (KPIs)
+// ==========================================
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+
+  @include respond-to('lg') {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @include respond-to('sm') {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-card {
+    @include card-surface($bg: $bg-card, $border: $border-color, $radius: $radius-lg);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    transition: transform $transition-fast, box-shadow $transition-fast;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: $shadow-md;
+    }
+
+    .metric-icon-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 46px;
+      height: 46px;
+      border-radius: $radius-md;
+      flex-shrink: 0;
+
+      mat-icon {
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+      }
+    }
+
+    .metric-details {
+      display: flex;
+      flex-direction: column;
+
+      .metric-label {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: $text-muted;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .metric-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: $text-primary;
+        line-height: 1.2;
+      }
+    }
+
+    &.card-total .metric-icon-wrapper {
+      background-color: $color-info-bg;
+      color: $brand-blue;
+    }
+
+    &.card-active .metric-icon-wrapper {
+      background-color: $color-success-bg;
+      color: $color-success;
+    }
+
+    &.card-inactive .metric-icon-wrapper {
+      background-color: #F3F4F6;
+      color: $text-muted;
+    }
+
+    &.card-stock .metric-icon-wrapper {
+      background-color: $color-warning-bg;
+      color: $color-warning;
+    }
+
+    &.warning-active {
+      border-color: rgba(245, 158, 11, 0.4);
+      background: linear-gradient(to right, #FFFDF8, $bg-card);
+
+      .metric-value {
+        color: #D97706;
+      }
+    }
+  }
+}
+
+// ==========================================
+// 3. BARRA DE FILTROS & BÚSQUEDA
+// ==========================================
+.filters-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  .search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 280px;
+    max-width: 480px;
+    background-color: $bg-card;
+    border: 1px solid $border-color;
+    border-radius: $radius-full;
+    padding: 0 16px;
+    height: 44px;
+    box-shadow: $shadow-xs;
+    transition: border-color $transition-fast, box-shadow $transition-fast;
+
+    &:focus-within {
+      border-color: $brand-blue;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .search-icon {
+      color: $text-muted;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      margin-right: 10px;
+    }
+
+    .search-input {
+      border: none;
+      background: transparent;
+      outline: none;
+      width: 100%;
+      font-size: 0.9375rem;
+      color: $text-primary;
+
+      &::placeholder {
+        color: $text-light-muted;
+      }
+    }
+
+    .clear-search-btn {
+      background: transparent;
+      border: none;
+      color: $text-muted;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
+      &:hover {
+        color: $text-primary;
+      }
+    }
+  }
+
+  .availability-filter-group {
+    display: flex;
+    background-color: #ECEEF2;
+    padding: 4px;
+    border-radius: $radius-full;
+    gap: 4px;
+
+    .filter-pill {
+      border: none;
+      background: transparent;
+      padding: 6px 14px;
+      border-radius: $radius-full;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: $text-secondary;
+      cursor: pointer;
+      transition: background-color $transition-fast, color $transition-fast;
+
+      &:hover {
+        color: $text-primary;
+      }
+
+      &.active {
+        background-color: $bg-card;
+        color: $brand-blue;
+        box-shadow: $shadow-xs;
+      }
+    }
+  }
+}
+
+// ==========================================
+// 4. CHIPS DE CATEGORÍAS
+// ==========================================
+.category-chips-bar {
+  overflow-x: auto;
+  @include custom-scrollbar(4px);
+  padding-bottom: 4px;
+
+  .chips-scroll-container {
+    display: flex;
+    gap: 8px;
+    white-space: nowrap;
+
+    .cat-chip {
+      background-color: $bg-card;
+      border: 1px solid $border-color;
+      border-radius: $radius-full;
+      padding: 8px 18px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: $text-secondary;
+      cursor: pointer;
+      transition: all $transition-fast;
+
+      &:hover {
+        border-color: #CBD5E1;
+        background-color: $bg-card-alt;
+        color: $text-primary;
+      }
+
+      &.active {
+        background-color: $brand-blue;
+        border-color: $brand-blue;
+        color: white;
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+      }
+    }
+  }
+}
+
+// ==========================================
+// 5. BANNER DE ERROR Y ESTADO DE CARGA
+// ==========================================
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background-color: $color-danger-bg;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: $radius-lg;
+  padding: 16px 20px;
+  color: #B91C1C;
+
+  mat-icon {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+    color: $color-danger;
+  }
+
+  .error-content {
+    flex: 1;
+
+    strong {
+      font-size: 0.95rem;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    p {
+      margin: 0;
+      font-size: 0.875rem;
+      color: #991B1B;
+    }
+  }
+
+  .btn-retry {
+    background-color: $color-danger !important;
+    color: white !important;
+    border-radius: $radius-md !important;
+    font-weight: 600;
+  }
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  gap: 16px;
+  color: $text-muted;
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+// ==========================================
+// 6. ESTADO VACÍO (EMPTY STATE)
+// ==========================================
+.empty-state {
+  @include card-surface($bg: $bg-card, $border: $border-color, $radius: $radius-xl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  text-align: center;
+  gap: 14px;
+
+  .empty-icon-circle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    border-radius: $radius-full;
+    background-color: $color-info-bg;
+    color: $brand-blue;
+    margin-bottom: 4px;
+
+    mat-icon {
+      font-size: 36px;
+      width: 36px;
+      height: 36px;
+    }
+  }
+
+  h3 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: $text-primary;
+    margin: 0;
+  }
+
+  p {
+    font-size: 0.9375rem;
+    color: $text-muted;
+    max-width: 420px;
+    margin: 0 0 10px 0;
+    line-height: 1.5;
+  }
+}
+
+// ==========================================
+// 7. PRODUCTOS GRID
+// ==========================================
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+
+  .product-card {
+    @include card-surface($bg: $bg-card, $border: $border-color, $radius: $radius-lg);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform $transition-fast, box-shadow $transition-fast, border-color $transition-fast;
+    position: relative;
+    overflow: hidden;
+
+    &:hover {
+      transform: translateY(-3px);
+      box-shadow: $shadow-lg;
+      border-color: #CBD5E1;
+    }
+
+    &.unavailable {
+      background-color: #FAFAFB;
+      border-style: dashed;
+
+      .card-main .product-name {
+        color: $text-muted;
+      }
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 16px 8px 16px;
+
+      .badge-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+
+        .category-tag {
+          font-size: 0.75rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          color: $brand-blue;
+          background-color: $color-info-bg;
+          padding: 4px 10px;
+          border-radius: $radius-full;
+        }
+
+        .stock-badge {
+          font-size: 0.75rem;
+          font-weight: 600;
+          padding: 3px 8px;
+          border-radius: $radius-sm;
+
+          &.good-stock {
+            background-color: $color-success-bg;
+            color: $color-success;
+          }
+
+          &.low-stock {
+            background-color: $color-warning-bg;
+            color: #D97706;
+          }
+
+          &.out-of-stock {
+            background-color: $color-danger-bg;
+            color: $color-danger;
+          }
+        }
+      }
+
+      .btn-more-options {
+        color: $text-muted;
+        width: 34px;
+        height: 34px;
+
+        &:hover {
+          color: $text-primary;
+          background-color: $bg-card-alt;
+        }
+      }
+    }
+
+    .card-main {
+      padding: 4px 16px 14px 16px;
+      flex: 1;
+
+      .product-name {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: $text-primary;
+        margin: 0 0 8px 0;
+        cursor: pointer;
+        transition: color $transition-fast;
+
+        &:hover {
+          color: $brand-blue;
+        }
+      }
+
+      .ingredients-box {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+
+        .ingredients-label {
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: $text-muted;
+          text-transform: uppercase;
+          letter-spacing: 0.03em;
+        }
+
+        .ingredients-pills {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+
+          .ing-pill {
+            font-size: 0.75rem;
+            background-color: #F1F5F9;
+            color: $text-secondary;
+            padding: 3px 8px;
+            border-radius: $radius-sm;
+            border: 1px solid #E2E8F0;
+          }
+        }
+      }
+
+      .no-recipe-hint {
+        font-size: 0.8125rem;
+        color: $text-light-muted;
+        margin: 0;
+        font-style: italic;
+      }
+    }
+
+    .financials-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      padding: 12px 16px;
+      background-color: $bg-card-alt;
+      border-top: 1px solid $border-subtle;
+      border-bottom: 1px solid $border-subtle;
+      text-align: center;
+
+      .fin-col {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+
+        .fin-label {
+          font-size: 0.6875rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          color: $text-muted;
+        }
+
+        .fin-value {
+          font-size: 0.9375rem;
+          font-weight: 700;
+
+          &.price {
+            color: $text-primary;
+          }
+
+          &.cost {
+            color: $text-secondary;
+          }
+
+          &.margin {
+            color: $color-success;
+          }
+        }
+
+        &:not(:last-child) {
+          border-right: 1px solid $border-color;
+        }
+      }
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      gap: 12px;
+
+      .live-status-toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        user-select: none;
+
+        .status-text {
+          font-size: 0.8125rem;
+          font-weight: 600;
+          color: $text-muted;
+
+          &.is-active {
+            color: $color-success;
+          }
+        }
+      }
+
+      .card-action-buttons {
+        .btn-edit-card {
+          border-color: $border-color !important;
+          color: $text-secondary !important;
+          border-radius: $radius-md !important;
+          font-weight: 600;
+          height: 36px;
+          padding: 0 14px;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+
+          mat-icon {
+            font-size: 16px;
+            width: 16px;
+            height: 16px;
+          }
+
+          &:hover {
+            color: $brand-blue !important;
+            border-color: $brand-blue !important;
+            background-color: $color-info-bg !important;
+          }
+        }
+      }
+    }
+  }
+}
+
+.menu-delete {
+  color: $color-danger !important;
+
+  mat-icon {
+    color: $color-danger !important;
+  }
+}
