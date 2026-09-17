@@ -1,259 +1,252 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+// $bg-sidebar: #FFFFFF;
+// $text-primary: #1F2937;
+// $text-muted: #6B7280;
+// $border-color: #E5E7EB;
+// $primary-orange: #FF6B35;
+// $accent-blue: #2563EB;
 
-html,
-body {
-    font-family: 'Inter', sans-serif;
-}
+// $bg-sidebar: #1F2937;
+// $text-primary: #FFFFFF;
+// $text-muted: #6B7280;
+// $border-color: #E5E7EB;
+// $primary-orange: #FF6B35;
+// $accent-blue: #2563EB;
 
-.brand-title {
-    font-family: 'Inter', sans-serif;
-    font-size: 1.25rem;
-    font-weight: 700;
-    letter-spacing: -0.03em;
-}
+// $sidebar-width: 260px;
+// $sidebar-collapsed-width: 72px;
 
-.sidebar__label {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.9rem;
-    font-weight: 500;
-}
+// .app-sidenav {
+//   width: $sidebar-width;
+//   height: 100%;
+//   background-color: $bg-sidebar;
+//   border-right: 1px solid $border-color;
+//   display: flex;
+//   flex-direction: column;
+//   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+//   box-sizing: border-box;
 
-// Variables de diseño SaaS Dashboard
-$bg-dark-primary: #1A1D20  ; // Gris súper oscuro / casi negro
-$bg-dark-secondary: #6f6e6e; // Gris elevado para hover/active
-$bg-app-content: #f9fafb; // Fondo claro para el área de contenido
-//$accent-color: #6366f1; // Índigo moderno para marcas e indicadores
-$accent-color:#FF6B35; // Naranja moderno para marcas e indicadores
-$accent-hover: #4f46e5;
-$text-light: #f3f4f6;
-$text-muted: #9ca3af;
-$border-color: rgba(255, 255, 255, 0.08);
+//   &.collapsed {
+//     width: $sidebar-collapsed-width;
 
-$sidebar-width: 260px;
-$sidebar-collapsed-width: 72px;
+//     .sidenav-header {
+//       justify-content: center;
+//       padding: 16px 8px;
+//     }
 
-.sidenav-container {
-    height: 100vh;
-    width: 100vw;
-    background-color: $bg-app-content;
-}
+//     .nav-item {
+//       justify-content: center;
+//       padding: 0;
+//     }
 
-// --- Estilos de la Sidenav ---
-.app-sidenav {
-    width: $sidebar-width;
-    background-color: $bg-dark-primary;
-    color: $text-light;
-    border-right: 1px solid $border-color;
-    display: flex;
-    flex-direction: column;
+//     .profile-container {
+//       justify-content: center;
+//       padding: 12px 0;
+//     }
+//   }
+// }
 
-    // Transición suave al colapsar/expandir en escritorio
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+// .sidenav-header {
+//   height: 64px;
+//   display: flex;
+//   align-items: center;
+//   justify-content: space-between;
+//   padding: 0 16px;
 
-    &.collapsed {
-        width: $sidebar-collapsed-width;
+//   .brand-logo {
+//     display: flex;
+//     align-items: center;
+//     gap: 12px;
 
-        .sidenav-header {
-            justify-content: center;
-            padding: 16px 8px;
-        }
+//     .brand-icon {
+//       color: $accent-blue;
+//       font-size: 26px;
+//       width: 26px;
+//       height: 26px;
+//     }
 
-        .nav-item {
-            justify-content: center;
-            padding: 0;
-        }
+//     .brand-title {
+//       font-weight: 700;
+//       font-size: 1.1rem;
+//       color: $text-primary;
+//       white-space: nowrap;
+//     }
+//   }
 
-        .profile-container {
-            justify-content: center;
-            padding: 12px 0;
-        }
-    }
-}
+//   .collapse-btn {
+//     color: $text-muted;
+//     &:hover {
+//       color: $text-primary;
+//       background-color: rgba(0, 0, 0, 0.04);
+//     }
+//   }
+// }
 
-// --- Header / Logo ---
-.sidenav-header {
-    height: 64px;
+// .divider {
+//   border-color: $border-color !important;
+// }
+
+// .nav-list {
+//   padding: 12px 8px !important;
+//   flex: 1;
+
+//   .nav-item {
+//     border-radius: 8px;
+//     margin-bottom: 4px;
+//     color: $text-muted !important;
+//     transition: all 0.2s ease;
+//     height: 48px;
+
+//     .item-icon {
+//       color: $text-muted;
+//     }
+
+//     .item-text {
+//       font-weight: 500;
+//       font-size: 0.9rem;
+//     }
+
+//     &:hover {
+//       background-color: rgba($accent-blue, 0.05) !important;
+//       color: $text-primary !important;
+
+//       .item-icon {
+//         color: $accent-blue;
+//       }
+//     }
+
+//     &.active-link {
+//       background-color: $primary-orange !important;
+//       color: #ffffff !important;
+
+//       .item-icon {
+//         color: #ffffff !important;
+//       }
+//     }
+//   }
+// }
+
+// .user-profile-section {
+//   margin-top: auto;
+
+//   .profile-container {
+//     display: flex;
+//     align-items: center;
+//     padding: 16px;
+//     gap: 12px;
+
+//     .profile-icon {
+//       font-size: 32px;
+//       width: 32px;
+//       height: 32px;
+//       color: $text-muted;
+//     }
+
+//     .profile-info {
+//       display: flex;
+//       flex-direction: column;
+//       overflow: hidden;
+
+//       .user-name {
+//         font-size: 0.85rem;
+//         font-weight: 600;
+//         color: $text-primary;
+//         white-space: nowrap;
+//       }
+
+//       .user-role {
+//         font-size: 0.75rem;
+//         color: $text-muted;
+//       }
+//     }
+//   }
+// }
+
+// Paleta corporativa Light SaaS
+$bg-app: #F4F6F9;
+$sidebar-bg: #FFFFFF;
+$card-bg: #FFFFFF;
+$text-primary: #1F2937;
+$text-muted: #6B7280;
+$border-color: #E5E7EB;
+$primary-orange: #FF6B35;
+$primary-blue: #1E40AF;
+$accent-blue: #2563EB;
+
+// --- SIDEBAR ---
+.sidebar {
+  height: 100vh;
+  width: 260px;
+  background-color: $sidebar-bg;
+  border-right: 1px solid $border-color;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0;
+
+  .sidebar-brand {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 0 16px;
+    gap: 12px;
+    padding: 0 20px 24px 20px;
+    border-bottom: 1px solid $border-color;
 
-    .brand-logo {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-
-        .brand-icon {
-            color: $accent-color;
-            font-size: 28px;
-            width: 28px;
-            height: 28px;
-        }
-
-        .brand-title {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.25rem;
-            font-weight: 700;
-            letter-spacing: -0.025em;
-            color: #ffffff;
-            white-space: nowrap;
-        }
+    .logo-badge {
+      background-color: $accent-blue;
+      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    .collapse-btn {
+    .brand-info {
+      h2 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: $text-primary;
+        margin: 0;
+      }
+
+      span {
+        font-size: 0.75rem;
         color: $text-muted;
-
-        &:hover {
-            color: #ffffff;
-            background-color: rgba(255, 255, 255, 0.05);
-        }
+      }
     }
-}
+  }
 
-.divider {
-    border-color: $border-color !important;
-}
-
-// --- Lista de Navegación ---
-.nav-list {
-    padding: 12px 8px !important;
-    flex: 1;
-
-    .nav-item {
-        border-radius: 8px;
-        margin-bottom: 4px;
-        color: $text-muted !important;
-        transition: all 0.2s ease;
-        height: 48px;
-
-        .item-icon {
-            color: $text-muted;
-            transition: color 0.2s ease;
-        }
-
-        .item-text {
-            color: $text-light;
-            font-family: 'Outfit', sans-serif;
-            font-weight: 500;
-            font-size: 0.9rem;
-            letter-spacing: -0.01em;
-            white-space: nowrap;
-        }
-
-        &:hover {
-            background-color: $bg-dark-secondary !important;
-            color: $text-light !important;
-
-            .item-icon {
-                color: $text-light;
-            }
-        }
-
-        // Estilo cuando la ruta está activa
-        &.active-link {
-            background-color: rgba($accent-color, 0.15) !important;
-            color: #ffffff !important;
-            position: relative;
-
-            .item-icon {
-                color: $accent-color;
-            }
-
-            // Indicador de barra lateral activa
-            &::before {
-                content: '';
-                position: absolute;
-                left: 0;
-                top: 8px;
-                bottom: 8px;
-                width: 4px;
-                background-color: $accent-color;
-                border-radius: 0 4px 4px 0;
-            }
-        }
-    }
-}
-
-// --- Sección de Perfil del Usuario ---
-.user-profile-section {
-    margin-top: auto;
-
-    .profile-container {
-        display: flex;
-        align-items: center;
-        padding: 12px 16px;
-        gap: 12px;
-
-        .profile-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border: 2px solid $accent-color;
-        }
-
-        .profile-info {
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            flex: 1;
-
-            .user-name {
-                font-size: 0.875rem;
-                font-weight: 600;
-                color: $text-light;
-                white-space: nowrap;
-                text-overflow: ellipsis;
-                overflow: hidden;
-            }
-
-            .user-role {
-                font-size: 0.75rem;
-                color: $text-muted;
-                white-space: nowrap;
-            }
-        }
-
-        .logout-btn {
-            color: #ef4444; // Rojo suave
-            opacity: 0.8;
-
-            &:hover {
-                opacity: 1;
-                background-color: rgba(239, 68, 68, 0.1);
-            }
-        }
-    }
-}
-
-// --- Área de Contenido Principal ---
-.main-content {
+  .sidebar-nav {
     display: flex;
     flex-direction: column;
+    padding: 16px 12px;
+    gap: 4px;
 
-    .app-toolbar {
-        background-color: #ffffff;
-        color: #111827;
-        border-bottom: 1px solid #e5e7eb;
-        box-shadow: none;
-        display: flex;
-        align-items: center;
-        gap: 12px;
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      color: $text-muted;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.95rem;
+      transition: all 0.2s ease;
 
-        .toolbar-title {
-            font-family: 'Inter', sans-serif;
-            font-size: 1.15rem;
-            font-weight: 600;
-            letter-spacing: -0.02em;
-        }
+      mat-icon {
+        color: inherit;
+      }
 
-        .toolbar-spacer {
-            flex: 1 1 auto;
-        }
+      &:hover {
+        background-color: rgba($accent-blue, 0.05);
+        color: $text-primary;
+      }
+
+      &.active {
+        background-color: $primary-orange;
+        color: #ffffff;
+        box-shadow: 0 4px 12px rgba(255, 107, 53, 0.25);
+      }
     }
-
-    .page-container {
-        padding: 24px;
-        flex: 1;
-        overflow-y: auto;
-    }
+  }
 }
