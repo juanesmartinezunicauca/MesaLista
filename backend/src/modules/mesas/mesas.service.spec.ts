@@ -20,10 +20,12 @@ describe('MesasService', () => {
     };
     pedido: {
       count: jest.Mock;
+      updateMany: jest.Mock;
     };
     factura: {
       count: jest.Mock;
     };
+    $transaction: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -37,10 +39,12 @@ describe('MesasService', () => {
       },
       pedido: {
         count: jest.fn(),
+        updateMany: jest.fn(),
       },
       factura: {
         count: jest.fn(),
       },
+      $transaction: jest.fn().mockImplementation((cb) => cb(prisma)),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -291,6 +295,73 @@ describe('MesasService', () => {
         mensaje: 'La mesa #9 ha sido eliminada exitosamente.',
         id_mesa: 1,
       });
+    });
+  });
+
+  describe('transferirMesa', () => {
+    it('debe lanzar BadRequestException si id_origen e id_destino son iguales', async () => {
+      await expect(
+        service.transferirMesa({ id_origen: 1, id_destino: 1 }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('debe lanzar NotFoundException si la mesa origen no existe', async () => {
+      prisma.mesa.findUnique.mockResolvedValueOnce(null);
+
+      await expect(
+        service.transferirMesa({ id_origen: 1, id_destino: 2 }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('debe lanzar NotFoundException si la mesa destino no existe', async () => {
+      prisma.mesa.findUnique
+        .mockResolvedValueOnce({ id_mesa: 1, numero: 1, estado: EstadoMesa.ocupada })
+        .mockResolvedValueOnce(null);
+
+      await expect(
+        service.transferirMesa({ id_origen: 1, id_destino: 2 }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('debe transferir correctamente incluso si la mesa origen no tiene pedidos activos registrados', async () => {
+      prisma.mesa.findUnique
+        .mockResolvedValueOnce({ id_mesa: 1, numero: 1, estado: EstadoMesa.ocupada })
+        .mockResolvedValueOnce({ id_mesa: 2, numero: 2, estado: EstadoMesa.libre });
+      prisma.pedido.count.mockResolvedValue(0);
+      prisma.mesa.update.mockResolvedValue({});
+
+      const res = await service.transferirMesa({ id_origen: 1, id_destino: 2 });
+      expect(res.pedidos_transferidos).toBe(0);
+      expect(prisma.pedido.updateMany).not.toHaveBeenCalled();
+      expect(prisma.mesa.update).toHaveBeenCalledTimes(2);
+    });
+
+    it('debe transferir pedidos, marcar origen libre y destino ocupada exitosamente', async () => {
+      const mesaOrigen = { id_mesa: 1, numero: 1, estado: EstadoMesa.ocupada };
+      const mesaDestino = { id_mesa: 2, numero: 2, estado: EstadoMesa.libre };
+
+      prisma.mesa.findUnique
+        .mockResolvedValueOnce(mesaOrigen)
+        .mockResolvedValueOnce(mesaDestino);
+      prisma.pedido.count.mockResolvedValue(3);
+      prisma.pedido.updateMany.mockResolvedValue({ count: 3 });
+      prisma.mesa.update.mockResolvedValue({});
+
+      const res = await service.transferirMesa({ id_origen: 1, id_destino: 2 });
+
+      expect(prisma.pedido.updateMany).toHaveBeenCalledWith({
+        where: { id_mesa: 1, estado: EstadoPedido.enviada },
+        data: { id_mesa: 2 },
+      });
+      expect(prisma.mesa.update).toHaveBeenCalledWith({
+        where: { id_mesa: 1 },
+        data: { estado: EstadoMesa.libre },
+      });
+      expect(prisma.mesa.update).toHaveBeenCalledWith({
+        where: { id_mesa: 2 },
+        data: { estado: EstadoMesa.ocupada },
+      });
+      expect(res.pedidos_transferidos).toBe(3);
     });
   });
 });

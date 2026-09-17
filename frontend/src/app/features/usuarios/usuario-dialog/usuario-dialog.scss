@@ -1,0 +1,191 @@
+@use 'tokens' as *;
+
+.usuario-dialog-container {
+  padding: 4px;
+  min-width: 420px;
+  max-width: 520px;
+  font-family: $font-family-base;
+}
+
+.dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 18px 24px 14px;
+  border-bottom: 1px solid $border-color;
+  background-color: $bg-card-alt;
+  border-radius: $radius-lg $radius-lg 0 0;
+
+  .dialog-title-group {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .header-icon-badge {
+    width: 44px;
+    height: 44px;
+    border-radius: $radius-lg;
+    background: linear-gradient(135deg, $brand-blue 0%, #3b82f6 100%);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: $shadow-blue;
+
+    &.badge-edit {
+      background: linear-gradient(135deg, $brand-orange 0%, #ff8c5a 100%);
+      box-shadow: $shadow-orange;
+    }
+  }
+
+  .dialog-title {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: $text-primary;
+  }
+
+  .dialog-subtitle {
+    font-size: 0.8rem;
+    color: $text-muted;
+    display: block;
+    margin-top: 2px;
+  }
+
+  .btn-close {
+    color: $text-muted;
+    &:hover {
+      color: $text-primary;
+    }
+  }
+}
+
+.dialog-body {
+  padding: 20px 24px !important;
+  max-height: 72vh;
+}
+
+.feedback-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: $radius-md;
+  font-size: 0.875rem;
+  margin-bottom: 16px;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  &.error-banner {
+    background-color: $color-danger-bg;
+    color: $color-danger;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+}
+
+.form-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.role-option-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+
+  .option-role-icon {
+    color: $brand-blue;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .option-role-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .role-name {
+    font-weight: 600;
+    color: $text-primary;
+    font-size: 0.9rem;
+  }
+
+  .role-desc {
+    font-size: 0.75rem;
+    color: $text-muted;
+  }
+}
+
+.status-toggle-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border: 1px solid $border-color;
+  border-radius: $radius-md;
+  background-color: $bg-card-alt;
+
+  .toggle-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .toggle-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: $text-primary;
+  }
+
+  .toggle-desc {
+    font-size: 0.75rem;
+    color: $text-muted;
+  }
+
+  .status-pill {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: $radius-full;
+    background-color: #e5e7eb;
+    color: $text-secondary;
+
+    &.pill-active {
+      background-color: $color-success-bg;
+      color: $color-success;
+    }
+  }
+}
+
+.dialog-actions {
+  padding: 14px 24px 18px;
+  border-top: 1px solid $border-color;
+  gap: 12px;
+
+  .btn-confirm {
+    background-color: $brand-blue !important;
+    color: #ffffff !important;
+    border-radius: $radius-md;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: $shadow-blue;
+
+    &:hover:not(:disabled) {
+      background-color: $brand-blue-dark !important;
+    }
+  }
+}

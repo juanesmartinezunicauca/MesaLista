@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -35,13 +35,25 @@ import { DetalleMesaComponent } from '../detalle-mesa/detalle-mesa';
   templateUrl: './plano-mesas.html',
   styleUrl: './plano-mesas.scss',
 })
-export class PlanoMesasComponent {
+export class PlanoMesasComponent implements OnInit {
   mesasService = inject(MesasService);
   private dialog = inject(MatDialog);
 
   // Vista activa: 'plano' (tablero general) | 'borrador' (toma de pedido) | 'detalle' (pedidos enviados)
   vistaActiva = signal<'plano' | 'borrador' | 'detalle'>('plano');
-  mesaActiva = signal<Mesa | null>(null);
+  mesaActivaId = signal<number | null>(null);
+
+  // Mesa activa computada de forma reactiva desde el servicio global de mesas
+  mesaActiva = computed<Mesa | null>(() => {
+    const id = this.mesaActivaId();
+    if (!id) return null;
+    return this.mesasService.mesas().find((m) => m.id_mesa === id) || null;
+  });
+
+  ngOnInit(): void {
+    // Al acceder al plano de mesas, recarga las mesas y el catálogo fresco desde el backend
+    this.mesasService.cargarDatosDesdeBackend();
+  }
 
   abrirNuevaMesaDialog(): void {
     this.dialog.open(NuevaMesaDialogComponent, {
@@ -75,45 +87,41 @@ export class PlanoMesasComponent {
    * - Si está libre o en pedido: abre la toma del pedido (borrador)
    */
   clickMesa(mesa: Mesa): void {
-    this.mesaActiva.set(mesa);
+    this.mesaActivaId.set(mesa.id_mesa);
     if (mesa.estado_visual === 'ocupada') {
       this.vistaActiva.set('detalle');
     } else {
+      this.mesasService.cargarCatalogo();
       this.vistaActiva.set('borrador');
     }
   }
 
   abrirBorradorDirecto(mesa: Mesa, event?: MouseEvent): void {
     if (event) event.stopPropagation();
-    this.mesaActiva.set(mesa);
+    this.mesasService.cargarCatalogo();
+    this.mesaActivaId.set(mesa.id_mesa);
     this.vistaActiva.set('borrador');
   }
 
   abrirDetalleDirecto(mesa: Mesa, event?: MouseEvent): void {
     if (event) event.stopPropagation();
-    this.mesaActiva.set(mesa);
+    this.mesaActivaId.set(mesa.id_mesa);
     this.vistaActiva.set('detalle');
   }
 
   abrirNuevoPedido(): void {
     // Desde detalle-mesa, pasa a borrador-pedido para tomar el Pedido N+1
+    this.mesasService.cargarCatalogo();
     this.vistaActiva.set('borrador');
   }
 
   volverAlPlano(): void {
     this.vistaActiva.set('plano');
-    this.mesaActiva.set(null);
+    this.mesaActivaId.set(null);
   }
 
   onPedidoEnviado(): void {
-    // Cuando el pedido se envía con éxito, refresca la mesa activa y vuelve a su detalle
-    const id = this.mesaActiva()?.id_mesa;
-    if (id) {
-      const mesaActual = this.mesasService.mesas().find((m) => m.id_mesa === id);
-      if (mesaActual) {
-        this.mesaActiva.set(mesaActual);
-      }
-    }
+    // La mesa activa se recalcula automáticamente gracias a mesaActiva = computed(...)
     this.vistaActiva.set('detalle');
   }
 
@@ -122,7 +130,7 @@ export class PlanoMesasComponent {
 
     if (confirm(`¿Generar Factura para la Mesa #${mesa.numero} por un total de $${mesa.total_acumulado.toLocaleString()} COP?`)) {
       this.mesasService.liberarMesa(mesa.id_mesa);
-      if (this.mesaActiva()?.id_mesa === mesa.id_mesa) {
+      if (this.mesaActivaId() === mesa.id_mesa) {
         this.volverAlPlano();
       }
     }

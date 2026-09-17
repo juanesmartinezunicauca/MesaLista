@@ -10,12 +10,14 @@ describe('AuthController', () => {
   let service: {
     login: jest.Mock;
     obtenerPerfil: jest.Mock;
+    actualizarPerfil: jest.Mock;
   };
 
   beforeEach(async () => {
     service = {
       login: jest.fn(),
       obtenerPerfil: jest.fn(),
+      actualizarPerfil: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -79,5 +81,26 @@ describe('AuthController', () => {
 
     expect(service.obtenerPerfil).toHaveBeenCalledWith(1);
     expect(res).toEqual(mockPerfil);
+  });
+
+  it('PATCH /auth/perfil debe delegar a authService.actualizarPerfil con el id del usuario', async () => {
+    const updateDto = {
+      nombre: 'Carlos Mesero Actualizado',
+      password: 'newpassword123',
+    };
+    const mockPerfilActualizado = {
+      id_usuario: 1,
+      nombre: 'Carlos Mesero Actualizado',
+      usuario: 'cmesero',
+      rol: RolUsuario.mesero,
+      estado: EstadoUsuario.activo,
+    };
+
+    service.actualizarPerfil.mockResolvedValue(mockPerfilActualizado);
+
+    const res = await controller.actualizarPerfil(1, updateDto);
+
+    expect(service.actualizarPerfil).toHaveBeenCalledWith(1, updateDto);
+    expect(res).toEqual(mockPerfilActualizado);
   });
 });

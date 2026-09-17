@@ -65,24 +65,31 @@ export class ListaProductosComponent implements OnInit {
     return { total, disponibles, agotados, bajoStock };
   });
 
-  // Lista de productos filtrada reactivamente
-  productosFiltrados = computed<Producto[]>(() => {
+  // Lista de productos filtrada reactivamente, con campos calculados precargados
+  // para evitar llamadas repetidas a funciones puras en cada ciclo de change detection.
+  productosFiltrados = computed(() => {
     const list = this.productos();
     const cat = this.categoriaSeleccionada();
     const disp = this.filtroDisponibilidad();
     const term = this.busqueda().trim().toLowerCase();
 
-    return list.filter((p) => {
-      const coincideCat = cat === 'Todas' || p.categoria === cat;
-      const coincideDisp =
-        disp === 'todos' || (disp === 'disponibles' ? p.disponible : !p.disponible);
-      const coincideTerm =
-        !term ||
-        p.nombre.toLowerCase().includes(term) ||
-        p.categoria.toLowerCase().includes(term);
-
-      return coincideCat && coincideDisp && coincideTerm;
-    });
+    return list
+      .filter((p) => {
+        const coincideCat = cat === 'Todas' || p.categoria === cat;
+        const coincideDisp =
+          disp === 'todos' || (disp === 'disponibles' ? p.disponible : !p.disponible);
+        const coincideTerm =
+          !term ||
+          p.nombre.toLowerCase().includes(term) ||
+          p.categoria.toLowerCase().includes(term);
+        return coincideCat && coincideDisp && coincideTerm;
+      })
+      .map((p) => ({
+        ...p,
+        margen: this.calcularMargen(p.precio_venta, p.costo),
+        etiquetaStock: this.obtenerEtiquetaStock(p.cantidad_inventario),
+        claseStock: this.obtenerClaseStock(p.cantidad_inventario),
+      }));
   });
 
   ngOnInit(): void {

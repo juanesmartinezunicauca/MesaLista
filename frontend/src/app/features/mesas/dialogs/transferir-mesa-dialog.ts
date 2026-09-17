@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -128,8 +128,11 @@ export class TransferirMesaDialogComponent {
   idMesaDestino: number | null = null;
   errorMensaje: string = '';
 
-  mesasDisponibles = () =>
-    this.mesasService.mesas().filter((m) => m.id_mesa !== this.data.mesaOrigen.id_mesa);
+  // computed() para que Angular solo recalcule cuando cambia la lista de mesas,
+  // en lugar de hacerlo en cada ciclo de change detection.
+  mesasDisponibles = computed(() =>
+    this.mesasService.mesas().filter((m) => m.id_mesa !== this.data.mesaOrigen.id_mesa)
+  );
 
   confirmarTransferencia(): void {
     if (!this.idMesaDestino) return;

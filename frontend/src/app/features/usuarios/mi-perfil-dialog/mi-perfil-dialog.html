@@ -1,0 +1,135 @@
+<div class="perfil-dialog-container">
+  <form [formGroup]="perfilForm" (ngSubmit)="guardar()">
+    <div class="dialog-header">
+      <div class="user-card-header">
+        <div class="user-avatar">
+          {{ usuarioActual()?.iniciales || 'US' }}
+        </div>
+        <div class="user-info">
+          <h2 class="user-name-title">{{ usuarioActual()?.nombre }}</h2>
+          <div class="user-meta-row">
+            <span class="user-handle">&#64;{{ usuarioActual()?.usuario }}</span>
+            <span class="role-badge" [attr.data-role]="usuarioActual()?.rol">
+              {{ usuarioActual()?.rol | titlecase }}
+            </span>
+          </div>
+        </div>
+      </div>
+      <button type="button" mat-icon-button (click)="cerrar()" class="btn-close" aria-label="Cerrar modal">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <mat-dialog-content class="dialog-body">
+      @if (errorMensaje()) {
+        <div class="feedback-banner error-banner">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ errorMensaje() }}</span>
+        </div>
+      }
+
+      @if (exitoMensaje()) {
+        <div class="feedback-banner success-banner">
+          <mat-icon>check_circle</mat-icon>
+          <span>{{ exitoMensaje() }}</span>
+        </div>
+      }
+
+      <div class="form-content">
+        <div class="section-title">
+          <mat-icon>badge</mat-icon>
+          <span>Datos Personales</span>
+        </div>
+
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Nombre Completo</mat-label>
+          <input matInput type="text" formControlName="nombre" placeholder="Ej. Juan Pérez">
+          <mat-icon matPrefix>person</mat-icon>
+          @if (tieneError('nombre', 'required')) {
+            <mat-error>El nombre es obligatorio.</mat-error>
+          }
+          @if (tieneError('nombre', 'minlength')) {
+            <mat-error>Debe tener al menos 2 caracteres.</mat-error>
+          }
+        </mat-form-field>
+
+        <div class="divider"></div>
+
+        <div class="section-title">
+          <mat-icon>lock_reset</mat-icon>
+          <span>Cambiar Contraseña</span>
+          <span class="caption-optional">(Dejar en blanco para mantener la actual)</span>
+        </div>
+
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Nueva Contraseña</mat-label>
+          <input
+            matInput
+            type="password"
+            [type]="mostrarPassword() ? 'text' : 'password'"
+            formControlName="password"
+            placeholder="Mínimo 6 caracteres"
+          >
+          <mat-icon matPrefix>lock</mat-icon>
+          <button
+            type="button"
+            mat-icon-button
+            matSuffix
+            (click)="toggleMostrarPassword()"
+            [attr.aria-label]="mostrarPassword() ? 'Ocultar contraseña' : 'Ver contraseña'"
+          >
+            <mat-icon>{{ mostrarPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          @if (tieneError('password', 'minlength')) {
+            <mat-error>La contraseña debe tener mínimo 6 caracteres.</mat-error>
+          }
+        </mat-form-field>
+
+        @if (perfilForm.get('password')?.value) {
+          <mat-form-field appearance="outline" class="w-full animate-fade-in">
+            <mat-label>Confirmar Nueva Contraseña</mat-label>
+            <input
+              matInput
+              type="password"
+              [type]="mostrarConfirmPassword() ? 'text' : 'password'"
+              formControlName="confirmPassword"
+              placeholder="Repite la contraseña"
+            >
+            <mat-icon matPrefix>lock_clock</mat-icon>
+            <button
+              type="button"
+              mat-icon-button
+              matSuffix
+              (click)="toggleMostrarConfirmPassword()"
+              [attr.aria-label]="mostrarConfirmPassword() ? 'Ocultar confirmación' : 'Ver confirmación'"
+            >
+              <mat-icon>{{ mostrarConfirmPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+          </mat-form-field>
+        }
+      </div>
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="end" class="dialog-actions">
+      <button type="button" mat-button (click)="cerrar()" [disabled]="guardando()">
+        Cancelar
+      </button>
+      <button
+        type="submit"
+        mat-flat-button
+        color="primary"
+        class="btn-save"
+        [disabled]="guardando() || perfilForm.invalid"
+      >
+        @if (guardando()) {
+          <span>Guardando...</span>
+        } @else {
+          <ng-container>
+            <mat-icon>save</mat-icon>
+            <span>Guardar Cambios</span>
+          </ng-container>
+        }
+      </button>
+    </mat-dialog-actions>
+  </form>
+</div>

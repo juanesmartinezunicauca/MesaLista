@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -28,15 +28,26 @@ import { MesasService } from '../services/mesas.service';
   templateUrl: './borrador-pedido.html',
   styleUrl: './borrador-pedido.scss',
 })
-export class BorradorPedidoComponent {
+export class BorradorPedidoComponent implements OnInit {
   @Input({ required: true }) mesa!: Mesa;
   @Output() cerrar = new EventEmitter<void>();
   @Output() pedidoEnviado = new EventEmitter<void>();
 
   mesasService = inject(MesasService);
 
-  // Filtro de categorías del catálogo
-  categorias = ['Todas', 'Hamburguesas', 'Comidas Rápidas', 'Entradas', 'Bebidas'];
+  // Mesa reactiva vinculada directamente al estado global de mesasService
+  mesaActual = computed<Mesa>(() => {
+    const fromService = this.mesasService.mesas().find((m) => m.id_mesa === this.mesa?.id_mesa);
+    return fromService || this.mesa;
+  });
+
+  // Categorías calculadas dinámicamente desde los productos disponibles en el catálogo
+  categorias = computed(() => {
+    const list = this.mesasService.catalogoProductos();
+    const dynamicCats = Array.from(new Set(list.map((p) => p.categoria).filter(Boolean)));
+    return ['Todas', ...dynamicCats.sort()];
+  });
+
   categoriaSeleccionada = signal<string>('Todas');
   busquedaProducto = signal<string>('');
 
@@ -46,17 +57,27 @@ export class BorradorPedidoComponent {
   observacionLibre = signal<string>('');
   notaPedidoCocina = signal<string>('');
 
-  // Catálogo filtrado
-  productosFiltrados = () => {
+  // Total a despachar del pedido actual en borrador (exclusivo de los ítems de este pedido)
+  totalPedidoActual = computed<number>(() => {
+    return this.mesaActual().borrador_local.reduce((acc, item) => acc + item.subtotal, 0);
+  });
+
+  ngOnInit(): void {
+    // Al abrir el borrador de pedido, refresca el catálogo desde el backend
+    this.mesasService.cargarCatalogo();
+  }
+
+  // Catálogo filtrado reactivo
+  productosFiltrados = computed(() => {
     const cat = this.categoriaSeleccionada();
     const query = this.busquedaProducto().toLowerCase().trim();
 
     return this.mesasService.catalogoProductos().filter((p) => {
-      const matchCat = cat === 'Todas' || p.categoria === cat;
+      const matchCat = cat === 'Todas' || p.categoria.toLowerCase() === cat.toLowerCase();
       const matchQuery = !query || p.nombre.toLowerCase().includes(query);
       return matchCat && matchQuery && p.disponible;
     });
-  };
+  });
 
   seleccionarCategoria(cat: string): void {
     this.categoriaSeleccionada.set(cat);
@@ -68,7 +89,7 @@ export class BorradorPedidoComponent {
       this.ingredientesSeleccionados.set([...producto.ingredientes_removibles]);
       this.observacionLibre.set('');
     } else {
-      this.mesasService.agregarItemBorrador(this.mesa.id_mesa, producto);
+      this.mesasService.agregarItemBorrador(this.mesaActual().id_mesa, producto);
     }
   }
 
@@ -90,7 +111,7 @@ export class BorradorPedidoComponent {
       (ing) => !this.ingredientesSeleccionados().includes(ing)
     );
 
-    this.mesasService.agregarItemBorrador(this.mesa.id_mesa, prod, {
+    this.mesasService.agregarItemBorrador(this.mesaActual().id_mesa, prod, {
       ingredientes_removibles: prod.ingredientes_removibles,
       ingredientes_removidos: removidos,
       observacion: this.observacionLibre().trim(),
@@ -106,12 +127,12 @@ export class BorradorPedidoComponent {
   }
 
   modificarCantidad(item: ItemPedido, delta: number): void {
-    this.mesasService.modificarCantidadBorrador(this.mesa.id_mesa, item.id_item, delta);
+    this.mesasService.modificarCantidadBorrador(this.mesaActual().id_mesa, item.id_item, delta);
   }
 
   enviarCocina(): void {
     const res = this.mesasService.enviarPedidoACocina(
-      this.mesa.id_mesa,
+      this.mesaActual().id_mesa,
       this.notaPedidoCocina().trim()
     );
     if (res.exito) {

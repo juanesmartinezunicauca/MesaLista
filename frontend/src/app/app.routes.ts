@@ -47,6 +47,13 @@ export const routes: Routes = [
             './features/catalogo/producto-form/producto-form'
           ).then((m) => m.ProductoFormComponent),
       },
+      {
+        path: 'usuarios',
+        loadComponent: () =>
+          import('./features/usuarios/lista-usuarios/lista-usuarios').then(
+            (m) => m.ListaUsuariosComponent
+          ),
+      },
       // Compatibilidad con enlace previo
       { path: 'inventory', redirectTo: 'catalogo', pathMatch: 'full' },
     ],

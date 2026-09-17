@@ -10,6 +10,7 @@ import {
     CambiarEstadoMesaDto,
     CreateMesaDto,
     QueryMesaDto,
+    TransferirMesaDto,
     UpdateMesaDto,
 } from './dto';
 
@@ -139,6 +140,67 @@ export class MesasService {
             data: {
                 estado: cambiarEstadoDto.estado,
             },
+        });
+    }
+
+    /**
+     * Transfiere las comandas activas de una mesa origen a una mesa destino.
+     * Actualiza el estado de la mesa origen a libre y la mesa destino a ocupada de manera transaccional.
+     */
+    async transferirMesa(dto: TransferirMesaDto) {
+        if (dto.id_origen === dto.id_destino) {
+            throw new BadRequestException('La mesa origen y destino no pueden ser la misma.');
+        }
+
+        return this.prisma.$transaction(async (tx) => {
+            const origen = await tx.mesa.findUnique({ where: { id_mesa: dto.id_origen } });
+            const destino = await tx.mesa.findUnique({ where: { id_mesa: dto.id_destino } });
+
+            if (!origen) {
+                throw new NotFoundException(`La mesa origen con ID #${dto.id_origen} no fue encontrada.`);
+            }
+            if (!destino) {
+                throw new NotFoundException(`La mesa destino con ID #${dto.id_destino} no fue encontrada.`);
+            }
+
+            const pedidosActivos = await tx.pedido.count({
+                where: {
+                    id_mesa: dto.id_origen,
+                    estado: EstadoPedido.enviada,
+                },
+            });
+
+            if (pedidosActivos > 0) {
+                // Mover pedidos activos a la mesa destino
+                await tx.pedido.updateMany({
+                    where: {
+                        id_mesa: dto.id_origen,
+                        estado: EstadoPedido.enviada,
+                    },
+                    data: {
+                        id_mesa: dto.id_destino,
+                    },
+                });
+            }
+
+            // Liberar mesa de origen
+            await tx.mesa.update({
+                where: { id_mesa: dto.id_origen },
+                data: { estado: EstadoMesa.libre },
+            });
+
+            // Marcar mesa de destino como ocupada
+            await tx.mesa.update({
+                where: { id_mesa: dto.id_destino },
+                data: { estado: EstadoMesa.ocupada },
+            });
+
+            return {
+                mensaje: `Comandas transferidas de Mesa #${origen.numero} a Mesa #${destino.numero} exitosamente.`,
+                id_origen: dto.id_origen,
+                id_destino: dto.id_destino,
+                pedidos_transferidos: pedidosActivos,
+            };
         });
     }
 

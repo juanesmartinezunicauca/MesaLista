@@ -1,0 +1,262 @@
+<div class="usuarios-container">
+  <!-- 1. Encabezado de la Sección -->
+  <header class="page-header">
+    <div class="header-titles">
+      <div class="header-badge">
+        <mat-icon>manage_accounts</mat-icon>
+        <span>Módulo Administrativo</span>
+      </div>
+      <h1 class="page-title">Personal y Perfiles</h1>
+      <p class="page-subtitle">
+        Gestiona las cuentas de acceso, roles operativos y permisos del equipo de trabajo en MesaLista POS.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <button type="button" mat-stroked-button class="btn-reload" (click)="cargarUsuarios()" [disabled]="cargando()">
+        <mat-icon [class.spinning]="cargando()">sync</mat-icon>
+        <span>Actualizar</span>
+      </button>
+
+      <button type="button" mat-flat-button color="primary" class="btn-create" (click)="abrirDialogoCrear()">
+        <mat-icon>person_add</mat-icon>
+        <span>Nuevo Empleado</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 2. KPIs / Métricas del Personal -->
+  <section class="kpi-grid">
+    <div class="kpi-card card-total">
+      <div class="kpi-icon-wrapper">
+        <mat-icon>groups</mat-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-value">{{ metricas().total }}</span>
+        <span class="kpi-label">Total Empleados</span>
+      </div>
+    </div>
+
+    <div class="kpi-card card-admin">
+      <div class="kpi-icon-wrapper">
+        <mat-icon>admin_panel_settings</mat-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-value">{{ metricas().administradores }}</span>
+        <span class="kpi-label">Administradores</span>
+      </div>
+    </div>
+
+    <div class="kpi-card card-mesero">
+      <div class="kpi-icon-wrapper">
+        <mat-icon>restaurant</mat-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-value">{{ metricas().meseros }}</span>
+        <span class="kpi-label">Meseros</span>
+      </div>
+    </div>
+
+    <div class="kpi-card card-cajero">
+      <div class="kpi-icon-wrapper">
+        <mat-icon>point_of_sale</mat-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-value">{{ metricas().cajeros }}</span>
+        <span class="kpi-label">Cajeros</span>
+      </div>
+    </div>
+
+    <div class="kpi-card card-cocina">
+      <div class="kpi-icon-wrapper">
+        <mat-icon>soup_kitchen</mat-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-value">{{ metricas().cocina }}</span>
+        <span class="kpi-label">Cocina</span>
+      </div>
+    </div>
+
+    <div class="kpi-card card-inactivo">
+      <div class="kpi-icon-wrapper">
+        <mat-icon>person_off</mat-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-value">{{ metricas().inactivos }}</span>
+        <span class="kpi-label">Inactivos</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Barra de Búsqueda y Filtros -->
+  <section class="filters-bar">
+    <div class="search-box">
+      <mat-icon class="search-icon">search</mat-icon>
+      <input
+        type="text"
+        placeholder="Buscar por nombre o usuario (ej. @admin)..."
+        [value]="busqueda()"
+        (input)="onBusquedaInput($event)"
+      >
+      @if (busqueda()) {
+        <button type="button" mat-icon-button (click)="busqueda.set('')" class="btn-clear-search">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </div>
+
+    <div class="filters-group">
+      <!-- Filtro por Rol -->
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Rol / Perfil</mat-label>
+        <mat-select [value]="filtroRol()" (selectionChange)="filtroRol.set($event.value)">
+          <mat-option value="todos">Todos los Roles</mat-option>
+          <mat-option value="administrador">Administrador</mat-option>
+          <mat-option value="cajero">Cajero</mat-option>
+          <mat-option value="mesero">Mesero</mat-option>
+          <mat-option value="cocina">Cocina</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Filtro por Estado -->
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Estado</mat-label>
+        <mat-select [value]="filtroEstado()" (selectionChange)="filtroEstado.set($event.value)">
+          <mat-option value="todos">Todos</mat-option>
+          <mat-option value="activo">Solo Activos</mat-option>
+          <mat-option value="inactivo">Solo Inactivos</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </section>
+
+  <!-- 4. Cuadrícula / Tarjetas de Usuarios -->
+  @if (cargando()) {
+    <div class="loading-state">
+      <mat-icon class="spinning">sync</mat-icon>
+      <span>Cargando lista de personal...</span>
+    </div>
+  } @else if (error()) {
+    <div class="error-state">
+      <mat-icon>error_outline</mat-icon>
+      <p>{{ error() }}</p>
+      <button type="button" mat-flat-button color="primary" (click)="cargarUsuarios()">Reintentar</button>
+    </div>
+  } @else if (usuariosFiltrados().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon-circle">
+        <mat-icon>person_search</mat-icon>
+      </div>
+      <h3>No se encontraron usuarios</h3>
+      <p>No hay colaboradores que coincidan con los criterios de búsqueda o filtros seleccionados.</p>
+      <button type="button" mat-stroked-button (click)="limpiarFiltros()">Limpiar Filtros</button>
+    </div>
+  } @else {
+    <section class="users-grid">
+      @for (usuario of usuariosFiltrados(); track usuario.id_usuario) {
+        <article class="user-card" [class.card-inactive]="usuario.estado === 'inactivo'">
+          <div class="card-top">
+            <div class="avatar-ring" [attr.data-role]="usuario.rol">
+              <div class="avatar-circle">
+                {{ obtenerIniciales(usuario.nombre) }}
+              </div>
+            </div>
+
+            <div class="user-details">
+              <div class="name-row">
+                <h3 class="user-name">{{ usuario.nombre }}</h3>
+                @if (usuario.id_usuario === usuarioActual()?.id_usuario) {
+                  <span class="current-user-tag">Tú</span>
+                }
+              </div>
+              <span class="user-username">&#64;{{ usuario.usuario }}</span>
+            </div>
+
+            <button
+              type="button"
+              mat-icon-button
+              [matMenuTriggerFor]="cardMenu"
+              class="btn-card-menu"
+              aria-label="Opciones de usuario"
+            >
+              <mat-icon>more_vert</mat-icon>
+            </button>
+
+            <mat-menu #cardMenu="matMenu">
+              <button type="button" mat-menu-item (click)="abrirDialogoEditar(usuario)">
+                <mat-icon>edit</mat-icon>
+                <span>Editar datos</span>
+              </button>
+              <button
+                type="button"
+                mat-menu-item
+                (click)="toggleEstado(usuario)"
+                [disabled]="usuario.id_usuario === usuarioActual()?.id_usuario"
+              >
+                <mat-icon>{{ usuario.estado === 'activo' ? 'block' : 'check_circle' }}</mat-icon>
+                <span>{{ usuario.estado === 'activo' ? 'Desactivar acceso' : 'Activar acceso' }}</span>
+              </button>
+              <mat-divider></mat-divider>
+              <button
+                type="button"
+                mat-menu-item
+                (click)="eliminarUsuario(usuario)"
+                class="menu-item-danger"
+                [disabled]="usuario.id_usuario === usuarioActual()?.id_usuario"
+              >
+                <mat-icon color="warn">delete</mat-icon>
+                <span>Eliminar del sistema</span>
+              </button>
+            </mat-menu>
+          </div>
+
+          <div class="card-divider"></div>
+
+          <div class="card-bottom">
+            <div class="role-pill" [attr.data-role]="usuario.rol">
+              @switch (usuario.rol) {
+                @case ('administrador') {
+                  <mat-icon>admin_panel_settings</mat-icon>
+                }
+                @case ('cajero') {
+                  <mat-icon>point_of_sale</mat-icon>
+                }
+                @case ('mesero') {
+                  <mat-icon>restaurant</mat-icon>
+                }
+                @case ('cocina') {
+                  <mat-icon>soup_kitchen</mat-icon>
+                }
+              }
+              <span>{{ usuario.rol | titlecase }}</span>
+            </div>
+
+            <div class="status-action-row">
+              <mat-slide-toggle
+                [checked]="usuario.estado === 'activo'"
+                (change)="toggleEstado(usuario)"
+                [disabled]="usuario.id_usuario === usuarioActual()?.id_usuario"
+                color="primary"
+                [matTooltip]="usuario.id_usuario === usuarioActual()?.id_usuario ? 'No puedes desactivarte a ti mismo' : (usuario.estado === 'activo' ? 'Desactivar usuario' : 'Activar usuario')"
+              >
+                <span class="status-text" [class.text-active]="usuario.estado === 'activo'">
+                  {{ usuario.estado === 'activo' ? 'Activo' : 'Inactivo' }}
+                </span>
+              </mat-slide-toggle>
+
+              <button
+                type="button"
+                mat-icon-button
+                class="btn-quick-edit"
+                matTooltip="Editar usuario"
+                (click)="abrirDialogoEditar(usuario)"
+              >
+                <mat-icon>edit</mat-icon>
+              </button>
+            </div>
+          </div>
+        </article>
+      }
+    </section>
+  }
+</div>

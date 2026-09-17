@@ -25,6 +25,10 @@ export class MesasService {
   isSyncing = signal<boolean>(false);
   syncError = signal<string | null>(null);
 
+  // TTL para evitar recargas innecesarias del catálogo (30 segundos)
+  private _ultimaCargaCatalogo = 0;
+  private readonly CATALOGO_TTL_MS = 30_000;
+
   // Catálogo de productos disponibles para pedidos (cargado dinámicamente desde el backend)
   catalogoProductos = signal<ProductoCatalogo[]>([]);
 
@@ -65,7 +69,8 @@ export class MesasService {
   });
 
   constructor() {
-    this.cargarDatosDesdeBackend();
+    // La carga inicial se dispara desde PlanoMesasComponent.ngOnInit()
+    // para evitar una doble carga al montar el servicio y el componente.
   }
 
   /**
@@ -77,10 +82,16 @@ export class MesasService {
   }
 
   /**
-   * Carga el catálogo de productos desde el backend
+   * Carga el catálogo de productos desde el backend.
+   * Incorpora un TTL de 30s para evitar llamadas excesivas cuando múltiples
+   * puntos de la UI lo invocan en cascada (clickMesa, borrador ngOnInit, etc.).
    */
   cargarCatalogo(): void {
-    this.catalogoApi.obtenerProductos({ disponible: true }).subscribe({
+    const ahora = Date.now();
+    if (ahora - this._ultimaCargaCatalogo < this.CATALOGO_TTL_MS) return;
+    this._ultimaCargaCatalogo = ahora;
+
+    this.catalogoApi.obtenerProductos().subscribe({
       next: (prods) => {
         if (prods) {
           const catalogoMapeado: ProductoCatalogo[] = prods.map((p) => ({
@@ -490,13 +501,15 @@ export class MesasService {
 
         if (m.id_mesa === id_destino) {
           const pedidosConsolidados = [...m.pedidos, ...origen.pedidos];
-          const nuevoTotal = this.calcularTotalMesa(pedidosConsolidados, m.borrador_local);
+          const borradorConsolidado = [...m.borrador_local, ...origen.borrador_local];
+          const nuevoTotal = this.calcularTotalMesa(pedidosConsolidados, borradorConsolidado);
           return {
             ...m,
             estado_bd: 'ocupada',
             estado_visual: 'ocupada',
             mesero_actual: m.mesero_actual || origen.mesero_actual,
             pedidos: pedidosConsolidados,
+            borrador_local: borradorConsolidado,
             total_acumulado: nuevoTotal,
           };
         }
@@ -505,12 +518,22 @@ export class MesasService {
       })
     );
 
-    // Sincronizar estado libre en origen y ocupada en destino
-    this.mesasApi.cambiarEstado(id_origen, 'libre').subscribe({
-      error: (err) => console.warn('Error al liberar mesa origen en backend:', err),
-    });
-    this.mesasApi.cambiarEstado(id_destino, 'ocupada').subscribe({
-      error: (err) => console.warn('Error al marcar mesa destino en backend:', err),
+    // Actualizar mesa seleccionada si correspondía a la mesa transferida
+    if (this.mesaSeleccionada()?.id_mesa === id_origen) {
+      const destinoActualizado = this.mesasSignal().find((m) => m.id_mesa === id_destino);
+      if (destinoActualizado) {
+        this.mesaSeleccionada.set(destinoActualizado);
+      }
+    }
+
+    // Persistir transferencia atómica de comandas en backend
+    this.mesasApi.transferir(id_origen, id_destino).subscribe({
+      next: () => {
+        this.cargarMesas();
+      },
+      error: (err) => {
+        console.warn('Error al transferir mesa en backend:', err);
+      },
     });
 
     return {
