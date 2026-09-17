@@ -14,6 +14,7 @@
 
     <div class="header-actions">
       <button
+        type="button"
         mat-stroked-button
         class="btn-refresh"
         (click)="cargarProductos()"
@@ -24,7 +25,7 @@
         <span>Refrescar</span>
       </button>
 
-      <button mat-flat-button class="btn-create" (click)="irACrear()">
+      <button type="button" mat-flat-button class="btn-create" (click)="irACrear()">
         <mat-icon>add</mat-icon>
         <span>Nuevo Producto</span>
       </button>
@@ -84,9 +85,9 @@
         placeholder="Buscar por nombre o categoría..."
         [(ngModel)]="busqueda"
         class="search-input"
-      />
+      >
       @if (busqueda()) {
-        <button class="clear-search-btn" (click)="busqueda.set('')" matTooltip="Limpiar búsqueda">
+        <button type="button" class="clear-search-btn" (click)="busqueda.set('')" matTooltip="Limpiar búsqueda">
           <mat-icon>close</mat-icon>
         </button>
       }
@@ -95,6 +96,7 @@
     <!-- Filtro de Disponibilidad -->
     <div class="availability-filter-group">
       <button
+        type="button"
         class="filter-pill"
         [class.active]="filtroDisponibilidad() === 'todos'"
         (click)="filtroDisponibilidad.set('todos')"
@@ -102,6 +104,7 @@
         Todos
       </button>
       <button
+        type="button"
         class="filter-pill"
         [class.active]="filtroDisponibilidad() === 'disponibles'"
         (click)="filtroDisponibilidad.set('disponibles')"
@@ -109,6 +112,7 @@
         Disponibles
       </button>
       <button
+        type="button"
         class="filter-pill"
         [class.active]="filtroDisponibilidad() === 'agotados'"
         (click)="filtroDisponibilidad.set('agotados')"
@@ -123,6 +127,7 @@
     <div class="chips-scroll-container">
       @for (cat of categoriasDisponibles(); track cat) {
         <button
+          type="button"
           class="cat-chip"
           [class.active]="categoriaSeleccionada() === cat"
           (click)="categoriaSeleccionada.set(cat)"
@@ -141,7 +146,7 @@
         <strong>Error de Conexión</strong>
         <p>{{ err }}</p>
       </div>
-      <button mat-flat-button class="btn-retry" (click)="cargarProductos()">
+      <button type="button" mat-flat-button class="btn-retry" (click)="cargarProductos()">
         <mat-icon>refresh</mat-icon>
         <span>Reintentar</span>
       </button>
@@ -164,13 +169,13 @@
         @if (busqueda() || categoriaSeleccionada() !== 'Todas' || filtroDisponibilidad() !== 'todos') {
           <h3>No se encontraron productos</h3>
           <p>No hay coincidencias con los criterios de búsqueda o filtros aplicados.</p>
-          <button mat-stroked-button (click)="busqueda.set(''); categoriaSeleccionada.set('Todas'); filtroDisponibilidad.set('todos')">
+          <button type="button" mat-stroked-button (click)="busqueda.set(''); categoriaSeleccionada.set('Todas'); filtroDisponibilidad.set('todos')">
             Restablecer Filtros
           </button>
         } @else {
           <h3>El catálogo está vacío</h3>
           <p>Aún no hay productos registrados en la carta. Crea el primero para comenzar a tomar pedidos.</p>
-          <button mat-flat-button class="btn-create" (click)="irACrear()">
+          <button type="button" mat-flat-button class="btn-create" (click)="irACrear()">
             <mat-icon>add</mat-icon>
             <span>Crear Primer Producto</span>
           </button>
@@ -187,22 +192,15 @@
                 <span class="category-tag">{{ prod.categoria }}</span>
                 <span
                   class="stock-badge"
-                  [class.out-of-stock]="prod.cantidad_inventario <= 0"
-                  [class.low-stock]="prod.cantidad_inventario > 0 && prod.cantidad_inventario <= 5"
-                  [class.good-stock]="prod.cantidad_inventario > 5"
+                  [ngClass]="obtenerClaseStock(prod.cantidad_inventario)"
                 >
-                  @if (prod.cantidad_inventario <= 0) {
-                    Sin stock
-                  } @else if (prod.cantidad_inventario <= 5) {
-                    Bajo stock: {{ prod.cantidad_inventario }}
-                  } @else {
-                    Stock: {{ prod.cantidad_inventario }}
-                  }
+                  {{ obtenerEtiquetaStock(prod.cantidad_inventario) }}
                 </span>
               </div>
 
               <!-- Menú de Acciones Rápidas -->
               <button
+                type="button"
                 mat-icon-button
                 class="btn-more-options"
                 [matMenuTriggerFor]="productMenu"
@@ -213,11 +211,11 @@
               </button>
 
               <mat-menu #productMenu="matMenu">
-                <button mat-menu-item (click)="irAEditar(prod)">
+                <button type="button" mat-menu-item (click)="irAEditar(prod)">
                   <mat-icon>edit</mat-icon>
                   <span>Editar Producto</span>
                 </button>
-                <button mat-menu-item (click)="eliminarProducto(prod, $event)" class="menu-delete">
+                <button type="button" mat-menu-item (click)="eliminarProducto(prod, $event)" class="menu-delete">
                   <mat-icon color="warn">delete</mat-icon>
                   <span>Eliminar de Carta</span>
                 </button>
@@ -277,6 +275,7 @@
 
               <div class="card-action-buttons">
                 <button
+                  type="button"
                   mat-stroked-button
                   class="btn-edit-card"
                   (click)="irAEditar(prod)"

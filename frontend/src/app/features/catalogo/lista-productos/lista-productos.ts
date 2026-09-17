@@ -161,4 +161,16 @@ export class ListaProductosComponent implements OnInit {
     const margen = ((precio - costo) / precio) * 100;
     return `${Math.round(margen)}%`;
   }
+
+  obtenerEtiquetaStock(cantidad: number): string {
+    if (cantidad <= 0) return 'Sin stock';
+    if (cantidad <= 5) return `Bajo stock: ${cantidad}`;
+    return `Stock: ${cantidad}`;
+  }
+
+  obtenerClaseStock(cantidad: number): string {
+    if (cantidad <= 0) return 'out-of-stock';
+    if (cantidad <= 5) return 'low-stock';
+    return 'good-stock';
+  }
 }

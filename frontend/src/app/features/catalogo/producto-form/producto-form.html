@@ -10,8 +10,8 @@
         <h1>{{ isEditMode() ? 'Editar Producto' : 'Nuevo Producto' }}</h1>
       </div>
       <div class="header-actions">
-        <button mat-stroked-button class="btn-cancel" (click)="onCancel()" [disabled]="isSaving()">Cancelar</button>
-        <button mat-flat-button class="btn-save" (click)="onSave()" [disabled]="isSaving() || isLoadingProduct()">
+        <button type="button" mat-stroked-button class="btn-cancel" (click)="onCancel()" [disabled]="isSaving()">Cancelar</button>
+        <button type="button" mat-flat-button class="btn-save" (click)="onSave()" [disabled]="isSaving() || isLoadingProduct()">
           @if (isSaving()) {
             <mat-spinner diameter="18" class="inline-spinner"></mat-spinner>
           } @else {
@@ -49,7 +49,7 @@
               <div class="field-group">
                 <label>Nombre del Producto</label>
                 <mat-form-field appearance="outline" class="saas-input">
-                  <input matInput formControlName="nombre" placeholder="Ej. Hamburguesa Clásica" />
+                  <input type="text" matInput formControlName="nombre" placeholder="Ej. Hamburguesa Clásica">
                   @if (productForm.get('nombre')?.hasError('required')) {
                     <mat-error>El nombre es obligatorio</mat-error>
                   }
@@ -72,7 +72,7 @@
               <div class="field-group">
                 <label>Cantidad en Inventario (Stock)</label>
                 <mat-form-field appearance="outline" class="saas-input">
-                  <input matInput type="number" formControlName="cantidad_inventario" min="0" placeholder="0" />
+                  <input type="number" matInput formControlName="cantidad_inventario" min="0" placeholder="0">
                 </mat-form-field>
               </div>
 
@@ -96,7 +96,7 @@
                 <label>Precio de Venta</label>
                 <mat-form-field appearance="outline" class="saas-input">
                   <span matPrefix>$&nbsp;</span>
-                  <input matInput type="number" formControlName="precio_venta" placeholder="0.00" />
+                  <input type="number" matInput formControlName="precio_venta" placeholder="0.00">
                 </mat-form-field>
               </div>
 
@@ -104,7 +104,7 @@
                 <label>Costo</label>
                 <mat-form-field appearance="outline" class="saas-input">
                   <span matPrefix>$&nbsp;</span>
-                  <input matInput type="number" formControlName="costo" placeholder="0.00" />
+                  <input type="number" matInput formControlName="costo" placeholder="0.00">
                 </mat-form-field>
                 <span class="margin-hint">Margen estimado: {{ estimatedMargin }}</span>
               </div>
@@ -131,7 +131,7 @@
                 placeholder="Ej. Tocineta, Pepinillos..."
                 (keydown.enter)="agregarNuevoIngrediente(nuevoIngInput.value); nuevoIngInput.value = ''"
                 class="ingredient-quick-input"
-              />
+              >
               <button
                 type="button"
                 mat-flat-button
