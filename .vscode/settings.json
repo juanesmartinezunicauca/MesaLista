@@ -1,0 +1,9 @@
+{
+  "htmlhint.enable": false,
+  "htmlhint.options": {
+    "attr-lowercase": false
+  },
+  "files.associations": {
+    "*.html": "html"
+  }
+}
