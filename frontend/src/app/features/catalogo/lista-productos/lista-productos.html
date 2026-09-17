@@ -226,7 +226,7 @@
             <div class="card-main">
               <h3 class="product-name" (click)="irAEditar(prod)">{{ prod.nombre }}</h3>
 
-              @if (prod.ingredientes_removibles && prod.ingredientes_removibles.length > 0) {
+              @if (prod.ingredientes_removibles.length) {
                 <div class="ingredients-box">
                   <span class="ingredients-label">Personalizable:</span>
                   <div class="ingredients-pills">
