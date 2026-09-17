@@ -1,28 +1,56 @@
 import { Routes } from '@angular/router';
 import { Layout } from './shared/components/layout/layout';
-// import { roleGuard } from './core/auth/auth.guard';
+import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
-  
-  // Ruta pública (Login) fuera del layout principal
-  { 
-    path: 'login', 
-    loadComponent: () => import('./shared/components/login/login').then(m => m.LoginComponent) 
+
+  // Ruta pública de autenticación
+  {
+    path: 'login',
+    loadComponent: () =>
+      import('./features/auth/login/login').then((m) => m.LoginComponent),
   },
 
-  // Grupo de Rutas protegidas que comparten el Layout Maestro (Sidebar + Header)
+  // Grupo de rutas que comparten el Layout Maestro (Sidebar + Header) protegidas por AuthGuard
   {
     path: '',
     component: Layout,
+    canActivate: [authGuard],
     children: [
-      { 
-        path: 'inventory', 
-        loadComponent: () => import('./shared/components/inventory/inventory').then(m => m.InventoryComponent) 
+      { path: '', redirectTo: 'mesas', pathMatch: 'full' },
+      {
+        path: 'mesas',
+        loadComponent: () =>
+          import('./features/mesas/plano-mesas/plano-mesas').then(
+            (m) => m.PlanoMesasComponent
+          ),
       },
-      // ... tus otras vistas de meseros, cocina o reportes
-    ]
+      {
+        path: 'catalogo',
+        loadComponent: () =>
+          import(
+            './features/catalogo/lista-productos/lista-productos'
+          ).then((m) => m.ListaProductosComponent),
+      },
+      {
+        path: 'catalogo/nuevo',
+        loadComponent: () =>
+          import(
+            './features/catalogo/producto-form/producto-form'
+          ).then((m) => m.ProductoFormComponent),
+      },
+      {
+        path: 'catalogo/editar/:id',
+        loadComponent: () =>
+          import(
+            './features/catalogo/producto-form/producto-form'
+          ).then((m) => m.ProductoFormComponent),
+      },
+      // Compatibilidad con enlace previo
+      { path: 'inventory', redirectTo: 'catalogo', pathMatch: 'full' },
+    ],
   },
 
-  { path: '**', redirectTo: 'login' }
+  { path: '**', redirectTo: 'login' },
 ];

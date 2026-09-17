@@ -1,0 +1,389 @@
+@use 'tokens' as *;
+@use 'mixins' as *;
+
+.detalle-mesa-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: $bg-app;
+}
+
+// --- HEADER ---
+.detalle-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background-color: $bg-card;
+  border-bottom: 1px solid $border-color;
+  flex-wrap: wrap;
+  gap: 16px;
+
+  .header-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    h2 {
+      margin: 0;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: $text-primary;
+    }
+
+    .mesa-submeta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: $text-muted;
+      margin-top: 2px;
+
+      .meta-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+
+        mat-icon {
+          font-size: 15px;
+          width: 15px;
+          height: 15px;
+        }
+      }
+
+      .meta-separator {
+        color: $border-color;
+      }
+
+      .estado-pill {
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: $radius-full;
+        font-size: 0.725rem;
+
+        &.libre {
+          background-color: $color-success-bg;
+          color: $color-success;
+        }
+
+        &.en_pedido {
+          background-color: $color-warning-bg;
+          color: $color-warning;
+        }
+
+        &.ocupada {
+          background-color: $color-danger-bg;
+          color: $color-danger;
+        }
+      }
+    }
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .btn-action {
+      border-color: $border-color !important;
+      color: $text-primary !important;
+      border-radius: $radius-md;
+    }
+
+    .btn-new-pedido {
+      background-color: $brand-blue !important;
+      color: #ffffff !important;
+      border-radius: $radius-md;
+    }
+
+    .btn-cobrar {
+      background-color: $brand-orange !important;
+      color: #ffffff !important;
+      font-weight: 700;
+      border-radius: $radius-md;
+      box-shadow: $shadow-orange;
+    }
+  }
+}
+
+// --- CUERPO ---
+.detalle-body {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 24px;
+  padding: 24px;
+  flex: 1;
+  min-height: 0;
+
+  @include respond-to('lg') {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+}
+
+// --- COLUMNA DE PEDIDOS ---
+.pedidos-column {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  .section-title {
+    margin-bottom: 16px;
+
+    h3 {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: $text-primary;
+    }
+
+    .sub-label {
+      font-size: 0.8rem;
+      color: $text-muted;
+    }
+  }
+
+  .empty-pedidos {
+    @include card-surface();
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: $text-muted;
+
+    mat-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      margin-bottom: 12px;
+      opacity: 0.4;
+    }
+
+    p {
+      margin: 0 0 16px 0;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+  }
+
+  .pedidos-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+    padding-right: 4px;
+    @include custom-scrollbar();
+
+    .pedido-card {
+      @include card-surface();
+      padding: 16px;
+
+      .pedido-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 10px;
+        border-bottom: 1px solid $border-subtle;
+
+        .pedido-badge-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+
+          .pedido-tag {
+            background-color: $color-info-bg;
+            color: $brand-blue;
+            font-weight: 700;
+            font-size: 0.8rem;
+            padding: 3px 10px;
+            border-radius: $radius-full;
+          }
+
+          .pedido-time {
+            font-size: 0.8rem;
+            color: $text-muted;
+          }
+        }
+
+        .pedido-subtotal {
+          font-size: 1.05rem;
+          font-weight: 700;
+          color: $text-primary;
+        }
+      }
+
+      .pedido-nota-cocina {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background-color: $bg-app;
+        padding: 6px 10px;
+        border-radius: $radius-sm;
+        margin-top: 8px;
+        font-size: 0.775rem;
+        color: $text-secondary;
+        font-style: italic;
+
+        mat-icon {
+          font-size: 15px;
+          width: 15px;
+          height: 15px;
+          color: $brand-orange;
+        }
+      }
+
+      .pedido-items {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 12px;
+
+        .pedido-item-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 8px 10px;
+          background-color: $bg-card-alt;
+          border-radius: $radius-sm;
+          flex-wrap: wrap;
+
+          .item-qty-name {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            .qty-badge {
+              font-weight: 700;
+              font-size: 0.85rem;
+              color: $brand-blue;
+              background-color: #fff;
+              padding: 2px 6px;
+              border-radius: 4px;
+              border: 1px solid $border-color;
+            }
+
+            .item-name {
+              font-size: 0.9rem;
+              font-weight: 600;
+              color: $text-primary;
+            }
+          }
+
+          .item-price {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: $text-primary;
+          }
+
+          .item-badge-custom {
+            width: 100%;
+            margin-top: 4px;
+            font-size: 0.725rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+
+            &.remocion {
+              background-color: $color-danger-bg;
+              color: $color-danger;
+              font-weight: 600;
+            }
+
+            &.nota {
+              background-color: $color-warning-bg;
+              color: #92400E;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// --- COLUMNA DE TOTALES ---
+.totales-column {
+  .totales-card {
+    @include card-surface();
+    padding: 24px;
+    position: sticky;
+    top: 0;
+
+    h3 {
+      margin: 0 0 16px 0;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: $text-primary;
+    }
+
+    .summary-line {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+      color: $text-muted;
+
+      .val {
+        font-weight: 600;
+        color: $text-primary;
+      }
+
+      &.propina-hint {
+        color: $color-success;
+
+        .val {
+          color: $color-success;
+        }
+      }
+    }
+
+    .divider {
+      margin: 16px 0;
+    }
+
+    .total-big-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+
+      span:first-child {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: $text-primary;
+      }
+
+      .total-big {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: $brand-orange;
+      }
+    }
+
+    .totales-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+
+      .btn-liquidar-full {
+        height: 48px;
+        background-color: $color-success !important;
+        color: #ffffff !important;
+        font-weight: 700;
+        border-radius: $radius-md;
+      }
+
+      .btn-liberar-manual {
+        height: 42px;
+        border-color: $border-color !important;
+        color: $text-muted !important;
+        border-radius: $radius-md;
+
+        &:hover {
+          color: $color-danger !important;
+          border-color: $color-danger !important;
+        }
+      }
+    }
+  }
+}

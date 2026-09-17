@@ -1,0 +1,254 @@
+@use 'tokens' as *;
+@use 'mixins' as *;
+
+.login-split-container {
+  display: flex;
+  min-height: 100vh;
+  width: 100vw;
+  background-color: $bg-dark;
+  font-family: $font-family-base;
+  overflow: hidden;
+}
+
+// --- PANEL IZQUIERDO: HERO DE MARCA (OFFLINE-FIRST) ---
+.brand-panel {
+  flex: 1.1;
+  position: relative;
+  // Gradiente ambiental gastronómico elegante y autónomo (sin dependencias de red externas)
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 107, 53, 0.25) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(37, 99, 235, 0.15) 0%, transparent 50%),
+    linear-gradient(145deg, #141618 0%, #1A1D20 50%, #24282C 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 48px;
+
+  @include respond-to('lg') {
+    display: none;
+  }
+
+  .brand-content {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .logo-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .brand-icon {
+      color: $brand-orange;
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+    }
+
+    .brand-name {
+      color: $text-light;
+      font-weight: 700;
+      font-size: 1.5rem;
+      letter-spacing: -0.5px;
+    }
+  }
+
+  .hero-text {
+    max-width: 480px;
+
+    h2 {
+      color: #ffffff;
+      font-size: 2.25rem;
+      font-weight: 800;
+      line-height: 1.25;
+      margin-bottom: 16px;
+    }
+
+    p {
+      color: $text-light-muted;
+      font-size: 1.05rem;
+      line-height: 1.6;
+    }
+  }
+
+  .quote-card {
+    background: rgba(36, 40, 44, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid $border-dark;
+    border-radius: $radius-lg;
+    padding: 24px;
+    max-width: 480px;
+
+    p {
+      color: $text-light;
+      font-style: italic;
+      margin-bottom: 8px;
+    }
+
+    .quote-author {
+      color: $brand-orange;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+  }
+}
+
+// --- PANEL DERECHO: FORMULARIO DE ACCESO ---
+.form-panel {
+  flex: 1;
+  background-color: $bg-dark;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+
+  .form-wrapper {
+    width: 100%;
+    max-width: 420px;
+    animation: fadeInUp 0.5s ease-out;
+  }
+
+  .form-header {
+    margin-bottom: 24px;
+
+    h1 {
+      color: $text-light;
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    p {
+      color: $text-light-muted;
+      font-size: 0.95rem;
+    }
+  }
+
+  .login-error-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background-color: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #fca5a5;
+    padding: 12px 16px;
+    border-radius: $radius-md;
+    margin-bottom: 20px;
+    font-size: 0.875rem;
+
+    mat-icon {
+      color: #ef4444;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+  }
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .field-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    .custom-label {
+      color: $text-light;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+  }
+
+  .custom-field {
+    width: 100%;
+
+    --mdc-outlined-text-field-container-shape: #{$radius-md};
+    --mdc-outlined-text-field-outline-color: rgba(255, 255, 255, 0.15);
+    --mdc-outlined-text-field-focus-outline-color: #{$brand-orange};
+    --mdc-outlined-text-field-input-text-color: #{$text-light};
+    --mdc-outlined-text-field-input-text-placeholder-color: #{$text-light-muted};
+
+    input.mat-mdc-input-element {
+      color: $text-light !important;
+      caret-color: $brand-orange !important;
+
+      &::placeholder {
+        color: $text-light-muted !important;
+      }
+    }
+
+    .input-icon,
+    .visibility-btn {
+      color: $text-light-muted;
+    }
+
+    .visibility-btn:hover {
+      color: $text-light;
+    }
+  }
+
+  .form-options {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-top: 4px;
+    margin-bottom: 8px;
+
+    .forgot-link {
+      color: $brand-orange;
+      font-size: 0.875rem;
+      font-weight: 500;
+      text-decoration: none;
+      transition: color $transition-fast;
+
+      &:hover {
+        color: $brand-orange-hover;
+        text-decoration: underline;
+      }
+    }
+  }
+
+  .submit-btn {
+    height: 48px;
+    border-radius: $radius-md !important;
+    background-color: $brand-orange !important;
+    color: #ffffff !important;
+    font-size: 1rem;
+    font-weight: 600;
+    box-shadow: $shadow-orange !important;
+    transition: all $transition-base !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    &:hover:not([disabled]) {
+      background-color: $brand-orange-hover !important;
+      transform: translateY(-1px);
+    }
+
+    &[disabled] {
+      opacity: 0.6;
+      background-color: $text-muted !important;
+    }
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

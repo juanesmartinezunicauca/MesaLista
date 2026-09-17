@@ -1,0 +1,70 @@
+@use 'tokens' as *;
+@use 'mixins' as *;
+
+.app-outer-header {
+  height: 64px;
+  background-color: $bg-card;
+  border-bottom: 1px solid $border-color;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  width: 100%;
+  box-sizing: border-box;
+
+  .header-left {
+    .view-tag {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: $text-secondary;
+      background-color: $bg-app;
+      padding: 4px 12px;
+      border-radius: $radius-full;
+      border: 1px solid $border-color;
+    }
+  }
+
+  .user-session-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .user-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+
+      .user-name {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: $text-primary;
+      }
+
+      .user-role {
+        font-size: 0.725rem;
+        color: $text-muted;
+        text-transform: capitalize;
+      }
+    }
+
+    .avatar-btn {
+      width: 38px;
+      height: 38px;
+      padding: 0;
+
+      .avatar-badge {
+        width: 36px;
+        height: 36px;
+        border-radius: $radius-full;
+        background: linear-gradient(135deg, $brand-blue 0%, $brand-blue-dark 100%);
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 0.85rem;
+        box-shadow: $shadow-xs;
+      }
+    }
+  }
+}
