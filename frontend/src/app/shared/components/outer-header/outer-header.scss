@@ -1,0 +1,263 @@
+// Variables
+$header-bg: #1a1d20;
+$header-border: rgba(255, 255, 255, 0.08);
+$accent: #ff6b35;
+$text-light: #f3f4f6;
+$text-muted: #9ca3af;
+
+.outer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    width: 100%;
+    height: 72px;
+    padding: 0 32px;
+
+    box-sizing: border-box;
+
+    background-color: $header-bg;
+    border-bottom: 1px solid $header-border;
+
+    font-family: 'Inter', system-ui, sans-serif;
+}
+
+// ========================================
+// BRAND
+// ========================================
+
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    min-width: 220px;
+}
+
+.brand-icon {
+    width: 32px;
+    height: 32px;
+
+    color: $accent;
+    font-size: 32px;
+}
+
+.brand-title {
+    color: $text-light;
+
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.8px;
+}
+
+// ========================================
+// SEARCH
+// ========================================
+
+.header-search {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    width: 100%;
+    max-width: 470px;
+    height: 42px;
+
+    padding: 0 16px;
+
+    box-sizing: border-box;
+
+    background-color: #292e34;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 24px;
+
+    transition: border-color 0.2s ease;
+
+    mat-icon {
+        color: $text-muted;
+        font-size: 21px;
+    }
+
+    input {
+        width: 100%;
+
+        border: none;
+        outline: none;
+
+        background: transparent;
+
+        color: $text-light;
+        font-family: inherit;
+        font-size: 13px;
+
+        &::placeholder {
+            color: #9ca3af;
+        }
+    }
+
+    &:focus-within {
+        border-color: rgba(255, 107, 53, 0.5);
+    }
+}
+
+// ========================================
+// ACTIONS
+// ========================================
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+
+    min-width: 220px;
+    justify-content: flex-end;
+}
+
+// Botón de notificaciones
+.header-action {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: $text-light;
+
+    mat-icon {
+        font-size: 25px;
+    }
+
+    &:hover {
+        background-color: rgba(255, 255, 255, 0.06);
+    }
+}
+
+.notification-dot {
+    position: absolute;
+    top: 9px;
+    right: 9px;
+
+    width: 7px;
+    height: 7px;
+
+    background-color: $accent;
+    border: 2px solid $header-bg;
+    border-radius: 50%;
+}
+
+// ========================================
+// USER PROFILE
+// ========================================
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    padding: 6px 0;
+
+    border: none;
+    background: transparent;
+
+    color: $text-light;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.user-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 40px;
+    height: 40px;
+
+    border-radius: 50%;
+    background-color: #3b424b;
+
+    span {
+        color: $text-light;
+        font-size: 12px;
+        font-weight: 600;
+    }
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+}
+
+.user-name {
+    color: $text-light;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.user-role {
+    color: $text-muted;
+    font-size: 11px;
+}
+
+.user-chevron {
+    color: $text-muted;
+    font-size: 18px;
+}
+
+// ========================================
+// RESPONSIVE
+// ========================================
+
+@media (max-width: 900px) {
+
+    .outer-header {
+        padding: 0 20px;
+    }
+
+    .header-brand {
+        min-width: auto;
+    }
+
+    .header-search {
+        max-width: 300px;
+    }
+
+    .user-info {
+        display: none;
+    }
+
+    .header-actions {
+        min-width: auto;
+    }
+}
+
+@media (max-width: 600px) {
+
+    .outer-header {
+        gap: 12px;
+        padding: 0 16px;
+    }
+
+    .brand-title {
+        display: none;
+    }
+
+    .brand-icon {
+        font-size: 28px;
+    }
+
+    .header-search {
+        max-width: none;
+        height: 38px;
+    }
+
+    .header-actions {
+        gap: 4px;
+    }
+
+    .user-chevron {
+        display: none;
+    }
+}

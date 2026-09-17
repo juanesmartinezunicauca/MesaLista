@@ -1,90 +1,87 @@
-// Paleta corporativa Light SaaS
-$bg-app: #F4F6F9;
-$sidebar-bg: #FFFFFF;
-$card-bg: #FFFFFF;
-$text-primary: #1F2937;
-$text-muted: #6B7280;
-$border-color: #E5E7EB;
-$primary-orange: #FF6B35;
-$primary-blue: #1E40AF;
-$accent-blue: #2563EB;
+// Variables locales reutilizables
+$text-primary: #1f2937;
+$text-muted: #6b7280;
+$border-color: #e5e7eb;
+$primary-orange: #ff6b35;
 
-// --- CONTENIDO PRINCIPAL ---
+// Mixin para flex centrado horizontal/vertical
+@mixin flex-align-center {
+    display: flex;
+    align-items: center;
+}
+
+// --- ESTRUCTURA PRINCIPAL ---
 .main-content {
-    flex: 1;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
+    flex: 1;
     padding: 32px;
+    overflow-y: auto;
 }
 
 // --- HEADER DE LA VISTA ---
 .content-header {
-    display: flex;
+    @include flex-align-center;
     justify-content: space-between;
-    align-items: center;
     margin-bottom: 28px;
 
-    .header-title-wrapper {
-        .back-link {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            color: $text-muted;
-            text-decoration: none;
-            font-size: 0.875rem;
-            font-weight: 500;
-            margin-bottom: 6px;
-            transition: color 0.2s;
+    h1 {
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: $text-primary;
+    }
+}
 
-            mat-icon {
-                font-size: 18px;
-                width: 18px;
-                height: 18px;
-            }
+.back-link {
+    @include flex-align-center;
+    gap: 6px;
+    margin-bottom: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: $text-muted;
+    text-decoration: none;
+    transition: color 0.2s ease;
 
-            &:hover {
-                color: $text-primary;
-            }
-        }
-
-        h1 {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: $text-primary;
-            margin: 0;
-        }
+    mat-icon {
+        width: 18px;
+        height: 18px;
+        font-size: 18px;
     }
 
-    .header-actions {
-        display: flex;
-        gap: 12px;
+    &:hover {
+        color: $text-primary;
+    }
+}
 
-        .btn-cancel {
-            border-color: $border-color !important;
-            color: $text-primary !important;
-            border-radius: 8px !important;
-            padding: 0 20px;
-            font-weight: 500;
-        }
+.header-actions {
+    display: flex;
+    gap: 12px;
 
-        .btn-save {
-            background-color: $accent-blue !important;
-            color: white !important;
-            border-radius: 8px !important;
-            padding: 0 20px;
-            font-weight: 500;
-            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+    button {
+        border-radius: 8px !important;
+        padding: 0 20px;
+        font-weight: 500;
+    }
 
-            mat-icon {
-                margin-right: 6px;
-            }
+    .btn-cancel {
+        border-color: $border-color !important;
+        color: $text-primary !important;
+    }
+
+    .btn-save {
+        background-color: $primary-orange !important;
+        color: #fff !important;
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+
+        mat-icon {
+            margin-right: 6px;
         }
     }
 }
 
-// --- GRID DE FORMULARIO ---
-.form-grid-container {
+// --- GRID Y FORMULARIO ---
+.form-grid {
     display: grid;
     grid-template-columns: 1.6fr 1fr;
     gap: 24px;
@@ -94,37 +91,35 @@ $accent-blue: #2563EB;
     }
 }
 
-.left-column {
+.form-column {
     display: flex;
     flex-direction: column;
     gap: 24px;
 }
 
-// --- TARJETAS SECCIONADAS ---
-.card-section {
-    background-color: $card-bg;
-    border: 1px solid $border-color;
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-
-    h3 {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: $text-primary;
-        margin-top: 0;
-        margin-bottom: 20px;
-    }
-}
-
-.form-row-dual {
+.form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 16px;
-    margin-bottom: 16px;
 
     @media (max-width: 768px) {
         grid-template-columns: 1fr;
+    }
+}
+
+// --- TARJETAS Y CAMPOS ---
+.card-section {
+    padding: 24px;
+    background-color: #fff;
+    border: 1px solid $border-color;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+
+    h2 {
+        margin: 0 0 20px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: $text-primary;
     }
 }
 
@@ -139,22 +134,22 @@ $accent-blue: #2563EB;
         font-weight: 500;
         color: $text-muted;
     }
-
-    .margin-hint {
-        font-size: 0.75rem;
-        color: #10B981; // Verde esmeralda para el margen estimado
-        font-weight: 600;
-        margin-top: -8px;
-    }
 }
 
-// --- ANULACIÓN DE MATERIAL FORM FIELDS PARA ESTILO SAAS LIMPIO ---
+.margin-hint {
+    margin-top: -8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #10b981;
+}
+
+// Customización Angular Material Inputs
 .saas-input {
     width: 100%;
 
     ::ng-deep {
         .mat-mdc-text-field-wrapper {
-            background-color: #F9FAFB !important;
+            background-color: #f9fafb !important;
             border-radius: 8px !important;
         }
 
@@ -170,72 +165,66 @@ $accent-blue: #2563EB;
     }
 }
 
-// --- COLUMNA DERECHA: INGREDIENTES ---
-.ingredients-card {
-    .section-header-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 4px;
+// --- SECCIÓN INGREDIENTES ---
+.section-header {
+    @include flex-align-center;
+    justify-content: space-between;
 
-        h3 {
-            margin-bottom: 0;
-        }
+    h2 {
+        margin-bottom: 0;
+    }
+}
 
-        .add-ingredient-btn {
-            background-color: #EFF6FF;
-            color: $accent-blue;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-        }
+.add-ingredient-btn {
+    width: 36px;
+    height: 36px;
+    color: $primary-orange;
+    background-color: #eff6ff;
+    border-radius: 50%;
+}
+
+.section-subtitle {
+    margin: 4px 0 20px;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: $text-muted;
+}
+
+.ingredients-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.ingredient-row {
+    @include flex-align-center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background-color: #f9fafb;
+    border: 1px solid #f3f4f6;
+    border-radius: 8px;
+}
+
+.ingredient-info {
+    @include flex-align-center;
+    gap: 10px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: $text-primary;
+
+    .drag-handle {
+        width: 20px;
+        height: 20px;
+        font-size: 20px;
+        color: #9ca3af;
+        cursor: grab;
     }
 
-    .section-subtitle {
-        font-size: 0.85rem;
+    .disabled-text {
         color: $text-muted;
-        margin-bottom: 20px;
-        line-height: 1.4;
-    }
-
-    .ingredients-list {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-
-        .ingredient-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 12px;
-            background-color: #F9FAFB;
-            border: 1px solid #F3F4F6;
-            border-radius: 8px;
-
-            .ingredient-info {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-
-                .drag-handle {
-                    color: #9CA3AF;
-                    cursor: grab;
-                    font-size: 20px;
-                    width: 20px;
-                    height: 20px;
-                }
-
-                .ingredient-name {
-                    font-size: 0.9rem;
-                    font-weight: 500;
-                    color: $text-primary;
-
-                    &.disabled-text {
-                        color: $text-muted;
-                        text-decoration: line-through;
-                    }
-                }
-            }
-        }
+        text-decoration: line-through;
     }
 }
