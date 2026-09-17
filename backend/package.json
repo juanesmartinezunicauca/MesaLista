@@ -28,7 +28,7 @@
     "@nestjs/observe": "^0.1.8",
     "@nestjs/passport": "^12.0.0",
     "@nestjs/platform-express": "^12.0.1",
-    "@nestjs/throttler": "^6.5.0",
+    "@nestjs/throttler": "^6.6.0",
     "@prisma/client": "^6.19.3",
     "argon2": "^0.45.1",
     "bcrypt": "^6.0.0",
