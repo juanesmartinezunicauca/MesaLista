@@ -1,0 +1,294 @@
+<div class="catalogo-layout">
+  <!-- Header de la Vista -->
+  <header class="catalogo-header">
+    <div class="header-info">
+      <div class="header-breadcrumbs">
+        <mat-icon>restaurant_menu</mat-icon>
+        <span>Administración / Catálogo de Productos</span>
+      </div>
+      <h1 class="header-title">Catálogo y Carta</h1>
+      <p class="header-subtitle">
+        Gestiona los productos disponibles para pedidos, precios de venta, costos e inventario en tiempo real.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <button
+        type="button"
+        mat-stroked-button
+        class="btn-refresh"
+        (click)="cargarProductos()"
+        [disabled]="isLoading()"
+        matTooltip="Actualizar listado"
+      >
+        <mat-icon [class.spin]="isLoading()">refresh</mat-icon>
+        <span>Refrescar</span>
+      </button>
+
+      <button type="button" mat-flat-button class="btn-create" (click)="irACrear()">
+        <mat-icon>add</mat-icon>
+        <span>Nuevo Producto</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Métricas Rápidas del Catálogo -->
+  <section class="metrics-grid">
+    <div class="metric-card card-total">
+      <div class="metric-icon-wrapper">
+        <mat-icon>inventory_2</mat-icon>
+      </div>
+      <div class="metric-details">
+        <span class="metric-label">Total en Carta</span>
+        <strong class="metric-value">{{ metricas().total }}</strong>
+      </div>
+    </div>
+
+    <div class="metric-card card-active">
+      <div class="metric-icon-wrapper">
+        <mat-icon>check_circle</mat-icon>
+      </div>
+      <div class="metric-details">
+        <span class="metric-label">Disponibles</span>
+        <strong class="metric-value">{{ metricas().disponibles }}</strong>
+      </div>
+    </div>
+
+    <div class="metric-card card-inactive">
+      <div class="metric-icon-wrapper">
+        <mat-icon>pause_circle_outline</mat-icon>
+      </div>
+      <div class="metric-details">
+        <span class="metric-label">Agotados</span>
+        <strong class="metric-value">{{ metricas().agotados }}</strong>
+      </div>
+    </div>
+
+    <div class="metric-card card-stock" [class.warning-active]="metricas().bajoStock > 0">
+      <div class="metric-icon-wrapper">
+        <mat-icon>warning_amber</mat-icon>
+      </div>
+      <div class="metric-details">
+        <span class="metric-label">Bajo Stock (≤ 5)</span>
+        <strong class="metric-value">{{ metricas().bajoStock }}</strong>
+      </div>
+    </div>
+  </section>
+
+  <!-- Barra de Filtros y Búsqueda -->
+  <section class="filters-panel">
+    <!-- Buscador -->
+    <div class="search-box">
+      <mat-icon class="search-icon">search</mat-icon>
+      <input
+        type="text"
+        placeholder="Buscar por nombre o categoría..."
+        [(ngModel)]="busqueda"
+        class="search-input"
+      >
+      @if (busqueda()) {
+        <button type="button" class="clear-search-btn" (click)="busqueda.set('')" matTooltip="Limpiar búsqueda">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </div>
+
+    <!-- Filtro de Disponibilidad -->
+    <div class="availability-filter-group">
+      <button
+        type="button"
+        class="filter-pill"
+        [class.active]="filtroDisponibilidad() === 'todos'"
+        (click)="filtroDisponibilidad.set('todos')"
+      >
+        Todos
+      </button>
+      <button
+        type="button"
+        class="filter-pill"
+        [class.active]="filtroDisponibilidad() === 'disponibles'"
+        (click)="filtroDisponibilidad.set('disponibles')"
+      >
+        Disponibles
+      </button>
+      <button
+        type="button"
+        class="filter-pill"
+        [class.active]="filtroDisponibilidad() === 'agotados'"
+        (click)="filtroDisponibilidad.set('agotados')"
+      >
+        Agotados
+      </button>
+    </div>
+  </section>
+
+  <!-- Selector de Categorías (Chips) -->
+  <section class="category-chips-bar">
+    <div class="chips-scroll-container">
+      @for (cat of categoriasDisponibles(); track cat) {
+        <button
+          type="button"
+          class="cat-chip"
+          [class.active]="categoriaSeleccionada() === cat"
+          (click)="categoriaSeleccionada.set(cat)"
+        >
+          {{ cat }}
+        </button>
+      }
+    </div>
+  </section>
+
+  <!-- Mensaje de Error en caso de falla de API -->
+  @if (errorMensaje(); as err) {
+    <div class="error-banner">
+      <mat-icon>error_outline</mat-icon>
+      <div class="error-content">
+        <strong>Error de Conexión</strong>
+        <p>{{ err }}</p>
+      </div>
+      <button type="button" mat-flat-button class="btn-retry" (click)="cargarProductos()">
+        <mat-icon>refresh</mat-icon>
+        <span>Reintentar</span>
+      </button>
+    </div>
+  }
+
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="loading-state">
+      <mat-spinner diameter="44" strokeWidth="4"></mat-spinner>
+      <p>Cargando catálogo de productos desde la base de datos...</p>
+    </div>
+  } @else {
+    <!-- Empty State -->
+    @if (productosFiltrados().length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon-circle">
+          <mat-icon>fastfood</mat-icon>
+        </div>
+        @if (busqueda() || categoriaSeleccionada() !== 'Todas' || filtroDisponibilidad() !== 'todos') {
+          <h3>No se encontraron productos</h3>
+          <p>No hay coincidencias con los criterios de búsqueda o filtros aplicados.</p>
+          <button type="button" mat-stroked-button (click)="busqueda.set(''); categoriaSeleccionada.set('Todas'); filtroDisponibilidad.set('todos')">
+            Restablecer Filtros
+          </button>
+        } @else {
+          <h3>El catálogo está vacío</h3>
+          <p>Aún no hay productos registrados en la carta. Crea el primero para comenzar a tomar pedidos.</p>
+          <button type="button" mat-flat-button class="btn-create" (click)="irACrear()">
+            <mat-icon>add</mat-icon>
+            <span>Crear Primer Producto</span>
+          </button>
+        }
+      </div>
+    } @else {
+      <!-- Grilla de Tarjetas de Productos -->
+      <div class="products-grid">
+        @for (prod of productosFiltrados(); track prod.id_producto) {
+          <article class="product-card" [class.unavailable]="!prod.disponible">
+            <!-- Header de la Tarjeta -->
+            <div class="card-top">
+              <div class="badge-row">
+                <span class="category-tag">{{ prod.categoria }}</span>
+                <span
+                  class="stock-badge"
+                  [ngClass]="obtenerClaseStock(prod.cantidad_inventario)"
+                >
+                  {{ obtenerEtiquetaStock(prod.cantidad_inventario) }}
+                </span>
+              </div>
+
+              <!-- Menú de Acciones Rápidas -->
+              <button
+                type="button"
+                mat-icon-button
+                class="btn-more-options"
+                [matMenuTriggerFor]="productMenu"
+                (click)="$event.stopPropagation()"
+                aria-label="Opciones del producto"
+              >
+                <mat-icon>more_vert</mat-icon>
+              </button>
+
+              <mat-menu #productMenu="matMenu">
+                <button type="button" mat-menu-item (click)="irAEditar(prod)">
+                  <mat-icon>edit</mat-icon>
+                  <span>Editar Producto</span>
+                </button>
+                <button type="button" mat-menu-item (click)="eliminarProducto(prod, $event)" class="menu-delete">
+                  <mat-icon color="warn">delete</mat-icon>
+                  <span>Eliminar de Carta</span>
+                </button>
+              </mat-menu>
+            </div>
+
+            <!-- Cuerpo: Nombre y Receta -->
+            <div class="card-main">
+              <h3 class="product-name" (click)="irAEditar(prod)">{{ prod.nombre }}</h3>
+
+              @if (prod.ingredientes_removibles.length) {
+                <div class="ingredients-box">
+                  <span class="ingredients-label">Personalizable:</span>
+                  <div class="ingredients-pills">
+                    @for (ing of prod.ingredientes_removibles; track ing) {
+                      <span class="ing-pill">{{ ing }}</span>
+                    }
+                  </div>
+                </div>
+              } @else {
+                <p class="no-recipe-hint">Sin ingredientes personalizables especificados.</p>
+              }
+            </div>
+
+            <!-- Finanzas: Precios, Costo y Margen -->
+            <div class="financials-strip">
+              <div class="fin-col">
+                <span class="fin-label">Precio Carta</span>
+                <span class="fin-value price">${{ prod.precio_venta | number: '1.0-0' }}</span>
+              </div>
+              <div class="fin-col">
+                <span class="fin-label">Costo</span>
+                <span class="fin-value cost">${{ prod.costo | number: '1.0-0' }}</span>
+              </div>
+              <div class="fin-col">
+                <span class="fin-label">Margen</span>
+                <span class="fin-value margin">{{ calcularMargen(prod.precio_venta, prod.costo) }}</span>
+              </div>
+            </div>
+
+            <!-- Footer: Toggle de Disponibilidad en Vivo y Botón Editar -->
+            <footer class="card-footer">
+              <div
+                class="live-status-toggle"
+                (click)="toggleDisponibilidad(prod, $event)"
+                matTooltip="Haz clic para activar o desactivar inmediatamente en la toma de comandas"
+              >
+                <mat-slide-toggle
+                  [checked]="prod.disponible"
+                  color="primary"
+                >
+                </mat-slide-toggle>
+                <span class="status-text" [class.is-active]="prod.disponible">
+                  {{ prod.disponible ? 'Disponible' : 'Agotado' }}
+                </span>
+              </div>
+
+              <div class="card-action-buttons">
+                <button
+                  type="button"
+                  mat-stroked-button
+                  class="btn-edit-card"
+                  (click)="irAEditar(prod)"
+                  matTooltip="Editar información y costos"
+                >
+                  <mat-icon>edit</mat-icon>
+                  <span>Editar</span>
+                </button>
+              </div>
+            </footer>
+          </article>
+        }
+      </div>
+    }
+  }
+</div>

@@ -1,0 +1,161 @@
+<div class="detalle-mesa-container">
+  <!-- Header de la Mesa -->
+  <header class="detalle-header">
+    <div class="header-main">
+      <button mat-icon-button (click)="cerrar.emit()" aria-label="Volver">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div>
+        <h2>Mesa #{{ mesa.numero }}</h2>
+        <div class="mesa-submeta">
+          <span class="meta-item">
+            <mat-icon>person</mat-icon>
+            {{ mesa.mesero_actual || 'Sin mesero asignado' }}
+          </span>
+          <span class="meta-separator">•</span>
+          <span class="meta-item">
+            <mat-icon>schedule</mat-icon>
+            {{ mesa.fecha_apertura || 'Abierta' }}
+          </span>
+          <span class="meta-separator">•</span>
+          <span class="estado-pill" [class]="mesa.estado_visual">
+            {{ mesa.estado_visual === 'ocupada' ? 'Ocupada' : (mesa.estado_visual === 'en_pedido' ? 'En Pedido' : 'Libre') }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barra de Acciones de Cabecera -->
+    <div class="header-actions">
+      <button mat-stroked-button class="btn-action" (click)="abrirDialogoTransferir()">
+        <mat-icon>swap_horiz</mat-icon>
+        <span>Transferir Mesa</span>
+      </button>
+
+      <button mat-flat-button class="btn-new-pedido" (click)="iniciarNuevoPedido.emit()">
+        <mat-icon>add</mat-icon>
+        <span>+ Nuevo Pedido</span>
+      </button>
+
+      <!-- Botón Facturar visible SOLO cuando la mesa está ocupada -->
+      @if (mesa.estado_visual === 'ocupada') {
+        <button mat-flat-button class="btn-cobrar" (click)="simularFacturacion()">
+          <mat-icon>receipt</mat-icon>
+          <span>Facturar ($ {{ mesa.total_acumulado | number }})</span>
+        </button>
+      }
+    </div>
+  </header>
+
+  <!-- Cuerpo: Desglose Cronológico de Pedidos Enviados -->
+  <div class="detalle-body">
+    <div class="pedidos-column">
+      <div class="section-title">
+        <h3>Historial de Pedidos Despachados ({{ mesa.pedidos.length }})</h3>
+        <span class="sub-label">Enviados a cocina en orden cronológico</span>
+      </div>
+
+      @if (mesa.pedidos.length === 0) {
+        <div class="empty-pedidos">
+          <mat-icon>receipt_long</mat-icon>
+          <p>No hay pedidos confirmados en esta mesa</p>
+          <button mat-flat-button color="primary" (click)="iniciarNuevoPedido.emit()">
+            Tomar Primer Pedido
+          </button>
+        </div>
+      } @else {
+        <div class="pedidos-timeline">
+          @for (pedido of mesa.pedidos; track pedido.id_pedido) {
+            <div class="pedido-card">
+              <div class="pedido-card-header">
+                <div class="pedido-badge-title">
+                  <span class="pedido-tag">Pedido #{{ pedido.numero_pedido }}</span>
+                  <span class="pedido-time">{{ pedido.fecha_hora }}</span>
+                </div>
+                <span class="pedido-subtotal">$ {{ pedido.subtotal | number }}</span>
+              </div>
+
+              <!-- Observación del pedido si existe -->
+              @if (pedido.observacion) {
+                <div class="pedido-nota-cocina">
+                  <mat-icon>info</mat-icon>
+                  <span>Cocina: {{ pedido.observacion }}</span>
+                </div>
+              }
+
+              <!-- Lista de ítems del pedido (ItemPedido) -->
+              <div class="pedido-items">
+                @for (item of pedido.items; track item.id_item) {
+                  <div class="pedido-item-row">
+                    <div class="item-qty-name">
+                      <span class="qty-badge">{{ item.cantidad }}x</span>
+                      <span class="item-name">{{ item.nombre }}</span>
+                    </div>
+
+                    <span class="item-price">$ {{ item.subtotal | number }}</span>
+
+                    <!-- Remociones y notas personalizadas -->
+                    @if (item.ingredientes_removidos && item.ingredientes_removidos.length > 0) {
+                      <div class="item-badge-custom remocion">
+                        SIN: {{ item.ingredientes_removidos.join(', ') }}
+                      </div>
+                    }
+
+                    @if (item.observacion) {
+                      <div class="item-badge-custom nota">
+                        Nota: {{ item.observacion }}
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Columna Lateral de Facturación y Totales -->
+    <div class="totales-column">
+      <div class="totales-card">
+        <h3>Liquidación de Factura</h3>
+
+        <div class="summary-line">
+          <span>Subtotal consumos:</span>
+          <span class="val">$ {{ mesa.total_acumulado | number }} COP</span>
+        </div>
+
+        <div class="summary-line">
+          <span>Pedidos despachados:</span>
+          <span class="val">{{ mesa.pedidos.length }}</span>
+        </div>
+
+        <div class="summary-line propina-hint">
+          <span>Propina sugerida (10%):</span>
+          <span class="val">$ {{ (mesa.total_acumulado * 0.10) | number }} COP</span>
+        </div>
+
+        <mat-divider class="divider"></mat-divider>
+
+        <div class="total-big-row">
+          <span>Total Factura:</span>
+          <span class="total-big">$ {{ mesa.total_acumulado | number }} COP</span>
+        </div>
+
+        <div class="totales-actions">
+          @if (mesa.estado_visual === 'ocupada') {
+            <button mat-flat-button class="btn-liquidar-full" (click)="simularFacturacion()">
+              <mat-icon>receipt</mat-icon>
+              <span>Generar Factura y Cobrar</span>
+            </button>
+          }
+
+          <button mat-stroked-button class="btn-liberar-manual" (click)="liberarMesaManual()">
+            <mat-icon>lock_open</mat-icon>
+            <span>Liberar Mesa sin Facturar</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

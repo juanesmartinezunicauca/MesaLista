@@ -1,0 +1,96 @@
+<div class="login-split-container">
+  <!-- Lado Izquierdo: Branding & Hero Visual (Offline-First) -->
+  <div class="brand-panel">
+    <div class="brand-content">
+      <div class="logo-box">
+        <mat-icon class="brand-icon">restaurant_menu</mat-icon>
+        <span class="brand-name">MesaLista</span>
+      </div>
+
+      <div class="hero-text">
+        <h2>Gestión inteligente para tu restaurante.</h2>
+        <p>Control de mesas, pedidos, cocina, domicilios e inventario en una sola plataforma local.</p>
+      </div>
+
+      <div class="quote-card">
+        <p>Solución de alta disponibilidad para operación ininterrumpida en red local.</p>
+        <span class="quote-author">MesaLista POS</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lado Derecho: Formulario de Autenticación -->
+  <div class="form-panel">
+    <div class="form-wrapper">
+      <div class="form-header">
+        <h1>Iniciar Sesión</h1>
+        <p>Ingresa tus credenciales para acceder al sistema</p>
+      </div>
+
+      @if (errorMessage()) {
+        <div class="login-error-banner" role="alert">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ errorMessage() }}</span>
+        </div>
+      }
+
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+
+        <!-- Campo Correo o Usuario -->
+        <div class="field-container">
+          <label class="custom-label">Usuario</label>
+          <mat-form-field appearance="outline" class="custom-field">
+            <mat-icon matPrefix class="input-icon">person_outline</mat-icon>
+            <input matInput formControlName="usuario" placeholder="Ingresa tu usuario" type="text" autocomplete="username" />
+            @if (loginForm.get('usuario')?.hasError('required')) {
+              <mat-error>El usuario es obligatorio</mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        <!-- Campo Contraseña -->
+        <div class="field-container">
+          <label class="custom-label">Contraseña</label>
+          <mat-form-field appearance="outline" class="custom-field">
+            <mat-icon matPrefix class="input-icon">lock_outline</mat-icon>
+            <input
+              matInput
+              [type]="hidePassword() ? 'password' : 'text'"
+              formControlName="password"
+              placeholder="••••••••"
+              autocomplete="current-password"
+            />
+            <button
+              mat-icon-button
+              matSuffix
+              type="button"
+              (click)="togglePasswordVisibility($event)"
+              [attr.aria-label]="'Ocultar contraseña'"
+              [attr.aria-pressed]="hidePassword()"
+              class="visibility-btn"
+            >
+              <mat-icon>{{ hidePassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+            @if (loginForm.get('password')?.hasError('required')) {
+              <mat-error>La contraseña es obligatoria</mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        <!-- Opciones adicionales -->
+        <div class="form-options">
+          <a href="#" class="forgot-link" (click)="$event.preventDefault()">¿Olvidaste tu contraseña?</a>
+        </div>
+
+        <!-- Botón Principal de Envío -->
+        <button mat-raised-button type="submit" class="submit-btn" [disabled]="isLoading()">
+          @if (isLoading()) {
+            <mat-spinner diameter="20" class="btn-spinner"></mat-spinner>
+          } @else {
+            <span>Acceder al Sistema</span>
+          }
+        </button>
+      </form>
+    </div>
+  </div>
+</div>

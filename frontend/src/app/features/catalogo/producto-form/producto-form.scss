@@ -1,0 +1,355 @@
+@use 'tokens' as *;
+@use 'mixins' as *;
+
+.inventory-layout {
+  display: flex;
+  width: 100%;
+}
+
+// --- CONTENIDO PRINCIPAL ---
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 8px 16px 32px 16px;
+}
+
+// --- HEADER DE LA VISTA ---
+.content-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+
+  .header-title-wrapper {
+    .back-link {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: $text-muted;
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+      transition: color $transition-fast;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
+      &:hover {
+        color: $text-primary;
+      }
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: $text-primary;
+      margin: 0;
+    }
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 12px;
+
+    .btn-cancel {
+      border-color: $border-color !important;
+      color: $text-primary !important;
+      border-radius: $radius-md !important;
+      padding: 0 20px;
+      font-weight: 500;
+    }
+
+    .btn-save {
+      background-color: $brand-blue !important;
+      color: white !important;
+      border-radius: $radius-md !important;
+      padding: 0 20px;
+      font-weight: 500;
+      box-shadow: $shadow-blue;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      mat-icon {
+        margin-right: 0;
+      }
+
+      .inline-spinner {
+        display: inline-block;
+      }
+    }
+  }
+}
+
+.feedback-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-radius: $radius-md;
+  margin-bottom: 24px;
+  font-size: 0.95rem;
+  font-weight: 500;
+
+  mat-icon {
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+  }
+
+  &.feedback-exito {
+    background-color: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.35);
+    color: #15803d;
+    mat-icon {
+      color: #16a34a;
+    }
+  }
+
+  &.feedback-error {
+    background-color: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    color: #b91c1c;
+    mat-icon {
+      color: #dc2626;
+    }
+  }
+}
+
+// --- GRID DE FORMULARIO ---
+.form-grid-container {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 24px;
+
+  @include respond-to('lg') {
+    grid-template-columns: 1fr;
+  }
+}
+
+.left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+// --- TARJETAS SECCIONADAS ---
+.card-section {
+  @include card-surface($bg: $bg-card, $border: $border-color, $radius: $radius-lg);
+  padding: 24px;
+
+  h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: $text-primary;
+    margin-top: 0;
+    margin-bottom: 20px;
+  }
+}
+
+.form-row-dual {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+
+  @include respond-to('md') {
+    grid-template-columns: 1fr;
+  }
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+
+  label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: $text-muted;
+  }
+
+  .margin-hint {
+    font-size: 0.75rem;
+    color: $color-success;
+    font-weight: 600;
+    margin-top: -8px;
+  }
+
+  .toggle-wrapper {
+    display: flex;
+    align-items: center;
+    min-height: 52px;
+  }
+}
+
+// --- ESTILIZACIÓN DE FORM FIELDS SIN ::NG-DEEP ---
+.saas-input {
+  width: 100%;
+
+  --mdc-outlined-text-field-container-shape: #{$radius-md};
+  --mdc-outlined-text-field-outline-color: #{$border-color};
+  --mdc-outlined-text-field-focus-outline-color: #{$brand-blue};
+  --mdc-outlined-text-field-input-text-color: #{$text-primary};
+
+  input.mat-mdc-input-element,
+  textarea.mat-mdc-input-element {
+    color: $text-primary !important;
+  }
+}
+
+.form-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 16px;
+  color: $text-muted;
+  font-size: 0.9375rem;
+}
+
+// --- COLUMNA DERECHA: INGREDIENTES ---
+.ingredients-card {
+  .section-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+
+    h3 {
+      margin-bottom: 0;
+    }
+  }
+
+  .section-subtitle {
+    font-size: 0.85rem;
+    color: $text-muted;
+    margin-bottom: 16px;
+    line-height: 1.4;
+  }
+
+  .add-ingredient-inline {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+
+    .ingredient-quick-input {
+      flex: 1;
+      height: 38px;
+      padding: 0 12px;
+      border: 1px solid $border-color;
+      border-radius: $radius-md;
+      font-size: 0.875rem;
+      color: $text-primary;
+      background-color: $bg-card;
+      outline: none;
+      transition: border-color $transition-fast;
+
+      &:focus {
+        border-color: $brand-blue;
+      }
+
+      &::placeholder {
+        color: $text-light-muted;
+      }
+    }
+
+    .btn-add-ing {
+      background-color: $brand-blue !important;
+      color: white !important;
+      border-radius: $radius-md !important;
+      height: 38px;
+      padding: 0 14px;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+
+  .empty-ingredients {
+    padding: 24px 12px;
+    text-align: center;
+    color: $text-muted;
+    font-size: 0.875rem;
+    font-style: italic;
+  }
+
+  .ingredients-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    .ingredient-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background-color: $bg-card-alt;
+      border: 1px solid $border-subtle;
+      border-radius: $radius-md;
+
+      .ingredient-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        .drag-handle {
+          color: $text-light-muted;
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+        }
+
+        .ingredient-name {
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: $text-primary;
+
+          &.disabled-text {
+            color: $text-muted;
+            text-decoration: line-through;
+          }
+        }
+      }
+
+      .ingredient-controls {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        .btn-delete-ing {
+          color: $text-light-muted;
+          width: 32px;
+          height: 32px;
+
+          mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+          }
+
+          &:hover {
+            color: $color-danger;
+          }
+        }
+      }
+    }
+  }
+}

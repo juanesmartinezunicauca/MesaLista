@@ -1,0 +1,56 @@
+// ==========================================
+// MesaLista - SCSS Mixins & Utilities
+// ==========================================
+
+@use './tokens' as *;
+
+// --- Responsive Breakpoints ---
+$breakpoint-sm: 640px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 1024px;
+$breakpoint-xl: 1280px;
+
+@mixin respond-to($breakpoint) {
+  @if $breakpoint == 'sm' {
+    @media (max-width: $breakpoint-sm) { @content; }
+  } @else if $breakpoint == 'md' {
+    @media (max-width: $breakpoint-md) { @content; }
+  } @else if $breakpoint == 'lg' {
+    @media (max-width: $breakpoint-lg) { @content; }
+  } @else if $breakpoint == 'xl' {
+    @media (max-width: $breakpoint-xl) { @content; }
+  }
+}
+
+// --- Cards & Contenedores ---
+@mixin card-surface($bg: $bg-card, $border: $border-color, $radius: $radius-lg) {
+  background-color: $bg;
+  border: 1px solid $border;
+  border-radius: $radius;
+  box-shadow: $shadow-xs;
+}
+
+// --- Truncamiento de Texto ---
+@mixin text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// --- Scrollbar Personalizado y Discreto ---
+@mixin custom-scrollbar($width: 6px, $track: transparent, $thumb: #D1D5DB, $thumb-hover: #9CA3AF) {
+  &::-webkit-scrollbar {
+    width: $width;
+    height: $width;
+  }
+  &::-webkit-scrollbar-track {
+    background: $track;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: $thumb;
+    border-radius: $radius-full;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: $thumb-hover;
+  }
+}

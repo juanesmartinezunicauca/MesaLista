@@ -5,9 +5,19 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // A-05: CORS restringido al origen de la LAN del restaurante
+  // A-05: CORS para la LAN del restaurante y entornos de desarrollo local
+  const configuredOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+    : [];
+  const allowedOrigins = [
+    'http://localhost:4200',
+    'http://127.0.0.1:4200',
+    'http://localhost:3000',
+    ...configuredOrigins,
+  ];
+
   app.enableCors({
-    origin: process.env.CORS_ORIGIN ?? 'http://localhost',
+    origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,
   });
