@@ -20,6 +20,7 @@ describe('CatalogoService', () => {
     costo: 7500,
     ingredientes_removibles: 'Cebolla, Tomate, Salsa Especial',
     cantidad_inventario: 20,
+    controla_inventario: true,
     disponible: true,
   };
 
@@ -96,6 +97,35 @@ describe('CatalogoService', () => {
         }),
       });
       expect(resultado).toEqual(mockProducto);
+    });
+
+    it('debe crear un producto sin control de stock con cantidad_inventario en 0', async () => {
+      prisma.producto.findFirst.mockResolvedValue(null);
+      const productoSinStock = {
+        ...mockProducto,
+        controla_inventario: false,
+        cantidad_inventario: 0,
+      };
+      prisma.producto.create.mockResolvedValue(productoSinStock);
+
+      const dto = {
+        nombre: 'Hamburguesa Artesanal',
+        categoria: 'Hamburguesas',
+        precio_venta: 18000,
+        costo: 7500,
+        controla_inventario: false,
+      };
+
+      const resultado = await service.crear(dto);
+
+      expect(prisma.producto.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          controla_inventario: false,
+          cantidad_inventario: 0,
+        }),
+      });
+      expect(resultado.controla_inventario).toBe(false);
+      expect(resultado.cantidad_inventario).toBe(0);
     });
 
     it('debe lanzar ConflictException si el producto ya existe', async () => {
@@ -337,6 +367,21 @@ describe('CatalogoService', () => {
         data: { cantidad_inventario: 18 },
       });
       expect(res.nuevo_stock).toBe(18);
+    });
+
+    it('debe lanzar BadRequestException si el producto no controla inventario', async () => {
+      prisma.producto.findUnique.mockResolvedValue({
+        ...mockProducto,
+        controla_inventario: false,
+      });
+
+      await expect(
+        service.registrarAjusteInventario(1, 5, {
+          tipo_ajuste: TipoAjuste.Entrada,
+          cantidad: 10,
+          motivo: 'Intento de ajuste en comida preparada',
+        }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

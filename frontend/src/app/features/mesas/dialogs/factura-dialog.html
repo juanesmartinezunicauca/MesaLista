@@ -1,0 +1,260 @@
+<div class="factura-modal">
+  <!-- Contenedor Desplazable Unificado: Se desliza todo el contenido junto -->
+  <div class="modal-scroll-area">
+    <!-- 1. Encabezado Limpio con Mesero Responsable -->
+    <div class="modal-header">
+      <div class="header-left">
+        <span class="mesa-badge">Mesa #{{ data.mesa.numero }}</span>
+        <div class="header-titles">
+          <h2>Cuenta de la Mesa</h2>
+          <span class="mesero-sub">
+            <mat-icon>person</mat-icon>
+            Atendido por: <strong>{{ data.mesa.mesero_actual || 'Mesero de turno' }}</strong>
+          </span>
+        </div>
+      </div>
+      <button mat-icon-button class="btn-close" (click)="cerrarSinCobrar()" aria-label="Cerrar">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <!-- 2. Lista Completa de Consumos (Totalmente Legible sin scroll interno) -->
+    <div class="consumos-list">
+      @for (item of itemsConsolidados(); track item.nombre + item.precio_unitario) {
+        <div class="consumo-fila">
+          <span class="item-qty">{{ item.cantidad }}x</span>
+          <div class="item-info">
+            <span class="item-name">{{ item.nombre }}</span>
+            @if (item.notas.length > 0) {
+              <span class="item-nota">{{ item.notas.join(', ') }}</span>
+            }
+          </div>
+          <span class="item-subtotal">$ {{ item.subtotal | number }}</span>
+        </div>
+      } @empty {
+        <p class="empty-msg">No hay productos en los pedidos de esta mesa.</p>
+      }
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <!-- 3. Totales y Propina (Super Directo) -->
+    <div class="resumen-seccion">
+      <div class="resumen-fila subtotal">
+        <span>Subtotal</span>
+        <span>$ {{ subtotal() | number }}</span>
+      </div>
+
+      <label class="propina-toggle">
+        <input
+          type="checkbox"
+          [checked]="tipoPropina() === 'diez'"
+          (change)="togglePropinaDiez($event)"
+        />
+        <span class="propina-texto">
+          Propina voluntaria (10%): <strong>$ {{ propinaDiez() | number }}</strong>
+        </span>
+      </label>
+
+      <div class="resumen-fila total-fila">
+        <span>TOTAL:</span>
+        <span class="monto-total">$ {{ totalFinal() | number }} COP</span>
+      </div>
+    </div>
+
+    <!-- 4. Medio de Pago (Simple o Mixto) -->
+    <div class="pago-seccion">
+      <span class="pago-lbl">Medio de Pago</span>
+      <div class="pago-botones">
+        <button
+          type="button"
+          class="pago-btn"
+          [class.activo]="metodoPago() === 'efectivo'"
+          (click)="seleccionarMetodo('efectivo')"
+        >
+          <mat-icon>payments</mat-icon>
+          <span>Efectivo</span>
+        </button>
+
+        <button
+          type="button"
+          class="pago-btn"
+          [class.activo]="metodoPago() === 'tarjeta'"
+          (click)="seleccionarMetodo('tarjeta')"
+        >
+          <mat-icon>credit_card</mat-icon>
+          <span>Tarjeta</span>
+        </button>
+
+        <button
+          type="button"
+          class="pago-btn"
+          [class.activo]="metodoPago() === 'transferencia'"
+          (click)="seleccionarMetodo('transferencia')"
+        >
+          <mat-icon>qr_code_2</mat-icon>
+          <span>Transferencia</span>
+        </button>
+
+        <button
+          type="button"
+          class="pago-btn mixto-btn"
+          [class.activo]="metodoPago() === 'mixto'"
+          (click)="seleccionarMetodo('mixto')"
+        >
+          <mat-icon>call_split</mat-icon>
+          <span>Mixto</span>
+        </button>
+      </div>
+
+      <!-- 4A. Pago 100% Efectivo -->
+      @if (metodoPago() === 'efectivo') {
+        <div class="efectivo-caja">
+          <div class="efectivo-input-row">
+            <span class="lbl-recibido">Paga con:</span>
+            <div class="input-contenedor">
+              <span class="simbolo">$</span>
+              <input
+                type="number"
+                [ngModel]="efectivoRecibido()"
+                (ngModelChange)="efectivoRecibido.set(+$event || 0)"
+                placeholder="0"
+              />
+            </div>
+            <button type="button" class="btn-exacto" (click)="setEfectivoExacto()">
+              Exacto
+            </button>
+          </div>
+
+          @if (efectivoRecibido() >= totalFinal() && totalFinal() > 0) {
+            <div class="cambio-tag exito">
+              <span>Vueltos:</span>
+              <strong>$ {{ cambioVueltos() | number }} COP</strong>
+            </div>
+          } @else if (efectivoRecibido() > 0 && efectivoRecibido() < totalFinal()) {
+            <div class="cambio-tag alerta">
+              <span>Faltan: $ {{ (totalFinal() - efectivoRecibido()) | number }} COP</span>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- 4B. Pago Mixto / Múltiples Medios -->
+      @if (metodoPago() === 'mixto') {
+        <div class="mixto-caja">
+          <div class="mixto-fila">
+            <span class="metodo-tag"><mat-icon>payments</mat-icon> Efectivo:</span>
+            <div class="input-contenedor">
+              <span class="simbolo">$</span>
+              <input
+                type="number"
+                [ngModel]="montoEfectivo()"
+                (ngModelChange)="montoEfectivo.set(+$event || 0)"
+                placeholder="0"
+              />
+            </div>
+            @if (diferenciaAsignacion() > 0) {
+              <button type="button" class="btn-completar" (click)="completarMonto('efectivo')">
+                + Resto
+              </button>
+            }
+          </div>
+
+          <div class="mixto-fila">
+            <span class="metodo-tag"><mat-icon>credit_card</mat-icon> Tarjeta:</span>
+            <div class="input-contenedor">
+              <span class="simbolo">$</span>
+              <input
+                type="number"
+                [ngModel]="montoTarjeta()"
+                (ngModelChange)="montoTarjeta.set(+$event || 0)"
+                placeholder="0"
+              />
+            </div>
+            @if (diferenciaAsignacion() > 0) {
+              <button type="button" class="btn-completar" (click)="completarMonto('tarjeta')">
+                + Resto
+              </button>
+            }
+          </div>
+
+          <div class="mixto-fila">
+            <span class="metodo-tag"><mat-icon>qr_code_2</mat-icon> Transferencia:</span>
+            <div class="input-contenedor">
+              <span class="simbolo">$</span>
+              <input
+                type="number"
+                [ngModel]="montoTransferencia()"
+                (ngModelChange)="montoTransferencia.set(+$event || 0)"
+                placeholder="0"
+              />
+            </div>
+            @if (diferenciaAsignacion() > 0) {
+              <button type="button" class="btn-completar" (click)="completarMonto('transferencia')">
+                + Resto
+              </button>
+            }
+          </div>
+
+          <!-- Barra de estado de pago mixto -->
+          <div class="mixto-status-bar">
+            @if (asignacionCompleta()) {
+              <div class="status-msg exito">
+                <mat-icon>check_circle</mat-icon>
+                <span>Monto total $ {{ totalFinal() | number }} distribuido correctamente</span>
+              </div>
+            } @else if (diferenciaAsignacion() > 0) {
+              <div class="status-msg alerta">
+                <mat-icon>info</mat-icon>
+                <span>Faltan <strong>$ {{ diferenciaAsignacion() | number }}</strong> por asignar</span>
+              </div>
+            } @else {
+              <div class="status-msg error">
+                <mat-icon>warning</mat-icon>
+                <span>Excede por <strong>$ {{ (-diferenciaAsignacion()) | number }}</strong></span>
+              </div>
+            }
+          </div>
+
+          <!-- Si asignó efectivo en el pago mixto, calcular vueltos -->
+          @if (montoEfectivo() > 0) {
+            <div class="efectivo-mixto-row">
+              <span class="sub-lbl">Entrega en efectivo:</span>
+              <div class="input-contenedor">
+                <span class="simbolo">$</span>
+                <input
+                  type="number"
+                  [ngModel]="efectivoRecibido()"
+                  (ngModelChange)="efectivoRecibido.set(+$event || 0)"
+                  placeholder="Monto entregado"
+                />
+              </div>
+              @if (efectivoRecibido() >= montoEfectivo()) {
+                <span class="vuelto-inline">Vueltos: $ {{ (efectivoRecibido() - montoEfectivo()) | number }}</span>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div> <!-- fin modal-scroll-area -->
+
+  <!-- 5. Acciones Finales (El botón Cobrar SIEMPRE visible al pie) -->
+  <div class="modal-acciones">
+    <button mat-button class="btn-cancelar" (click)="cerrarSinCobrar()">
+      Cancelar
+    </button>
+
+    <button
+      mat-flat-button
+      class="btn-confirmar-cobro"
+      [disabled]="!puedeCobrar()"
+      (click)="confirmarCobro()"
+    >
+      <mat-icon>check</mat-icon>
+      <span>Cobrar $ {{ totalFinal() | number }}</span>
+    </button>
+  </div>
+</div>

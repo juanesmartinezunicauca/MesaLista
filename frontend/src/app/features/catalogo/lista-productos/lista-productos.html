@@ -20,10 +20,12 @@
         <span>Refrescar</span>
       </button>
 
-      <button type="button" mat-flat-button class="btn-create" (click)="irACrear()">
-        <mat-icon>add</mat-icon>
-        <span>Nuevo Producto</span>
-      </button>
+      @if (esAdmin()) {
+        <button type="button" mat-flat-button class="btn-create" (click)="irACrear()">
+          <mat-icon>add</mat-icon>
+          <span>Nuevo Producto</span>
+        </button>
+      }
     </div>
   </header>
 
@@ -135,63 +137,83 @@
     <p>Cargando catálogo de productos desde la base de datos...</p>
   </div>
   } @else {
-  <!-- Empty State -->
-  @if (productosFiltrados().length === 0) {
-  <div class="empty-state">
-    <div class="empty-icon-circle">
-      <mat-icon>fastfood</mat-icon>
-    </div>
-    @if (busqueda() || categoriaSeleccionada() !== 'Todas' || filtroDisponibilidad() !== 'todos') {
-    <h3>No se encontraron productos</h3>
-    <p>No hay coincidencias con los criterios de búsqueda o filtros aplicados.</p>
-    <button type="button" mat-stroked-button
-      (click)="busqueda.set(''); categoriaSeleccionada.set('Todas'); filtroDisponibilidad.set('todos')">
-      Restablecer Filtros
-    </button>
-    } @else {
-    <h3>El catálogo está vacío</h3>
-    <p>Aún no hay productos registrados en la carta. Crea el primero para comenzar a tomar pedidos.</p>
-    <button type="button" mat-flat-button class="btn-create" (click)="irACrear()">
-      <mat-icon>add</mat-icon>
-      <span>Crear Primer Producto</span>
-    </button>
-    }
-  </div>
-  } @else {
-  <!-- Grilla de Tarjetas de Productos -->
-  <div class="products-grid">
-    @for (prod of productosFiltrados(); track prod.id_producto) {
-    <article class="product-card" [class.unavailable]="!prod.disponible">
-      <!-- Header de la Tarjeta -->
-      <div class="card-top">
-        <div class="badge-row">
-          <span class="category-tag">{{ prod.categoria }}</span>
-          <span class="stock-badge" [ngClass]="prod.claseStock">
-            {{ prod.etiquetaStock }}
-          </span>
+    <!-- Empty State -->
+    @if (productosFiltrados().length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon-circle">
+          <mat-icon>fastfood</mat-icon>
         </div>
-
-        <!-- Menú de Acciones Rápidas -->
-        <button type="button" mat-icon-button class="btn-more-options" [matMenuTriggerFor]="productMenu"
-          (click)="$event.stopPropagation()" aria-label="Opciones del producto">
-          <mat-icon>more_vert</mat-icon>
-        </button>
-
-        <mat-menu #productMenu="matMenu">
-          <button type="button" mat-menu-item (click)="irAEditar(prod)">
-            <mat-icon>edit</mat-icon>
-            <span>Editar Producto</span>
+        @if (busqueda() || categoriaSeleccionada() !== 'Todas' || filtroDisponibilidad() !== 'todos') {
+          <h3>No se encontraron productos</h3>
+          <p>No hay coincidencias con los criterios de búsqueda o filtros aplicados.</p>
+          <button type="button" mat-stroked-button (click)="busqueda.set(''); categoriaSeleccionada.set('Todas'); filtroDisponibilidad.set('todos')">
+            Restablecer Filtros
           </button>
-          <button type="button" mat-menu-item (click)="eliminarProducto(prod, $event)" class="menu-delete">
-            <mat-icon color="warn">delete</mat-icon>
-            <span>Eliminar de Carta</span>
-          </button>
-        </mat-menu>
+        } @else {
+          <h3>El catálogo está vacío</h3>
+          <p>Aún no hay productos registrados en la carta. Crea el primero para comenzar a tomar pedidos.</p>
+          @if (esAdmin()) {
+            <button type="button" mat-flat-button class="btn-create" (click)="irACrear()">
+              <mat-icon>add</mat-icon>
+              <span>Crear Primer Producto</span>
+            </button>
+          }
+        }
       </div>
+    } @else {
+      <!-- Grilla de Tarjetas de Productos -->
+      <div class="products-grid">
+        @for (prod of productosFiltrados(); track prod.id_producto) {
+          <article class="product-card" [class.unavailable]="!prod.disponible">
+            <!-- Header de la Tarjeta -->
+            <div class="card-top">
+              <div class="badge-row">
+                <span class="category-tag">{{ prod.categoria }}</span>
+                @if (prod.controla_inventario) {
+                  <span
+                    class="stock-badge"
+                    [ngClass]="prod.claseStock"
+                  >
+                    {{ prod.etiquetaStock }}
+                  </span>
+                }
+              </div>
 
-      <!-- Cuerpo: Nombre y Receta -->
-      <div class="card-main">
-        <h3 class="product-name" (click)="irAEditar(prod)">{{ prod.nombre }}</h3>
+              <!-- Menú de Acciones Rápidas (Solo Administrador) -->
+              @if (esAdmin()) {
+                <button
+                  type="button"
+                  mat-icon-button
+                  class="btn-more-options"
+                  [matMenuTriggerFor]="productMenu"
+                  (click)="$event.stopPropagation()"
+                  aria-label="Opciones del producto"
+                >
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+
+                <mat-menu #productMenu="matMenu">
+                  <button type="button" mat-menu-item (click)="irAEditar(prod)">
+                    <mat-icon>edit</mat-icon>
+                    <span>Editar Producto</span>
+                  </button>
+                  <button type="button" mat-menu-item (click)="eliminarProducto(prod, $event)" class="menu-delete">
+                    <mat-icon color="warn">delete</mat-icon>
+                    <span>Eliminar de Carta</span>
+                  </button>
+                </mat-menu>
+              }
+            </div>
+
+            <!-- Cuerpo: Nombre y Receta -->
+            <div class="card-main">
+              <h3
+                class="product-name"
+                [style.cursor]="esAdmin() ? 'pointer' : 'default'"
+                (click)="esAdmin() ? irAEditar(prod) : null"
+              >
+                {{ prod.nombre }}
+              </h3>
 
         @if (prod.ingredientes_removibles.length) {
         <div class="ingredients-box">

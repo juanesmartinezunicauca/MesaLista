@@ -21,10 +21,12 @@
           <p class="page-subtitle">Control de disponibilidad, toma de pedidos y facturación del salón</p>
         </div>
 
-        <button mat-flat-button class="btn-nueva-mesa" (click)="abrirNuevaMesaDialog()">
-          <mat-icon>add</mat-icon>
-          <span>Nueva Mesa</span>
-        </button>
+        @if (esAdmin()) {
+          <button mat-flat-button class="btn-nueva-mesa" (click)="abrirNuevaMesaDialog()">
+            <mat-icon>add</mat-icon>
+            <span>Nueva Mesa</span>
+          </button>
+        }
       </header>
 
       <!-- 2. BARRA DE MÉTRICAS EN VIVO -->
@@ -144,15 +146,17 @@
               </div>
 
               <!-- Menú contextual de mesa -->
-              <button
-                mat-icon-button
-                [matMenuTriggerFor]="cardMenu"
-                (click)="$event.stopPropagation()"
-                class="more-btn"
-                aria-label="Opciones de mesa"
-              >
-                <mat-icon>more_vert</mat-icon>
-              </button>
+              @if (mesa.estado_visual === 'ocupada' || esAdmin()) {
+                <button
+                  mat-icon-button
+                  [matMenuTriggerFor]="cardMenu"
+                  (click)="$event.stopPropagation()"
+                  class="more-btn"
+                  aria-label="Opciones de mesa"
+                >
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+              }
 
               <mat-menu #cardMenu="matMenu">
                 @if (mesa.estado_visual === 'ocupada') {
@@ -160,12 +164,12 @@
                     <mat-icon>swap_horiz</mat-icon>
                     <span>Transferir pedidos</span>
                   </button>
-                  <button mat-menu-item (click)="simularFacturacion(mesa, $event)">
-                    <mat-icon>receipt</mat-icon>
-                    <span>Facturar cuenta</span>
+                  <button mat-menu-item (click)="generarFacturaMesa(mesa, $event)">
+                    <mat-icon>receipt_long</mat-icon>
+                    <span>Facturar / Pre-cuenta</span>
                   </button>
                 }
-                @if (mesa.estado_visual === 'libre') {
+                @if (mesa.estado_visual === 'libre' && esAdmin()) {
                   <button mat-menu-item (click)="eliminarMesa(mesa, $event)">
                     <mat-icon color="warn">delete</mat-icon>
                     <span>Retirar mesa</span>
@@ -241,9 +245,9 @@
                       <span>Ver Pedidos</span>
                     </button>
 
-                    <!-- Botón Facturar SOLO visible si está ocupada -->
-                    <button mat-flat-button class="btn-cobrar-quick" (click)="simularFacturacion(mesa, $event)">
-                      <mat-icon>receipt</mat-icon>
+                    <!-- Botón Facturar / Pre-cuenta (abre la factura para cobrar desde allí) -->
+                    <button mat-flat-button class="btn-facturar-quick" (click)="generarFacturaMesa(mesa, $event)">
+                      <mat-icon>receipt_long</mat-icon>
                       <span>Facturar</span>
                     </button>
                   </div>
@@ -258,10 +262,12 @@
             </div>
             <h3>No hay mesas registradas</h3>
             <p>Comienza registrando las mesas de tu restaurante para organizar el salón y gestionar pedidos.</p>
-            <button mat-flat-button class="btn-nueva-mesa" (click)="abrirNuevaMesaDialog()">
-              <mat-icon>add</mat-icon>
-              <span>Registrar Primera Mesa</span>
-            </button>
+            @if (esAdmin()) {
+              <button mat-flat-button class="btn-nueva-mesa" (click)="abrirNuevaMesaDialog()">
+                <mat-icon>add</mat-icon>
+                <span>Registrar Primera Mesa</span>
+              </button>
+            }
           </div>
         }
       </section>

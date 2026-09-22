@@ -99,6 +99,7 @@ model Producto {
   costo                   Decimal @db.Decimal(10, 2)
   ingredientes_removibles String? @db.VarChar(255)
   cantidad_inventario     Int     @default(0)
+  controla_inventario     Boolean @default(false)
   disponible              Boolean @default(true)
 
   ajustesInventario AjusteInventario[]

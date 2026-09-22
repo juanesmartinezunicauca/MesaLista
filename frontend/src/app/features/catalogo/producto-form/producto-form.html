@@ -15,14 +15,24 @@
         <h1>{{ isEditMode() ? 'Editar Producto' : 'Nuevo Producto' }}</h1>
       </div>
       <div class="header-actions">
-        <button type="button" mat-stroked-button class="btn-cancel" (click)="onCancel()"
-          [disabled]="isSaving()">Cancelar</button>
-        <button type="button" mat-flat-button class="btn-save" (click)="onSave()"
-          [disabled]="isSaving() || isLoadingProduct()">
+        <button
+          type="button"
+          mat-stroked-button
+          class="btn-cancel"
+          (click)="onCancel()"
+          [disabled]="isSaving()"
+        >Cancelar</button>
+        <button
+          type="button"
+          mat-flat-button
+          class="btn-save"
+          (click)="onSave()"
+          [disabled]="isSaving() || isLoadingProduct()"
+        >
           @if (isSaving()) {
-          <mat-spinner diameter="18" class="inline-spinner"></mat-spinner>
+            <mat-spinner diameter="18" class="inline-spinner"></mat-spinner>
           } @else {
-          <mat-icon>{{ isEditMode() ? 'save' : 'add_task' }}</mat-icon>
+            <mat-icon>{{ isEditMode() ? 'save' : 'add_task' }}</mat-icon>
           }
           <span>{{ isEditMode() ? 'Guardar Cambios' : 'Crear Producto' }}</span>
         </button>
@@ -31,211 +41,271 @@
 
     <!-- Banner de Feedback -->
     @if (mensajeFeedback(); as msg) {
-    <div class="feedback-banner" [class.feedback-exito]="msg.tipo === 'exito'"
-      [class.feedback-error]="msg.tipo === 'error'">
-      <mat-icon>{{ msg.tipo === 'exito' ? 'check_circle' : 'error_outline' }}</mat-icon>
-      <span>{{ msg.texto }}</span>
-    </div>
+      <div
+        class="feedback-banner"
+        [class.feedback-exito]="msg.tipo === 'exito'"
+        [class.feedback-error]="msg.tipo === 'error'"
+      >
+        <mat-icon>{{ msg.tipo === 'exito' ? 'check_circle' : 'error_outline' }}</mat-icon>
+        <span>{{ msg.texto }}</span>
+      </div>
     }
 
     <!-- Loading al cargar datos existentes -->
     @if (isLoadingProduct()) {
-    <div class="form-loading-state">
-      <mat-spinner diameter="40"></mat-spinner>
-      <p>Cargando información del producto...</p>
-    </div>
-    } @else {
-    <!-- Grid de Formulario de 2 Columnas -->
-    <div class="form-grid-container" [formGroup]="productForm">
-      <!-- Columna Izquierda: Información Principal, Precios e Inventario -->
-      <div class="left-column">
-        <!-- Tarjeta: Información Principal -->
-        <section class="card-section">
-          <h3>Información Principal</h3>
-
-          <div class="form-row-dual">
-            <div class="field-group">
-              <label>Nombre del Producto *</label>
-              <mat-form-field appearance="outline" floatLabel="auto" class="saas-input">
-                <input type="text" matInput formControlName="nombre" placeholder="Ej. Hamburguesa Clásica">
-                @if (productForm.get('nombre')?.hasError('required')) {
-                <mat-error>El nombre del producto es obligatorio</mat-error>
-                }
-              </mat-form-field>
-            </div>
-
-            <div class="field-group">
-              <div class="field-label-row">
-                <label>Categoría *</label>
-                @if (!modoNuevaCategoria()) {
-                <button type="button" class="btn-text-crear-cat" (click)="activarModoNuevaCategoria()"
-                  matTooltip="Crear una categoría personalizada">
-                  <mat-icon>add</mat-icon>
-                  <span>Nueva categoría</span>
-                </button>
-                }
-              </div>
-
-              @if (!modoNuevaCategoria()) {
-              <mat-form-field appearance="outline" class="saas-input">
-                <mat-select formControlName="categoria" (selectionChange)="onCategoriaSelect($event.value)"
-                  placeholder="Selecciona o crea una categoría">
-                  @for (cat of categorias(); track cat) {
-                  <mat-option [value]="cat">{{ cat }}</mat-option>
-                  }
-                  <mat-divider></mat-divider>
-                  <mat-option value="__CREAR_NUEVA__" class="opt-nueva-categoria">
-                    <div class="opt-nueva-inner">
-                      <mat-icon class="icon-add-cat">add_circle_outline</mat-icon>
-                      <span>+ Crear nueva categoría...</span>
-                    </div>
-                  </mat-option>
-                </mat-select>
-                @if (productForm.get('categoria')?.hasError('required')) {
-                <mat-error>La categoría es obligatoria</mat-error>
-                }
-              </mat-form-field>
-              } @else {
-              <div class="nueva-cat-box">
-                <div class="nueva-cat-input-row">
-                  <mat-form-field appearance="outline" class="saas-input">
-                    <input type="text" matInput #nuevaCatInput placeholder="Ej. Pizzas, Cafetería, Mariscos..."
-                      [value]="nuevaCategoriaTexto()" (input)="nuevaCategoriaTexto.set(nuevaCatInput.value)"
-                      (keydown.enter)="$event.preventDefault(); guardarNuevaCategoria(nuevaCatInput.value)">
-                  </mat-form-field>
-                  <button type="button" mat-flat-button class="btn-aplicar-cat"
-                    (click)="guardarNuevaCategoria(nuevaCatInput.value)" [disabled]="!nuevaCatInput.value.trim()">
-                    <mat-icon>check</mat-icon>
-                    <span>Usar</span>
-                  </button>
-                  <button type="button" mat-icon-button class="btn-cancelar-cat" (click)="cancelarModoNuevaCategoria()"
-                    matTooltip="Cancelar">
-                    <mat-icon>close</mat-icon>
-                  </button>
-                </div>
-              </div>
-              }
-            </div>
-          </div>
-
-          <div class="form-row-dual">
-            <div class="field-group">
-              <label>Cantidad en Inventario (Stock) *</label>
-              <mat-form-field appearance="outline" class="saas-input">
-                <input type="number" matInput formControlName="cantidad_inventario" min="0" placeholder="0">
-                @if (productForm.get('cantidad_inventario')?.hasError('required')) {
-                <mat-error>El número de stock es obligatorio</mat-error>
-                } @else if (productForm.get('cantidad_inventario')?.hasError('min')) {
-                <mat-error>El stock no puede ser negativo</mat-error>
-                }
-              </mat-form-field>
-            </div>
-
-            <div class="field-group toggle-group">
-              <label>Disponibilidad Inmediata</label>
-              <div class="toggle-wrapper">
-                <mat-slide-toggle formControlName="disponible" color="primary">
-                  {{ productForm.get('disponible')?.value ? 'Disponible para pedidos' : 'Agotado' }}
-                </mat-slide-toggle>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- Tarjeta: Precios y Costos -->
-        <section class="card-section">
-          <h3>Precios y Costos</h3>
-
-          <div class="form-row-dual">
-            <div class="field-group">
-              <label>Precio de Venta *</label>
-              <mat-form-field appearance="outline" class="saas-input">
-                
-                <span matPrefix style="margin-left: 15px">$&nbsp;</span>
-                <input type="number" matInput formControlName="precio_venta" placeholder="0.00">
-                @if (productForm.get('precio_venta')?.hasError('required')) {
-                <mat-error>El precio de venta es obligatorio</mat-error>
-                } @else if (productForm.get('precio_venta')?.hasError('min')) {
-                <mat-error>El precio no puede ser negativo</mat-error>
-                }
-              </mat-form-field>
-            </div>
-
-            <div class="field-group">
-              <label>Costo *</label>
-              <mat-form-field appearance="outline" class="saas-input">
-                <span matPrefix style="margin-left: 15px">$&nbsp;</span>
-                <input type="number" matInput formControlName="costo" placeholder="0.00">
-                @if (productForm.get('costo')?.hasError('required')) {
-                <mat-error>El costo es obligatorio</mat-error>
-                } @else if (productForm.get('costo')?.hasError('min')) {
-                <mat-error>El costo no puede ser negativo</mat-error>
-                }
-              </mat-form-field>
-              <span class="margin-hint">Margen estimado: {{ estimatedMargin }}</span>
-            </div>
-          </div>
-        </section>
+      <div class="form-loading-state">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Cargando información del producto...</p>
       </div>
+    } @else {
+      <!-- Grid de Formulario de 2 Columnas -->
+      <div class="form-grid-container" [formGroup]="productForm">
+        <!-- Columna Izquierda: Información Principal, Precios e Inventario -->
+        <div class="left-column">
+          <!-- Tarjeta: Información Principal -->
+          <section class="card-section">
+            <h3>Información Principal</h3>
 
-      <!-- Columna Derecha: Ingredientes -->
-      <div class="right-column">
-        <section class="card-section ingredients-card">
-          <div class="section-header-row">
-            <h3>Ingredientes</h3>
-          </div>
-
-          <p class="section-subtitle">
-            Agrega los ingredientes de la receta del producto y define si pueden ser removidos por el cliente.
-          </p>
-
-          <!-- Input para agregar nuevo ingrediente -->
-          <div class="add-ingredient-inline">
-            <input type="text" #nuevoIngInput placeholder="Ej. Tocineta, Pepinillos..."
-              (keydown.enter)="agregarNuevoIngrediente(nuevoIngInput.value); nuevoIngInput.value = ''"
-              class="ingredient-quick-input">
-            <button type="button" mat-flat-button class="btn-add-ing"
-              (click)="agregarNuevoIngrediente(nuevoIngInput.value); nuevoIngInput.value = ''">
-              <mat-icon>add</mat-icon>
-              <span>Agregar</span>
-            </button>
-          </div>
-
-          <!-- Listado de ingredientes configurables -->
-          <div class="ingredients-list">
-            @if (ingredientes().length === 0) {
-            <div class="empty-ingredients">
-              <p>Sin ingredientes añadidos. Escribe un ingrediente y haz clic en Agregar.</p>
-            </div>
-            }
-
-            @for (ing of ingredientes(); track ing.id) {
-            <div class="ingredient-row">
-              <div class="ingredient-info">
-                <mat-icon class="drag-handle">drag_indicator</mat-icon>
-                <span class="ingredient-name">{{ ing.nombre }}</span>
+            <div class="form-row-dual">
+              <div class="field-group">
+                <label>Nombre del Producto *</label>
+                <mat-form-field appearance="outline" floatLabel="auto" class="saas-input">
+                  <input
+                    type="text"
+                    matInput
+                    formControlName="nombre"
+                    placeholder="Ej. Hamburguesa Clásica"
+                  >
+                  @if (productForm.get('nombre')?.hasError('required')) {
+                    <mat-error>El nombre del producto es obligatorio</mat-error>
+                  }
+                </mat-form-field>
               </div>
 
-              <div class="ingredient-controls">
-                <div class="toggle-container">
-                  <span class="removable-label" [class.is-removible]="ing.activo">
-                    {{ ing.activo ? 'Removible' : 'No removible' }}
-                  </span>
-                  <mat-slide-toggle [checked]="ing.activo" (change)="toggleIngrediente(ing.id)" color="primary"
-                    [matTooltip]="ing.activo ? 'Clic para marcar como No removible' : 'Clic para marcar como Removible'">
+              <div class="field-group">
+                <div class="field-label-row">
+                  <label>Categoría *</label>
+                  @if (!modoNuevaCategoria()) {
+                    <button
+                      type="button"
+                      class="btn-text-crear-cat"
+                      (click)="activarModoNuevaCategoria()"
+                      matTooltip="Crear una categoría personalizada"
+                    >
+                      <mat-icon>add</mat-icon>
+                      <span>Nueva categoría</span>
+                    </button>
+                  }
+                </div>
+
+                @if (!modoNuevaCategoria()) {
+                  <mat-form-field appearance="outline" class="saas-input">
+                    <mat-select
+                      formControlName="categoria"
+                      (selectionChange)="onCategoriaSelect($event.value)"
+                      placeholder="Selecciona o crea una categoría"
+                    >
+                      @for (cat of categorias(); track cat) {
+                        <mat-option [value]="cat">{{ cat }}</mat-option>
+                      }
+                      <mat-divider></mat-divider>
+                      <mat-option value="__CREAR_NUEVA__" class="opt-nueva-categoria">
+                        <div class="opt-nueva-inner">
+                          <mat-icon class="icon-add-cat">add_circle_outline</mat-icon>
+                          <span>+ Crear nueva categoría...</span>
+                        </div>
+                      </mat-option>
+                    </mat-select>
+                    @if (productForm.get('categoria')?.hasError('required')) {
+                      <mat-error>La categoría es obligatoria</mat-error>
+                    }
+                  </mat-form-field>
+                } @else {
+                  <div class="nueva-cat-box">
+                    <div class="nueva-cat-input-row">
+                      <mat-form-field appearance="outline" class="saas-input">
+                        <input
+                          type="text"
+                          matInput
+                          #nuevaCatInput
+                          placeholder="Ej. Pizzas, Cafetería, Mariscos..."
+                          [value]="nuevaCategoriaTexto()"
+                          (input)="nuevaCategoriaTexto.set(nuevaCatInput.value)"
+                          (keydown.enter)="$event.preventDefault(); guardarNuevaCategoria(nuevaCatInput.value)"
+                        >
+                      </mat-form-field>
+                      <button
+                        type="button"
+                        mat-flat-button
+                        class="btn-aplicar-cat"
+                        (click)="guardarNuevaCategoria(nuevaCatInput.value)"
+                        [disabled]="!nuevaCatInput.value.trim()"
+                      >
+                        <mat-icon>check</mat-icon>
+                        <span>Usar</span>
+                      </button>
+                      <button
+                        type="button"
+                        mat-icon-button
+                        class="btn-cancelar-cat"
+                        (click)="cancelarModoNuevaCategoria()"
+                        matTooltip="Cancelar"
+                      >
+                        <mat-icon>close</mat-icon>
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="form-row-dual">
+              <div class="field-group toggle-group">
+                <label>Control de Stock</label>
+                <div class="toggle-wrapper">
+                  <mat-slide-toggle formControlName="controla_inventario" color="primary">
+                    {{ productForm.get('controla_inventario')?.value ? 'Lleva stock' : 'No lleva stock' }}
                   </mat-slide-toggle>
                 </div>
-                <button type="button" mat-icon-button class="btn-delete-ing" (click)="eliminarIngrediente(ing.id)"
-                  matTooltip="Eliminar de la lista">
-                  <mat-icon>close</mat-icon>
-                </button>
+              </div>
+
+              <div class="field-group toggle-group">
+                <label>Disponibilidad</label>
+                <div class="toggle-wrapper">
+                  <mat-slide-toggle formControlName="disponible" color="primary">
+                    {{ productForm.get('disponible')?.value ? 'Disponible' : 'Agotado' }}
+                  </mat-slide-toggle>
+                </div>
               </div>
             </div>
+
+            @if (productForm.get('controla_inventario')?.value) {
+              <div class="form-row-dual" style="margin-top: 8px;">
+                <div class="field-group">
+                  <label>Cantidad en Inventario (Stock) *</label>
+                  <mat-form-field appearance="outline" class="saas-input">
+                    <input type="number" matInput formControlName="cantidad_inventario" min="0" placeholder="0">
+                    @if (productForm.get('cantidad_inventario')?.hasError('required')) {
+                      <mat-error>El número de stock es obligatorio</mat-error>
+                    } @else if (productForm.get('cantidad_inventario')?.hasError('min')) {
+                      <mat-error>El stock no puede ser negativo</mat-error>
+                    }
+                  </mat-form-field>
+                </div>
+              </div>
             }
-          </div>
-        </section>
+          </section>
+
+          <!-- Tarjeta: Precios y Costos -->
+          <section class="card-section">
+            <h3>Precios y Costos</h3>
+
+            <div class="form-row-dual">
+              <div class="field-group">
+                <label>Precio de Venta *</label>
+                <mat-form-field appearance="outline" class="saas-input">
+                  <span matPrefix style="margin-left: 15px">$&nbsp;</span>
+                  <input type="number" matInput formControlName="precio_venta" placeholder="0.00">
+                  @if (productForm.get('precio_venta')?.hasError('required')) {
+                    <mat-error>El precio de venta es obligatorio</mat-error>
+                  } @else if (productForm.get('precio_venta')?.hasError('min')) {
+                    <mat-error>El precio no puede ser negativo</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+
+              <div class="field-group">
+                <label>Costo *</label>
+                <mat-form-field appearance="outline" class="saas-input">
+                  <span matPrefix style="margin-left: 15px">$&nbsp;</span>
+                  <input type="number" matInput formControlName="costo" placeholder="0.00">
+                  @if (productForm.get('costo')?.hasError('required')) {
+                    <mat-error>El costo es obligatorio</mat-error>
+                  } @else if (productForm.get('costo')?.hasError('min')) {
+                    <mat-error>El costo no puede ser negativo</mat-error>
+                  }
+                </mat-form-field>
+                <span class="margin-hint">Margen estimado: {{ estimatedMargin }}</span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Columna Derecha: Ingredientes -->
+        <div class="right-column">
+          <section class="card-section ingredients-card">
+            <div class="section-header-row">
+              <h3>Ingredientes</h3>
+            </div>
+
+            <p class="section-subtitle">
+              Agrega los ingredientes de la receta del producto y define si pueden ser removidos por el cliente.
+            </p>
+
+            <!-- Input para agregar nuevo ingrediente -->
+            <div class="add-ingredient-inline">
+              <input
+                type="text"
+                #nuevoIngInput
+                placeholder="Ej. Tocineta, Pepinillos..."
+                (keydown.enter)="agregarNuevoIngrediente(nuevoIngInput.value); nuevoIngInput.value = ''"
+                class="ingredient-quick-input"
+              >
+              <button
+                type="button"
+                mat-flat-button
+                class="btn-add-ing"
+                (click)="agregarNuevoIngrediente(nuevoIngInput.value); nuevoIngInput.value = ''"
+              >
+                <mat-icon>add</mat-icon>
+                <span>Agregar</span>
+              </button>
+            </div>
+
+            <!-- Listado de ingredientes configurables -->
+            <div class="ingredients-list">
+              @if (ingredientes().length === 0) {
+                <div class="empty-ingredients">
+                  <p>Sin ingredientes añadidos. Escribe un ingrediente y haz clic en Agregar.</p>
+                </div>
+              }
+
+              @for (ing of ingredientes(); track ing.id) {
+                <div class="ingredient-row">
+                  <div class="ingredient-info">
+                    <mat-icon class="drag-handle">drag_indicator</mat-icon>
+                    <span class="ingredient-name">{{ ing.nombre }}</span>
+                  </div>
+
+                  <div class="ingredient-controls">
+                    <div class="toggle-container">
+                      <span class="removable-label" [class.is-removible]="ing.activo">
+                        {{ ing.activo ? 'Removible' : 'No removible' }}
+                      </span>
+                      <mat-slide-toggle
+                        [checked]="ing.activo"
+                        (change)="toggleIngrediente(ing.id)"
+                        color="primary"
+                        [matTooltip]="ing.activo ? 'Clic para marcar como No removible' : 'Clic para marcar como Removible'"
+                      >
+                      </mat-slide-toggle>
+                    </div>
+                    <button
+                      type="button"
+                      mat-icon-button
+                      class="btn-delete-ing"
+                      (click)="eliminarIngrediente(ing.id)"
+                      matTooltip="Eliminar de la lista"
+                    >
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          </section>
+        </div>
       </div>
-    </div>
     }
   </main>
 </div>

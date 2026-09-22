@@ -41,10 +41,22 @@ describe('ProductoFormComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('debe inicializar el formulario con validaciones requeridas', () => {
+  it('debe inicializar el formulario con validaciones requeridas y control de stock inactivo por defecto', () => {
     expect(component.productForm).toBeDefined();
     expect(component.productForm.get('nombre')?.valid).toBe(false);
+    expect(component.productForm.get('controla_inventario')?.value).toBe(false);
+    expect(component.productForm.get('cantidad_inventario')?.disabled).toBe(true);
+  });
+
+  it('debe activar y exigir cantidad_inventario al activar controla_inventario', () => {
+    component.productForm.get('controla_inventario')?.setValue(true);
+    expect(component.productForm.get('cantidad_inventario')?.enabled).toBe(true);
+
+    component.productForm.get('cantidad_inventario')?.setValue(null);
     expect(component.productForm.get('cantidad_inventario')?.valid).toBe(false);
+
+    component.productForm.get('cantidad_inventario')?.setValue(15);
+    expect(component.productForm.get('cantidad_inventario')?.valid).toBe(true);
   });
 
   it('debe permitir crear una categoría personalizada y seleccionarla en el formulario', () => {

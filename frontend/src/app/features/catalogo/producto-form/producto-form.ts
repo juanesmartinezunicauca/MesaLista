@@ -10,6 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
@@ -36,6 +37,7 @@ interface IngredienteRemovibleConfig {
     MatButtonModule,
     MatIconModule,
     MatSlideToggleModule,
+    MatCheckboxModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
     MatDividerModule,
@@ -83,9 +85,29 @@ export class ProductoFormComponent implements OnInit {
       categoria: ['Hamburguesas', [Validators.required]],
       precio_venta: [null, [Validators.required, Validators.min(0)]],
       costo: [null, [Validators.required, Validators.min(0)]],
-      cantidad_inventario: [null, [Validators.required, Validators.min(0)]],
+      controla_inventario: [false],
+      cantidad_inventario: [{ value: 0, disabled: true }, [Validators.min(0)]],
       disponible: [true],
     });
+
+    this.productForm.get('controla_inventario')?.valueChanges.subscribe((controla) => {
+      this.actualizarValidacionInventario(Boolean(controla));
+    });
+  }
+
+  actualizarValidacionInventario(controla: boolean): void {
+    const stockControl = this.productForm.get('cantidad_inventario');
+    if (!stockControl) return;
+
+    if (controla) {
+      stockControl.enable({ emitEvent: false });
+      stockControl.setValidators([Validators.required, Validators.min(0)]);
+    } else {
+      stockControl.clearValidators();
+      stockControl.setValue(0, { emitEvent: false });
+      stockControl.disable({ emitEvent: false });
+    }
+    stockControl.updateValueAndValidity({ emitEvent: false });
   }
 
   ngOnInit(): void {
@@ -118,9 +140,11 @@ export class ProductoFormComponent implements OnInit {
           categoria: prod.categoria,
           precio_venta: prod.precio_venta,
           costo: prod.costo,
+          controla_inventario: prod.controla_inventario,
           cantidad_inventario: prod.cantidad_inventario,
           disponible: prod.disponible,
         });
+        this.actualizarValidacionInventario(prod.controla_inventario);
 
         // Asegurar que la categoría del producto figure en la lista si es personalizada
         if (prod.categoria && !this.categorias().includes(prod.categoria)) {
@@ -248,10 +272,13 @@ export class ProductoFormComponent implements OnInit {
     if (this.productForm.invalid) {
       this.productForm.markAllAsTouched();
 
+      const controlaInventario = Boolean(this.productForm.get('controla_inventario')?.value);
       const camposFaltantes: string[] = [];
       if (this.productForm.get('nombre')?.invalid) camposFaltantes.push('Nombre del producto');
       if (this.productForm.get('categoria')?.invalid) camposFaltantes.push('Categoría');
-      if (this.productForm.get('cantidad_inventario')?.invalid) camposFaltantes.push('Cantidad en inventario (Stock)');
+      if (controlaInventario && this.productForm.get('cantidad_inventario')?.invalid) {
+        camposFaltantes.push('Cantidad en inventario (Stock)');
+      }
       if (this.productForm.get('precio_venta')?.invalid) camposFaltantes.push('Precio de venta');
       if (this.productForm.get('costo')?.invalid) camposFaltantes.push('Costo');
 
@@ -275,12 +302,17 @@ export class ProductoFormComponent implements OnInit {
       .filter((i) => i.activo)
       .map((i) => i.nombre);
 
+    const controlaInventario = Boolean(this.productForm.get('controla_inventario')?.value);
+    const rawStock = this.productForm.getRawValue().cantidad_inventario;
+    const cantidadInventario = controlaInventario ? Number(rawStock ?? 0) : 0;
+
     const payload = {
       nombre: this.productForm.value.nombre,
       categoria: this.productForm.value.categoria,
       precio_venta: Number(this.productForm.value.precio_venta),
       costo: Number(this.productForm.value.costo),
-      cantidad_inventario: Number(this.productForm.value.cantidad_inventario),
+      controla_inventario: controlaInventario,
+      cantidad_inventario: cantidadInventario,
       disponible: Boolean(this.productForm.value.disponible),
       ingredientes_removibles: ingredientesRemovibles,
     };

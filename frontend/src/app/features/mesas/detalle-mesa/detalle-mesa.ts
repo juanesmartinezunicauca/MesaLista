@@ -8,6 +8,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { Mesa } from '../models/mesa.model';
 import { MesasService } from '../services/mesas.service';
 import { TransferirMesaDialogComponent } from '../dialogs/transferir-mesa-dialog';
+import { FacturaCobroResult, FacturaDialogComponent } from '../dialogs/factura-dialog';
 
 @Component({
   selector: 'app-detalle-mesa',
@@ -44,15 +45,24 @@ export class DetalleMesaComponent {
     });
   }
 
-  simularFacturacion(): void {
-    if (confirm(`¿Generar Factura para la Mesa #${this.mesa.numero} por un total de $${this.mesa.total_acumulado.toLocaleString()} COP? Los pedidos pasarán a estado cerrado y la mesa quedará libre.`)) {
-      this.mesasService.liberarMesa(this.mesa.id_mesa);
-      this.cerrar.emit();
-    }
+  generarFactura(): void {
+    const dialogRef = this.dialog.open(FacturaDialogComponent, {
+      data: { mesa: this.mesa },
+      width: '460px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+    });
+
+    dialogRef.afterClosed().subscribe((resultado: FacturaCobroResult | null) => {
+      if (resultado?.cobrado) {
+        this.mesasService.liberarMesa(this.mesa.id_mesa);
+        this.cerrar.emit();
+      }
+    });
   }
 
   liberarMesaManual(): void {
-    if (confirm(`¿Estás seguro de liberar la Mesa #${this.mesa.numero}?`)) {
+    if (confirm(`¿Estás seguro de liberar la Mesa #${this.mesa.numero} sin registrar cobro?`)) {
       this.mesasService.liberarMesa(this.mesa.id_mesa);
       this.cerrar.emit();
     }

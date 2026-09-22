@@ -26,6 +26,62 @@
     }
   }
 
+  // Auto-colapso responsivo para tablets y pantallas medianas
+  @include respond-to('lg') {
+    width: 68px;
+
+    .sidebar-brand {
+      padding: 0 12px 16px !important;
+      justify-content: center;
+
+      .brand-info {
+        display: none !important;
+      }
+    }
+
+    .sidebar-nav {
+      padding: 12px 6px !important;
+
+      .nav-item {
+        justify-content: center !important;
+        padding: 12px 6px !important;
+
+        span {
+          display: none !important;
+        }
+      }
+    }
+
+    .sidebar-footer {
+      display: none !important;
+    }
+  }
+
+  // Formato ultra-compacto para smartphones
+  @include respond-to('sm') {
+    width: 56px;
+    padding: 12px 0;
+
+    .sidebar-brand .logo-badge {
+      width: 34px;
+      height: 34px;
+    }
+
+    .sidebar-nav {
+      padding: 8px 4px !important;
+
+      .nav-item {
+        padding: 10px 4px !important;
+
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
+      }
+    }
+  }
+
   .sidebar-brand {
     display: flex;
     align-items: center;
