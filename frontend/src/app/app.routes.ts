@@ -27,6 +27,20 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'caja',
+        loadComponent: () =>
+          import('./features/caja/apertura-caja/apertura-caja').then(
+            (m) => m.AperturaCajaComponent
+          ),
+      },
+      {
+        path: 'caja/dashboard',
+        loadComponent: () =>
+          import('./features/caja/dashboard-caja/dashboard-caja').then(
+            (m) => m.DashboardCajaComponent
+          ),
+      },
+      {
         path: 'catalogo',
         loadComponent: () =>
           import(

@@ -1,7 +1,14 @@
 @use 'tokens' as *;
 @use 'mixins' as *;
 
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
 .catalogo-layout {
+  font-family: 'Poppins', sans-serif;
+  /* Mejora el renderizado de la fuente */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -109,6 +116,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -226,7 +234,6 @@
     align-items: center;
     flex: 1;
     min-width: 280px;
-    max-width: 480px;
     background-color: $bg-card;
     border: 1px solid $border-color;
     border-radius: $radius-full;
@@ -391,10 +398,15 @@
   }
 
   .btn-retry {
-    background-color: $color-danger !important;
-    color: white !important;
+    background-color: #f9dada !important;
+    color: rgb(255, 92, 92) !important;
     border-radius: $radius-md !important;
     font-weight: 600;
+  }
+
+  .btn-retry:hover {
+    background-color: rgb(16, 15, 15) !important;
+    color: #f9dada !important;
   }
 }
 
