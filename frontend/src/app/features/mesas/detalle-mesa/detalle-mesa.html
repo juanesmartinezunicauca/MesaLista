@@ -36,14 +36,6 @@
         <mat-icon>add</mat-icon>
         <span>Nuevo Pedido</span>
       </button>
-
-      <!-- Botón Facturar visible SOLO cuando la mesa está ocupada -->
-      @if (mesa.estado_visual === 'ocupada') {
-        <button mat-flat-button class="btn-cobrar" (click)="simularFacturacion()">
-          <mat-icon>receipt</mat-icon>
-          <span>Facturar ($ {{ mesa.total_acumulado | number }})</span>
-        </button>
-      }
     </div>
   </header>
 

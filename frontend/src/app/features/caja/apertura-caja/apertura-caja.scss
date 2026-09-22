@@ -1,0 +1,107 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+/* Contenedor Principal de la Tarjeta */
+.caja-card {
+  max-width: 380px;
+  margin: 20px auto;
+  border-radius: 16px !important; /* Esquinas muy suaves */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05) !important; /* Sombra sutil */
+  border: 1px solid #f0f0f0;
+  background-color: #ffffff;
+}
+
+.card-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px !important;
+}
+
+/* Círculo del Candado Superior */
+.lock-icon-container {
+  width: 70px;
+  height: 70px;
+  background-color: #f4f5f9;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.lock-icon-top {
+  color: #616782;
+  font-size: 32px;
+  width: 32px;
+  height: 32px;
+}
+
+/* Textos */
+.card-title {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #000000;
+  margin: 0 0 12px 0;
+}
+
+.card-description {
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.92rem;
+  color: #555555;
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+/* Estilos de Entrada (Formulario) */
+.input-container {
+  width: 100%;
+  text-align: left;
+  margin-bottom: 16px;
+}
+
+.input-label {
+  display: block;
+  font-family: monospace; /* Estilo de fuente código/fija del label */
+  font-size: 0.85rem;
+  color: #444444;
+  margin-bottom: 6px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+/* Forzar estilos internos de Angular Material para el Input */
+::v-deep .mat-mdc-text-field-wrapper {
+  background-color: #fcfcfc !important;
+  border-radius: 8px !important;
+}
+
+.currency-prefix {
+  color: #777777;
+  font-size: 1.1rem;
+}
+
+/* Botón "Abrir Caja" */
+.btn-abrir-caja {
+  font-family: 'Poppins', sans-serif;
+  width: 100%;
+  height: 48px !important;
+  background-color: #e36d05 !important;
+  color: #ffffff !important;
+  border-radius: 8px !important;
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-abrir-caja mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
