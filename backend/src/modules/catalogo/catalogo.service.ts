@@ -45,6 +45,11 @@ export class CatalogoService {
         : createProductoDto.ingredientes_removibles;
     }
 
+    const controlaInventario = createProductoDto.controla_inventario ?? false;
+    const cantidadInventario = controlaInventario
+      ? (createProductoDto.cantidad_inventario ?? 0)
+      : 0;
+
     return this.prisma.producto.create({
       data: {
         nombre: nombreNormalizado,
@@ -52,7 +57,8 @@ export class CatalogoService {
         precio_venta: createProductoDto.precio_venta,
         costo: createProductoDto.costo,
         ingredientes_removibles: ingredientesStr,
-        cantidad_inventario: createProductoDto.cantidad_inventario ?? 0,
+        controla_inventario: controlaInventario,
+        cantidad_inventario: cantidadInventario,
         disponible: createProductoDto.disponible ?? true,
       },
     });
@@ -138,6 +144,12 @@ export class CatalogoService {
         : updateProductoDto.ingredientes_removibles;
     }
 
+    const controlaInventario = updateProductoDto.controla_inventario;
+    let cantidadInventario = updateProductoDto.cantidad_inventario;
+    if (controlaInventario === false) {
+      cantidadInventario = 0;
+    }
+
     return this.prisma.producto.update({
       where: { id_producto: id },
       data: {
@@ -148,8 +160,11 @@ export class CatalogoService {
         }),
         ...(updateProductoDto.costo !== undefined && { costo: updateProductoDto.costo }),
         ...(ingredientesStr !== undefined && { ingredientes_removibles: ingredientesStr }),
-        ...(updateProductoDto.cantidad_inventario !== undefined && {
-          cantidad_inventario: updateProductoDto.cantidad_inventario,
+        ...(controlaInventario !== undefined && {
+          controla_inventario: controlaInventario,
+        }),
+        ...(cantidadInventario !== undefined && {
+          cantidad_inventario: cantidadInventario,
         }),
         ...(updateProductoDto.disponible !== undefined && {
           disponible: updateProductoDto.disponible,
@@ -215,6 +230,12 @@ export class CatalogoService {
 
       if (!producto) {
         throw new NotFoundException(`El producto con ID #${id_producto} no existe.`);
+      }
+
+      if (!producto.controla_inventario) {
+        throw new BadRequestException(
+          `El producto '${producto.nombre}' no tiene habilitado el control de stock/inventario. Active el control de stock en el producto para registrar ajustes.`,
+        );
       }
 
       const usuario = await tx.usuario.findUnique({

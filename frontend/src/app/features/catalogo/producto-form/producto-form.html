@@ -134,27 +134,40 @@
             </div>
 
             <div class="form-row-dual">
-              <div class="field-group">
-                <label>Cantidad en Inventario (Stock) *</label>
-                <mat-form-field appearance="outline" class="saas-input">
-                  <input type="number" matInput formControlName="cantidad_inventario" min="0" placeholder="0">
-                  @if (productForm.get('cantidad_inventario')?.hasError('required')) {
-                    <mat-error>El número de stock es obligatorio</mat-error>
-                  } @else if (productForm.get('cantidad_inventario')?.hasError('min')) {
-                    <mat-error>El stock no puede ser negativo</mat-error>
-                  }
-                </mat-form-field>
+              <div class="field-group toggle-group">
+                <label>Control de Stock</label>
+                <div class="toggle-wrapper">
+                  <mat-slide-toggle formControlName="controla_inventario" color="primary">
+                    {{ productForm.get('controla_inventario')?.value ? 'Lleva stock' : 'No lleva stock' }}
+                  </mat-slide-toggle>
+                </div>
               </div>
 
               <div class="field-group toggle-group">
-                <label>Disponibilidad Inmediata</label>
+                <label>Disponibilidad</label>
                 <div class="toggle-wrapper">
                   <mat-slide-toggle formControlName="disponible" color="primary">
-                    {{ productForm.get('disponible')?.value ? 'Disponible para pedidos' : 'Agotado' }}
+                    {{ productForm.get('disponible')?.value ? 'Disponible' : 'Agotado' }}
                   </mat-slide-toggle>
                 </div>
               </div>
             </div>
+
+            @if (productForm.get('controla_inventario')?.value) {
+              <div class="form-row-dual" style="margin-top: 8px;">
+                <div class="field-group">
+                  <label>Cantidad en Inventario (Stock) *</label>
+                  <mat-form-field appearance="outline" class="saas-input">
+                    <input type="number" matInput formControlName="cantidad_inventario" min="0" placeholder="0">
+                    @if (productForm.get('cantidad_inventario')?.hasError('required')) {
+                      <mat-error>El número de stock es obligatorio</mat-error>
+                    } @else if (productForm.get('cantidad_inventario')?.hasError('min')) {
+                      <mat-error>El stock no puede ser negativo</mat-error>
+                    }
+                  </mat-form-field>
+                </div>
+              </div>
+            }
           </section>
 
           <!-- Tarjeta: Precios y Costos -->

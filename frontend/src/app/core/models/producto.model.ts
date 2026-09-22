@@ -6,6 +6,7 @@ export interface Producto {
   costo: number;
   ingredientes_removibles: string[];
   cantidad_inventario: number;
+  controla_inventario: boolean;
   disponible: boolean;
 }
 

@@ -13,8 +13,10 @@ import { Mesa } from '../models/mesa.model';
 import { MesasService } from '../services/mesas.service';
 import { NuevaMesaDialogComponent } from '../dialogs/nueva-mesa-dialog';
 import { TransferirMesaDialogComponent } from '../dialogs/transferir-mesa-dialog';
+import { FacturaCobroResult, FacturaDialogComponent } from '../dialogs/factura-dialog';
 import { BorradorPedidoComponent } from '../borrador-pedido/borrador-pedido';
 import { DetalleMesaComponent } from '../detalle-mesa/detalle-mesa';
+import { AuthService } from '../../../core/services/auth/auth.service';
 
 @Component({
   selector: 'app-plano-mesas',
@@ -37,7 +39,10 @@ import { DetalleMesaComponent } from '../detalle-mesa/detalle-mesa';
 })
 export class PlanoMesasComponent implements OnInit {
   mesasService = inject(MesasService);
+  authService = inject(AuthService);
   private dialog = inject(MatDialog);
+
+  esAdmin = computed<boolean>(() => this.authService.currentUser()?.rol === 'administrador');
 
   // Vista activa: 'plano' (tablero general) | 'borrador' (toma de pedido) | 'detalle' (pedidos enviados)
   vistaActiva = signal<'plano' | 'borrador' | 'detalle'>('plano');
@@ -125,14 +130,23 @@ export class PlanoMesasComponent implements OnInit {
     this.vistaActiva.set('detalle');
   }
 
-  simularFacturacion(mesa: Mesa, event?: MouseEvent): void {
+  generarFacturaMesa(mesa: Mesa, event?: MouseEvent): void {
     if (event) event.stopPropagation();
 
-    if (confirm(`¿Generar Factura para la Mesa #${mesa.numero} por un total de $${mesa.total_acumulado.toLocaleString()} COP?`)) {
-      this.mesasService.liberarMesa(mesa.id_mesa);
-      if (this.mesaActivaId() === mesa.id_mesa) {
-        this.volverAlPlano();
+    const dialogRef = this.dialog.open(FacturaDialogComponent, {
+      data: { mesa },
+      width: '460px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+    });
+
+    dialogRef.afterClosed().subscribe((resultado: FacturaCobroResult | null) => {
+      if (resultado?.cobrado) {
+        this.mesasService.liberarMesa(mesa.id_mesa);
+        if (this.mesaActivaId() === mesa.id_mesa) {
+          this.volverAlPlano();
+        }
       }
-    }
+    });
   }
 }

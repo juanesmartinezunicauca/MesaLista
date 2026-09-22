@@ -51,7 +51,7 @@ export class MesasService {
             where.estado = filtros.estado;
         }
 
-        return this.prisma.mesa.findMany({
+        const mesas = await this.prisma.mesa.findMany({
             where,
             orderBy: { numero: 'asc' },
             include: {
@@ -63,9 +63,23 @@ export class MesasService {
                                 producto: true,
                             },
                         },
+                        usuario: {
+                            select: {
+                                id_usuario: true,
+                                nombre: true,
+                            },
+                        },
                     },
                 },
             },
+        });
+
+        // Asegurar que mesas en estado 'libre' nunca reporten pedidos activos
+        return mesas.map((m) => {
+            if (m.estado === EstadoMesa.libre && m.pedidos && m.pedidos.length > 0) {
+                return { ...m, pedidos: [] };
+            }
+            return m;
         });
     }
 
@@ -131,15 +145,32 @@ export class MesasService {
 
     /**
      * Cambia el estado operativo de la mesa (libre u ocupada).
+     * Si la mesa pasa a estado libre, cierra automáticamente todas las comandas activas ('enviada') de la mesa.
      */
     async cambiarEstado(id: number, cambiarEstadoDto: CambiarEstadoMesaDto) {
         await this.obtenerPorId(id);
 
-        return this.prisma.mesa.update({
-            where: { id_mesa: id },
-            data: {
-                estado: cambiarEstadoDto.estado,
-            },
+        return this.prisma.$transaction(async (tx) => {
+            const mesaActualizada = await tx.mesa.update({
+                where: { id_mesa: id },
+                data: {
+                    estado: cambiarEstadoDto.estado,
+                },
+            });
+
+            if (cambiarEstadoDto.estado === EstadoMesa.libre) {
+                await tx.pedido.updateMany({
+                    where: {
+                        id_mesa: id,
+                        estado: EstadoPedido.enviada,
+                    },
+                    data: {
+                        estado: EstadoPedido.cerrada,
+                    },
+                });
+            }
+
+            return mesaActualizada;
         });
     }
 

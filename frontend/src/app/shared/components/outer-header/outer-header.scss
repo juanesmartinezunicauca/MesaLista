@@ -67,4 +67,22 @@
       }
     }
   }
+
+  @include respond-to('sm') {
+    padding: 0 12px;
+    height: 54px;
+
+    .header-left .view-tag {
+      font-size: 0.75rem;
+      padding: 3px 8px;
+    }
+
+    .user-session-container {
+      gap: 8px;
+
+      .user-meta {
+        display: none;
+      }
+    }
+  }
 }

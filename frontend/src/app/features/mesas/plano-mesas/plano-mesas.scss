@@ -44,13 +44,40 @@
     align-items: center;
     gap: 6px;
   }
+
+  @include respond-to('sm') {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+
+    .page-title {
+      font-size: 1.4rem;
+    }
+
+    .btn-nueva-mesa {
+      width: 100%;
+      justify-content: center;
+    }
+  }
 }
 
-// --- 2. BARRA DE MÉTRICAS ---
 .metricas-banner {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 14px;
+
+  @include respond-to('sm') {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+
+    .metrica-card {
+      padding: 10px 12px;
+
+      .met-valor {
+        font-size: 1.4rem;
+      }
+    }
+  }
 
   .metrica-card {
     @include card-surface();
@@ -82,22 +109,34 @@
 
     &.libre {
       border-left: 4px solid $color-success;
-      .met-valor { color: $color-success; }
+
+      .met-valor {
+        color: $color-success;
+      }
     }
 
     &.en_pedido {
       border-left: 4px solid $color-warning;
-      .met-valor { color: #D97706; }
+
+      .met-valor {
+        color: #D97706;
+      }
     }
 
     &.ocupada {
       border-left: 4px solid $color-danger;
-      .met-valor { color: $color-danger; }
+
+      .met-valor {
+        color: $color-danger;
+      }
     }
 
     &.ocupacion {
       border-left: 4px solid $brand-blue;
-      .met-valor { color: $brand-blue; }
+
+      .met-valor {
+        color: $brand-blue;
+      }
     }
   }
 }
@@ -108,9 +147,17 @@
   border-radius: $radius-full;
   display: inline-block;
 
-  &.green { background-color: $color-success; }
-  &.yellow { background-color: $color-warning; }
-  &.red { background-color: $color-danger; }
+  &.green {
+    background-color: $color-success;
+  }
+
+  &.yellow {
+    background-color: $color-warning;
+  }
+
+  &.red {
+    background-color: $color-danger;
+  }
 }
 
 // --- 3. BARRA DE FILTROS ---
@@ -160,13 +207,37 @@
       margin-bottom: -16px;
     }
   }
+
+  @include respond-to('md') {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+
+    .tabs-estados {
+      overflow-x: auto;
+      white-space: nowrap;
+      @include custom-scrollbar();
+    }
+
+    .search-input-wrapper {
+      width: 100%;
+
+      .search-field {
+        width: 100%;
+      }
+    }
+  }
 }
 
-// --- 4. GRID DE TARJETAS DE MESAS ---
 .mesas-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 20px;
+
+  @include respond-to('sm') {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
 
   .mesa-card {
     @include card-surface();
@@ -189,25 +260,52 @@
     &.libre {
       border-top-color: $color-success;
 
-      .mesa-badge-numero .num-val { color: $color-success; }
-      .indicator-pulse { background-color: $color-success; }
-      .indicator-text { color: $color-success; font-weight: 600; }
+      .mesa-badge-numero .num-val {
+        color: $color-success;
+      }
+
+      .indicator-pulse {
+        background-color: $color-success;
+      }
+
+      .indicator-text {
+        color: $color-success;
+        font-weight: 600;
+      }
     }
 
     &.en_pedido {
       border-top-color: $color-warning;
 
-      .mesa-badge-numero .num-val { color: #D97706; }
-      .indicator-pulse { background-color: $color-warning; }
-      .indicator-text { color: #B45309; font-weight: 600; }
+      .mesa-badge-numero .num-val {
+        color: #D97706;
+      }
+
+      .indicator-pulse {
+        background-color: $color-warning;
+      }
+
+      .indicator-text {
+        color: #B45309;
+        font-weight: 600;
+      }
     }
 
     &.ocupada {
       border-top-color: $color-danger;
 
-      .mesa-badge-numero .num-val { color: $color-danger; }
-      .indicator-pulse { background-color: $color-danger; }
-      .indicator-text { color: $color-danger; font-weight: 600; }
+      .mesa-badge-numero .num-val {
+        color: $color-danger;
+      }
+
+      .indicator-pulse {
+        background-color: $color-danger;
+      }
+
+      .indicator-text {
+        color: $color-danger;
+        font-weight: 600;
+      }
     }
 
     // Card Top
@@ -427,10 +525,11 @@
           gap: 4px;
         }
 
-        .btn-cobrar-quick {
+        .btn-cobrar-quick,
+        .btn-facturar-quick {
           height: 38px;
           border-radius: $radius-md;
-          background-color: $brand-orange !important;
+          background-color: $brand-blue !important;
           color: #ffffff !important;
           font-size: 0.85rem;
           font-weight: 700;
@@ -503,7 +602,18 @@
 }
 
 @keyframes pulseGlow {
-  0% { transform: scale(0.95); opacity: 0.8; }
-  50% { transform: scale(1.15); opacity: 1; }
-  100% { transform: scale(0.95); opacity: 0.8; }
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
 }

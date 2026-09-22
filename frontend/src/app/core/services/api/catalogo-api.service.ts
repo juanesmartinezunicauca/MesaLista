@@ -16,6 +16,7 @@ export interface CreateProductoPayload {
   precio_venta: number;
   costo: number;
   cantidad_inventario?: number;
+  controla_inventario?: boolean;
   disponible?: boolean;
   ingredientes_removibles?: string[];
 }
@@ -108,6 +109,7 @@ export class CatalogoApiService {
       precio_venta: Number(raw.precio_venta),
       costo: Number(raw.costo),
       cantidad_inventario: Number(raw.cantidad_inventario ?? 0),
+      controla_inventario: Boolean(raw.controla_inventario ?? false),
       disponible: Boolean(raw.disponible),
       ingredientes_removibles: ingredientes,
     };

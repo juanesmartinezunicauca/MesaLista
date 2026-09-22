@@ -37,11 +37,11 @@
         <span>Nuevo Pedido</span>
       </button>
 
-      <!-- Botón Facturar visible SOLO cuando la mesa está ocupada -->
+      <!-- Botón de Facturar / Pre-cuenta cuando la mesa está ocupada -->
       @if (mesa.estado_visual === 'ocupada') {
-        <button mat-flat-button class="btn-cobrar" (click)="simularFacturacion()">
-          <mat-icon>receipt</mat-icon>
-          <span>Facturar ($ {{ mesa.total_acumulado | number }})</span>
+        <button mat-flat-button class="btn-factura-header" (click)="generarFactura()">
+          <mat-icon>receipt_long</mat-icon>
+          <span>Facturar / Pre-cuenta</span>
         </button>
       }
     </div>
@@ -71,6 +71,12 @@
                 <div class="pedido-badge-title">
                   <span class="pedido-tag">Pedido #{{ pedido.numero_pedido }}</span>
                   <span class="pedido-time">{{ pedido.fecha_hora }}</span>
+                  @if (pedido.mesero) {
+                    <span class="pedido-mesero-pill">
+                      <mat-icon>person</mat-icon>
+                      {{ pedido.mesero }}
+                    </span>
+                  }
                 </div>
                 <span class="pedido-subtotal">$ {{ pedido.subtotal | number }}</span>
               </div>
@@ -144,15 +150,15 @@
 
         <div class="totales-actions">
           @if (mesa.estado_visual === 'ocupada') {
-            <button mat-flat-button class="btn-liquidar-full" (click)="simularFacturacion()">
-              <mat-icon>receipt</mat-icon>
-              <span>Generar Factura y Cobrar</span>
+            <button mat-flat-button class="btn-liquidar-full" (click)="generarFactura()">
+              <mat-icon>receipt_long</mat-icon>
+              <span>Generar Factura / Pre-cuenta</span>
             </button>
           }
 
           <button mat-stroked-button class="btn-liberar-manual" (click)="liberarMesaManual()">
             <mat-icon>lock_open</mat-icon>
-            <span>Liberar Mesa sin Facturar</span>
+            <span>Liberar Mesa sin Cobrar</span>
           </button>
         </div>
       </div>

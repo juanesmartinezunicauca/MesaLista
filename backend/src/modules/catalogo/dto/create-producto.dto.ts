@@ -37,6 +37,10 @@ export class CreateProductoDto {
   cantidad_inventario?: number;
 
   @IsOptional()
+  @IsBoolean({ message: 'El control de inventario debe ser un valor booleano.' })
+  controla_inventario?: boolean;
+
+  @IsOptional()
   @IsBoolean({ message: 'La disponibilidad debe ser un valor booleano.' })
   disponible?: boolean;
 }

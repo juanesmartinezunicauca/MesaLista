@@ -120,7 +120,10 @@ describe('MesasService', () => {
         include: {
           pedidos: {
             where: { estado: EstadoPedido.enviada },
-            include: { items: { include: { producto: true } } },
+            include: {
+              items: { include: { producto: true } },
+              usuario: { select: { id_usuario: true, nombre: true } },
+            },
           },
         },
       });

@@ -17,6 +17,7 @@ describe('ListaProductosComponent', () => {
       precio_venta: 22000,
       costo: 10000,
       cantidad_inventario: 20,
+      controla_inventario: false,
       disponible: true,
       ingredientes_removibles: ['Cebolla', 'Tomate'],
     },
@@ -27,6 +28,7 @@ describe('ListaProductosComponent', () => {
       precio_venta: 18000,
       costo: 8000,
       cantidad_inventario: 4,
+      controla_inventario: false,
       disponible: true,
       ingredientes_removibles: ['Tártara'],
     },
@@ -37,6 +39,7 @@ describe('ListaProductosComponent', () => {
       precio_venta: 5000,
       costo: 2500,
       cantidad_inventario: 0,
+      controla_inventario: true,
       disponible: false,
       ingredientes_removibles: [],
     },
@@ -78,7 +81,20 @@ describe('ListaProductosComponent', () => {
     expect(metricas.total).toBe(3);
     expect(metricas.disponibles).toBe(2);
     expect(metricas.agotados).toBe(1);
-    expect(metricas.bajoStock).toBe(2); // Salchipapa (4) y Gaseosa (0)
+    expect(metricas.bajoStock).toBe(1); // Solo Gaseosa (0) controla stock; las comidas no generan bajo stock
+  });
+
+  it('debe asignar etiqueta de stock solo a productos con control de stock activo', () => {
+    const filtrados = component.productosFiltrados();
+    const hamburguesa = filtrados.find((p) => p.id_producto === 1);
+    const gaseosa = filtrados.find((p) => p.id_producto === 3);
+
+    expect(hamburguesa?.controla_inventario).toBe(false);
+    expect(hamburguesa?.etiquetaStock).toBe('');
+
+    expect(gaseosa?.controla_inventario).toBe(true);
+    expect(gaseosa?.etiquetaStock).toBe('Sin stock');
+    expect(gaseosa?.claseStock).toBe('out-of-stock');
   });
 
   it('debe filtrar productos por término de búsqueda', () => {

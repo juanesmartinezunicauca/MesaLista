@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { Layout } from './shared/components/layout/layout';
 import { authGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -21,6 +22,8 @@ export const routes: Routes = [
       { path: '', redirectTo: 'mesas', pathMatch: 'full' },
       {
         path: 'mesas',
+        canActivate: [roleGuard],
+        data: { roles: ['administrador', 'cajero', 'mesero'] },
         loadComponent: () =>
           import('./features/mesas/plano-mesas/plano-mesas').then(
             (m) => m.PlanoMesasComponent
@@ -28,6 +31,8 @@ export const routes: Routes = [
       },
       {
         path: 'catalogo',
+        canActivate: [roleGuard],
+        data: { roles: ['administrador', 'cajero'] },
         loadComponent: () =>
           import(
             './features/catalogo/lista-productos/lista-productos'
@@ -35,6 +40,8 @@ export const routes: Routes = [
       },
       {
         path: 'catalogo/nuevo',
+        canActivate: [roleGuard],
+        data: { roles: ['administrador'] },
         loadComponent: () =>
           import(
             './features/catalogo/producto-form/producto-form'
@@ -42,6 +49,8 @@ export const routes: Routes = [
       },
       {
         path: 'catalogo/editar/:id',
+        canActivate: [roleGuard],
+        data: { roles: ['administrador'] },
         loadComponent: () =>
           import(
             './features/catalogo/producto-form/producto-form'
@@ -49,6 +58,8 @@ export const routes: Routes = [
       },
       {
         path: 'usuarios',
+        canActivate: [roleGuard],
+        data: { roles: ['administrador'] },
         loadComponent: () =>
           import('./features/usuarios/lista-usuarios/lista-usuarios').then(
             (m) => m.ListaUsuariosComponent

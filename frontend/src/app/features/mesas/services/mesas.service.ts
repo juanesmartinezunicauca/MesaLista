@@ -12,6 +12,7 @@ import {
 import { MesasApiService, BackendMesa } from '../../../core/services/api/mesas-api.service';
 import { PedidosApiService, CreatePedidoPayload } from '../../../core/services/api/pedidos-api.service';
 import { CatalogoApiService } from '../../../core/services/api/catalogo-api.service';
+import { AuthService } from '../../../core/services/auth/auth.service';
 
 @Injectable({
   providedIn: 'root',
@@ -20,6 +21,7 @@ export class MesasService {
   private mesasApi = inject(MesasApiService);
   private pedidosApi = inject(PedidosApiService);
   private catalogoApi = inject(CatalogoApiService);
+  private authService = inject(AuthService);
 
   // Estado de conexión / sincronización con backend
   isSyncing = signal<boolean>(false);
@@ -179,11 +181,18 @@ export class MesasService {
 
             const total = this.calcularTotalMesa(pedidosMapeados, borrador);
 
+            // Extraer meseros únicos que atendieron las comandas de esta mesa
+            const meserosUnicos = Array.from(
+              new Set(pedidosMapeados.map((p) => p.mesero).filter(Boolean))
+            );
+            const meseroActual = meserosUnicos.length > 0 ? meserosUnicos.join(', ') : undefined;
+
             return {
               id_mesa: bm.id_mesa,
               numero: bm.numero,
               estado_bd: bm.estado as EstadoMesaBD,
               estado_visual: estadoVisual,
+              mesero_actual: meseroActual,
               pedidos: pedidosMapeados,
               borrador_local: borrador,
               total_acumulado: total,
@@ -388,13 +397,16 @@ export class MesasService {
     const numeroPedido = mesaActual.pedidos.length + 1;
     const subtotalPedido = itemsBorrador.reduce((acc, item) => acc + item.subtotal, 0);
 
+    const usuarioSesion = this.authService.currentUser();
+    const nombreMesero = usuarioSesion?.nombre || mesaActual.mesero_actual || 'Mesero Activo';
+
     const nuevoPedido: PedidoMesa = {
       id_pedido: Date.now(),
       numero_pedido: numeroPedido,
       tipo: 'salon',
       estado: 'enviada',
       fecha_hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      mesero: mesaActual.mesero_actual || 'Mesero Activo',
+      mesero: nombreMesero,
       observacion: observacion || '',
       items: itemsBorrador,
       subtotal: subtotalPedido,
@@ -403,10 +415,16 @@ export class MesasService {
     const nuevosPedidos = [...mesaActual.pedidos, nuevoPedido];
     const nuevoTotal = this.calcularTotalMesa(nuevosPedidos, []);
 
+    const meserosUnicos = Array.from(
+      new Set(nuevosPedidos.map((p) => p.mesero).filter(Boolean))
+    );
+    const meseroActual = meserosUnicos.join(', ');
+
     const mesaActualizada: Mesa = {
       ...mesaActual,
       estado_bd: 'ocupada',
       estado_visual: 'ocupada',
+      mesero_actual: meseroActual,
       pedidos: nuevosPedidos,
       borrador_local: [],
       total_acumulado: nuevoTotal,
@@ -571,6 +589,9 @@ export class MesasService {
 
     // Sincronizar liberación con el backend
     this.mesasApi.cambiarEstado(id_mesa, 'libre').subscribe({
+      next: () => {
+        this.cargarMesas();
+      },
       error: (err) => console.warn('Error al liberar mesa en backend:', err),
     });
   }

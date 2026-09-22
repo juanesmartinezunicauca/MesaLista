@@ -51,6 +51,10 @@
       width: 100%;
       box-sizing: border-box;
       @include custom-scrollbar();
+
+      @include respond-to('md') {
+        padding: 12px 10px;
+      }
     }
   }
 }

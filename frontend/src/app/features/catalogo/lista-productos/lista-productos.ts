@@ -14,6 +14,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 import { CatalogoApiService } from '../../../core/services/api/catalogo-api.service';
+import { AuthService } from '../../../core/services/auth/auth.service';
 import { Producto } from '../../../core/models/producto.model';
 
 @Component({
@@ -38,6 +39,9 @@ import { Producto } from '../../../core/models/producto.model';
 export class ListaProductosComponent implements OnInit {
   private catalogoApi = inject(CatalogoApiService);
   private router = inject(Router);
+  private authService = inject(AuthService);
+
+  esAdmin = computed<boolean>(() => this.authService.currentUser()?.rol === 'administrador');
 
   productos = signal<Producto[]>([]);
   isLoading = signal<boolean>(false);
@@ -61,7 +65,7 @@ export class ListaProductosComponent implements OnInit {
     const total = list.length;
     const disponibles = list.filter((p) => p.disponible).length;
     const agotados = list.filter((p) => !p.disponible).length;
-    const bajoStock = list.filter((p) => p.cantidad_inventario <= 5).length;
+    const bajoStock = list.filter((p) => p.controla_inventario && p.cantidad_inventario <= 5).length;
     return { total, disponibles, agotados, bajoStock };
   });
 
@@ -87,8 +91,12 @@ export class ListaProductosComponent implements OnInit {
       .map((p) => ({
         ...p,
         margen: this.calcularMargen(p.precio_venta, p.costo),
-        etiquetaStock: this.obtenerEtiquetaStock(p.cantidad_inventario),
-        claseStock: this.obtenerClaseStock(p.cantidad_inventario),
+        etiquetaStock: p.controla_inventario
+          ? this.obtenerEtiquetaStock(p.cantidad_inventario)
+          : '',
+        claseStock: p.controla_inventario
+          ? this.obtenerClaseStock(p.cantidad_inventario)
+          : '',
       }));
   });
 
