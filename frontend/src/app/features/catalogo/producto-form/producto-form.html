@@ -1,5 +1,10 @@
 <div class="inventory-layout">
   <main class="main-content">
+    <div class="header-breadcrumbs">
+      <mat-icon>restaurant_menu</mat-icon>
+      <span>Administración/Catálogo de Productos/Producto</span>
+    </div>
+    <br>
     <!-- Header Superior de la Vista -->
     <header class="content-header">
       <div class="header-title-wrapper">
@@ -10,8 +15,20 @@
         <h1>{{ isEditMode() ? 'Editar Producto' : 'Nuevo Producto' }}</h1>
       </div>
       <div class="header-actions">
-        <button type="button" mat-stroked-button class="btn-cancel" (click)="onCancel()" [disabled]="isSaving()">Cancelar</button>
-        <button type="button" mat-flat-button class="btn-save" (click)="onSave()" [disabled]="isSaving() || isLoadingProduct()">
+        <button
+          type="button"
+          mat-stroked-button
+          class="btn-cancel"
+          (click)="onCancel()"
+          [disabled]="isSaving()"
+        >Cancelar</button>
+        <button
+          type="button"
+          mat-flat-button
+          class="btn-save"
+          (click)="onSave()"
+          [disabled]="isSaving() || isLoadingProduct()"
+        >
           @if (isSaving()) {
             <mat-spinner diameter="18" class="inline-spinner"></mat-spinner>
           } @else {
@@ -24,7 +41,11 @@
 
     <!-- Banner de Feedback -->
     @if (mensajeFeedback(); as msg) {
-      <div class="feedback-banner" [class.feedback-exito]="msg.tipo === 'exito'" [class.feedback-error]="msg.tipo === 'error'">
+      <div
+        class="feedback-banner"
+        [class.feedback-exito]="msg.tipo === 'exito'"
+        [class.feedback-error]="msg.tipo === 'error'"
+      >
         <mat-icon>{{ msg.tipo === 'exito' ? 'check_circle' : 'error_outline' }}</mat-icon>
         <span>{{ msg.texto }}</span>
       </div>
@@ -48,8 +69,13 @@
             <div class="form-row-dual">
               <div class="field-group">
                 <label>Nombre del Producto *</label>
-                <mat-form-field appearance="outline" class="saas-input">
-                  <input type="text" matInput formControlName="nombre" placeholder="Ej. Hamburguesa Clásica">
+                <mat-form-field appearance="outline" floatLabel="auto" class="saas-input">
+                  <input
+                    type="text"
+                    matInput
+                    formControlName="nombre"
+                    placeholder="Ej. Hamburguesa Clásica"
+                  >
                   @if (productForm.get('nombre')?.hasError('required')) {
                     <mat-error>El nombre del producto es obligatorio</mat-error>
                   }
@@ -178,7 +204,7 @@
               <div class="field-group">
                 <label>Precio de Venta *</label>
                 <mat-form-field appearance="outline" class="saas-input">
-                  <span matPrefix>$&nbsp;</span>
+                  <span matPrefix style="margin-left: 15px">$&nbsp;</span>
                   <input type="number" matInput formControlName="precio_venta" placeholder="0.00">
                   @if (productForm.get('precio_venta')?.hasError('required')) {
                     <mat-error>El precio de venta es obligatorio</mat-error>
@@ -191,7 +217,7 @@
               <div class="field-group">
                 <label>Costo *</label>
                 <mat-form-field appearance="outline" class="saas-input">
-                  <span matPrefix>$&nbsp;</span>
+                  <span matPrefix style="margin-left: 15px">$&nbsp;</span>
                   <input type="number" matInput formControlName="costo" placeholder="0.00">
                   @if (productForm.get('costo')?.hasError('required')) {
                     <mat-error>El costo es obligatorio</mat-error>

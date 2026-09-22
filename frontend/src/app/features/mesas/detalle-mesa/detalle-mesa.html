@@ -36,7 +36,6 @@
         <mat-icon>add</mat-icon>
         <span>Nuevo Pedido</span>
       </button>
-
       <!-- Botón de Facturar / Pre-cuenta cuando la mesa está ocupada -->
       @if (mesa.estado_visual === 'ocupada') {
         <button mat-flat-button class="btn-factura-header" (click)="generarFactura()">
