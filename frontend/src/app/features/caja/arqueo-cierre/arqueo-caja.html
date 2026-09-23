@@ -1,0 +1,121 @@
+<div class="cash-closing-container">
+
+    <!-- Encabezado del Modal -->
+    <div class="dialog-header">
+        <div class="header-title-group">
+            <div class="icon-wrapper">
+                <mat-icon>history_toggle_off</mat-icon>
+            </div>
+            <div>
+                <h2>Cierre de Caja</h2>
+                <span class="subtitle-mode">Arqueo final - Turno Mañana</span>
+            </div>
+        </div>
+        <button mat-icon-button class="btn-close" (click)="onCancel()" matTooltip="Cerrar">
+            <mat-icon>close</mat-icon>
+        </button>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <div class="dialog-body">
+
+        <!-- Tarjetas de Resumen Superior -->
+        <div class="summary-cards-grid">
+
+            <!-- Fondo Inicial -->
+            <div class="mini-card">
+                <span class="mini-label">FONDO INICIAL</span>
+                <span class="mini-value">$ {{ fondoInicial() | number:'1.2-2' }}</span>
+            </div>
+
+            <!-- Ventas Efectivo -->
+            <div class="mini-card">
+                <span class="mini-label">VENTAS EFECTIVO</span>
+                <span class="mini-value text-success">+ $ {{ ventasEfectivo() | number:'1.2-2' }}</span>
+            </div>
+
+            <!-- Retiros / Gastos -->
+            <div class="mini-card">
+                <span class="mini-label">RETIROS/GASTOS</span>
+                <span class="mini-value text-danger">- $ {{ retirosGastos() | number:'1.2-2' }}</span>
+            </div>
+
+        </div>
+
+        <!-- Sección Central: Valor Esperado vs Conteo Físico -->
+        <div class="calculation-section">
+            <div class="esperado-box">
+                <div class="label-with-tooltip">
+                    <span>Valor Esperado</span>
+                    <mat-icon
+                        matTooltip="Suma del fondo inicial más ventas en efectivo menos retiros">info_outline</mat-icon>
+                </div>
+                <div class="amount-esperado">$ {{ valorEsperado() | number:'1.2-2' }}</div>
+            </div>
+
+            <div class="exchange-icon-wrapper">
+                <mat-icon>sync_alt</mat-icon>
+            </div>
+
+            <div class="conteo-box">
+                <div class="label-with-tooltip">
+                    <span>Conteo Físico Real</span>
+                    <mat-icon matTooltip="Ingrese el dinero físico contado en caja">account_balance_wallet</mat-icon>
+                </div>
+                <mat-form-field appearance="outline" class="modern-input">
+                    <input type="number" matInput placeholder="0.00" [ngModel]="conteoFisico()"
+                        (ngModelChange)="conteoFisico.set($event)">
+                </mat-form-field>
+            </div>
+        </div>
+
+        <!-- Caja de Diferencia -->
+        <div class="difference-card" [ngClass]="{
+      'diff-zero': diferencia() === 0,
+      'diff-positive': diferencia() !== null && diferencia()! > 0,
+      'diff-negative': diferencia() !== null && diferencia()! < 0
+    }">
+            <div class="diff-header-info">
+                <span class="diff-title">DIFERENCIA</span>
+                @if (diferencia() === null) {
+                <span class="diff-hint">— Ingresa el conteo físico</span>
+                } @else if (diferencia() === 0) {
+                <span class="diff-hint text-success">¡Cuadre perfecto! Sin diferencias</span>
+                } @else if (diferencia()! > 0) {
+                <span class="diff-hint text-success">Sobrante en caja</span>
+                } @else {
+                <span class="diff-hint text-danger">Faltante en caja</span>
+                }
+            </div>
+            <div class="diff-amount">
+                {{ diferencia() === null ? '$ 0.00' : ((diferencia()! >= 0 ? '$ ' : '-$ ') + (abs(diferencia()!) |
+                number:'1.2-2')) }}
+            </div>
+        </div>
+
+        <!-- Observaciones -->
+        <div class="observations-container">
+            <label class="obs-label">Observaciones (Opcional)</label>
+            <mat-form-field appearance="outline" class="modern-textarea">
+                <textarea matInput rows="3" placeholder="Añade notas sobre el cierre, sobrantes o faltantes..."
+                    [ngModel]="observaciones()" (ngModelChange)="observaciones.set($event)"></textarea>
+            </mat-form-field>
+        </div>
+
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <!-- Acciones del Modal -->
+    <div class="dialog-actions">
+        <button mat-stroked-button class="btn-cancel" (click)="onCancel()">
+            Cancelar
+        </button>
+        <button mat-flat-button color="primary" class="btn-confirm" (click)="onConfirm()">
+            <mat-icon>lock</mat-icon>
+            Confirmar Cierre
+        </button>
+    </div>
+
+</div>

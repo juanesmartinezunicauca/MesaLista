@@ -1,0 +1,270 @@
+.cash-closing-container {
+    padding: 0;
+    max-width: 650px;
+    background: #ffffff;
+    border-radius: 16px;
+    font-family: Roboto, "Helvetica Neue", sans-serif;
+
+    .dialog-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 24px;
+
+        .header-title-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+
+            .icon-wrapper {
+                background-color: #fef3c7;
+                color: #d97706;
+                width: 42px;
+                height: 42px;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+
+                mat-icon {
+                    font-size: 24px;
+                    width: 24px;
+                    height: 24px;
+                }
+            }
+
+            h2 {
+                margin: 0;
+                font-size: 20px;
+                font-weight: 700;
+                color: #0f172a;
+            }
+
+            .subtitle-mode {
+                font-size: 13px;
+                color: #64748b;
+            }
+        }
+
+        .btn-close {
+            color: #94a3b8;
+
+            &:hover {
+                color: #1e293b;
+            }
+        }
+    }
+
+    .dialog-body {
+        padding: 24px;
+
+        // Tarjetas Superiores
+        .summary-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+
+            .mini-card {
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+                padding: 14px;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+
+                .mini-label {
+                    font-size: 11px;
+                    font-weight: 700;
+                    color: #64748b;
+                    letter-spacing: 0.5px;
+                }
+
+                .mini-value {
+                    font-size: 18px;
+                    font-weight: 700;
+                    color: #0f172a;
+                }
+
+                .text-success {
+                    color: #10b981;
+                }
+
+                .text-danger {
+                    color: #ef4444;
+                }
+            }
+        }
+
+        // Sección de Cálculo Intermedia
+        .calculation-section {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 20px;
+
+            .esperado-box,
+            .conteo-box {
+                flex: 1;
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+                padding: 14px 16px;
+
+                .label-with-tooltip {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: #475569;
+                    margin-bottom: 6px;
+
+                    mat-icon {
+                        font-size: 16px;
+                        width: 16px;
+                        height: 16px;
+                        color: #94a3b8;
+                        cursor: pointer;
+                    }
+                }
+
+                .amount-esperado {
+                    font-size: 26px;
+                    font-weight: 800;
+                    color: #1e293b;
+                    padding: 6px 0;
+                }
+
+                .modern-input {
+                    width: 100%;
+                    margin-bottom: -1.25em; // Ajuste para el mat-form-field appearance outline
+
+                    ::ng-deep .mat-mdc-text-field-wrapper {
+                        background-color: #ffffff;
+                        border-radius: 8px;
+                    }
+                }
+            }
+
+            .exchange-icon-wrapper {
+                color: #94a3b8;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding-top: 10px;
+
+                mat-icon {
+                    font-size: 24px;
+                    width: 24px;
+                    height: 24px;
+                }
+            }
+        }
+
+        // Tarjeta de Diferencia
+        .difference-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+
+            .diff-header-info {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+
+                .diff-title {
+                    font-size: 12px;
+                    font-weight: 700;
+                    color: #64748b;
+                    letter-spacing: 0.5px;
+                }
+
+                .diff-hint {
+                    font-size: 13px;
+                    color: #94a3b8;
+                }
+            }
+
+            .diff-amount {
+                font-size: 26px;
+                font-weight: 800;
+                color: #0f172a;
+            }
+
+            &.diff-positive {
+                background: #f0fdf4;
+                border-color: #bbf7d0;
+
+                .diff-amount {
+                    color: #15803d;
+                }
+            }
+
+            &.diff-negative {
+                background: #fef2f2;
+                border-color: #fecaca;
+
+                .diff-amount {
+                    color: #b91c1c;
+                }
+            }
+        }
+
+        // Observaciones
+        .observations-container {
+            .obs-label {
+                display: block;
+                font-size: 13px;
+                font-weight: 600;
+                color: #334155;
+                margin-bottom: 6px;
+            }
+
+            .modern-textarea {
+                width: 100%;
+
+                ::ng-deep .mat-mdc-text-field-wrapper {
+                    background-color: #ffffff;
+                    border-radius: 8px;
+                }
+            }
+        }
+    }
+
+    .dialog-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        padding: 16px 24px;
+        background: #f8fafc;
+        border-bottom-left-radius: 16px;
+        border-bottom-right-radius: 16px;
+
+        .btn-cancel {
+            border-color: #cbd5e1;
+            color: #dc2626; // Tono rojizo como en la imagen para cancelar/cerrar
+            font-weight: 500;
+            border-radius: 8px;
+
+            &:hover {
+                background-color: #fef2f2;
+            }
+        }
+
+        .btn-confirm {
+            background-color: #1d4ed8;
+            border-radius: 8px;
+            font-weight: 500;
+            padding: 0 20px;
+        }
+    }
+}

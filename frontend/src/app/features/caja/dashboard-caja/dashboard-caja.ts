@@ -6,6 +6,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
+import { Router } from '@angular/router';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { CierreDeCaja } from '../arqueo-cierre/arqueo-caja';
 
 interface Movimiento {
   hora: string;
@@ -30,6 +33,8 @@ interface Movimiento {
   styleUrls: ['./dashboard-caja.scss']
 })
 export class DashboardCajaComponent {
+  constructor(private dialog: MatDialog, readonly router: Router) {}
+
   // Datos simulados de la caja
   cajaAbierta = signal<boolean>(true);
   fechaApertura = signal<string>('Hoy, 08:30 AM');
@@ -67,7 +72,10 @@ export class DashboardCajaComponent {
   }
 
   cerrarCaja() {
-    // Lógica para cerrar caja
+    this.dialog.open(CierreDeCaja, {
+      width: '600px', // O el tamaño que prefieras para tu diseño
+      disableClose: true // Evita que se cierre haciendo clic afuera
+    });
   }
 
   verTodosMovimientos() {
