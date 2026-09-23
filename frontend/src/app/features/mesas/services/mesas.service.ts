@@ -103,6 +103,7 @@ export class MesasService {
             precio_venta: p.precio_venta,
             disponible: p.disponible,
             ingredientes_removibles: p.ingredientes_removibles || [],
+            imagen: p.imagen ?? null,
           }));
           this.catalogoProductos.set(catalogoMapeado);
         }

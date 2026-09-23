@@ -1,9 +1,15 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { json, urlencoded } from 'express';
+import { PrismaExceptionFilter } from './common/filters';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Aumento del límite de payload para permitir imágenes en base64 de productos
+  app.use(json({ limit: '10mb' }));
+  app.use(urlencoded({ extended: true, limit: '10mb' }));
 
   // A-05: CORS para la LAN del restaurante y entornos de desarrollo local
   const configuredOrigins = process.env.CORS_ORIGIN
@@ -36,6 +42,9 @@ async function bootstrap() {
       },
     }),
   );
+
+  // Filtro global de excepciones de base de datos Prisma
+  app.useGlobalFilters(new PrismaExceptionFilter());
 
   await app.listen(process.env.PORT ?? 3000);
 }

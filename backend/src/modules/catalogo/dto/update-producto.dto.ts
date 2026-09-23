@@ -6,6 +6,7 @@ import {
   IsString,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
 
 export class UpdateProductoDto {
@@ -44,4 +45,9 @@ export class UpdateProductoDto {
   @IsOptional()
   @IsBoolean({ message: 'La disponibilidad debe ser un valor booleano.' })
   disponible?: boolean;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString({ message: 'La imagen debe ser una cadena de texto válida.' })
+  imagen?: string | null;
 }

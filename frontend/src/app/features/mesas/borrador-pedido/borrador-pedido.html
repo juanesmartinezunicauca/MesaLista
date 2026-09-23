@@ -50,6 +50,11 @@
       <div class="productos-grid">
         @for (prod of productosFiltrados(); track prod.id_producto) {
           <div class="producto-card" (click)="clickProducto(prod)">
+            @if (prod.imagen) {
+              <div class="prod-thumb-container">
+                <img [src]="prod.imagen" [alt]="prod.nombre" class="prod-thumb-img" loading="lazy">
+              </div>
+            }
             <div class="producto-meta">
               <span class="cat-label">{{ prod.categoria }}</span>
               <h4 class="prod-nombre">{{ prod.nombre }}</h4>

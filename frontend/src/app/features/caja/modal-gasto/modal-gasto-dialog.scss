@@ -1,0 +1,135 @@
+@use '../../../../styles/tokens' as *;
+
+.dialog-container {
+  padding: 1.5rem;
+  max-width: 540px;
+
+  .dialog-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+
+    .header-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: $radius-md;
+      background: rgba($brand-orange, 0.12);
+      color: $brand-orange;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      mat-icon {
+        font-size: 1.5rem;
+        width: 1.5rem;
+        height: 1.5rem;
+      }
+    }
+
+    .header-titles {
+      flex: 1;
+
+      h2 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: $text-primary;
+      }
+
+      p {
+        margin: 0.25rem 0 0;
+        font-size: 0.85rem;
+        color: $text-secondary;
+      }
+    }
+
+    .btn-close {
+      color: $text-muted;
+    }
+  }
+
+  .error-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: $color-danger-bg;
+    color: $color-danger;
+    border: 1px solid rgba($color-danger, 0.2);
+    border-radius: $radius-sm;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+
+    mat-icon {
+      font-size: 1.1rem;
+      width: 1.1rem;
+      height: 1.1rem;
+    }
+  }
+
+  .dialog-body {
+    padding: 0;
+    max-height: 70vh;
+
+    .form-content {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+
+        @media (max-width: 500px) {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .field-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+
+        label {
+          font-size: 0.82rem;
+          font-weight: 600;
+          color: $text-secondary;
+        }
+
+        .full-width {
+          width: 100%;
+        }
+      }
+    }
+  }
+
+  .dialog-actions {
+    padding: 1.25rem 0 0;
+    margin: 0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+
+    .btn-save {
+      background: $brand-orange;
+      color: #fff;
+      font-weight: 600;
+
+      mat-icon {
+        margin-right: 0.3rem;
+      }
+
+      .spinner-btn {
+        display: inline-block;
+        margin-right: 0.5rem;
+      }
+
+      &:hover {
+        background: $brand-orange-hover;
+      }
+    }
+  }
+}

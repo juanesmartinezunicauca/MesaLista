@@ -8,6 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 import { Mesa } from '../models/mesa.model';
 import { MesasService } from '../services/mesas.service';
@@ -17,6 +18,7 @@ import { FacturaCobroResult, FacturaDialogComponent } from '../dialogs/factura-d
 import { BorradorPedidoComponent } from '../borrador-pedido/borrador-pedido';
 import { DetalleMesaComponent } from '../detalle-mesa/detalle-mesa';
 import { AuthService } from '../../../core/services/auth/auth.service';
+import { FacturacionApiService } from '../../../core/services/api/facturacion-api.service';
 
 @Component({
   selector: 'app-plano-mesas',
@@ -31,6 +33,7 @@ import { AuthService } from '../../../core/services/auth/auth.service';
     MatInputModule,
     MatMenuModule,
     MatTooltipModule,
+    MatSnackBarModule,
     BorradorPedidoComponent,
     DetalleMesaComponent,
   ],
@@ -41,6 +44,8 @@ export class PlanoMesasComponent implements OnInit {
   mesasService = inject(MesasService);
   authService = inject(AuthService);
   private dialog = inject(MatDialog);
+  private facturacionApi = inject(FacturacionApiService);
+  private snackBar = inject(MatSnackBar);
 
   esAdmin = computed<boolean>(() => this.authService.currentUser()?.rol === 'administrador');
 
@@ -142,10 +147,46 @@ export class PlanoMesasComponent implements OnInit {
 
     dialogRef.afterClosed().subscribe((resultado: FacturaCobroResult | null) => {
       if (resultado?.cobrado) {
-        this.mesasService.liberarMesa(mesa.id_mesa);
-        if (this.mesaActivaId() === mesa.id_mesa) {
-          this.volverAlPlano();
-        }
+        const pagosPayload = (resultado.pagos || []).map((p) => ({
+          medio_pago:
+            p.metodo === 'efectivo'
+              ? 'Efectivo'
+              : p.metodo === 'tarjeta'
+              ? 'Tarjeta'
+              : 'Transferencia',
+          monto: p.monto,
+        }));
+
+        this.facturacionApi
+          .crearFactura({
+            id_mesa: mesa.id_mesa,
+            propina: resultado.propina,
+            pagos: pagosPayload,
+          })
+          .subscribe({
+            next: (factura) => {
+              this.mesasService.liberarMesa(mesa.id_mesa);
+              this.snackBar.open(
+                `Factura #${factura.id_venta} registrada e ingresada a Caja.`,
+                'Entendido',
+                { duration: 3500 }
+              );
+              if (this.mesaActivaId() === mesa.id_mesa) {
+                this.volverAlPlano();
+              }
+            },
+            error: (err) => {
+              console.warn('Error al facturar en backend:', err);
+              const msg = err.error?.message || 'Error al registrar la factura en el servidor.';
+              this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+              if (!err.error?.message?.toLowerCase().includes('caja')) {
+                this.mesasService.liberarMesa(mesa.id_mesa);
+                if (this.mesaActivaId() === mesa.id_mesa) {
+                  this.volverAlPlano();
+                }
+              }
+            },
+          });
       }
     });
   }

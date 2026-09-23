@@ -60,6 +60,11 @@ export class ProductoFormComponent implements OnInit {
 
   mensajeFeedback = signal<{ tipo: 'exito' | 'error'; texto: string } | null>(null);
 
+  // Gestión de Foto del Producto optimizada para base de datos
+  imagenDataUrl = signal<string | null>(null);
+  isCompressingImage = signal<boolean>(false);
+  isDragging = signal<boolean>(false);
+
   // Nuevo ingrediente a añadir
   nuevoIngredienteInput = signal<string>('');
 
@@ -145,6 +150,7 @@ export class ProductoFormComponent implements OnInit {
           disponible: prod.disponible,
         });
         this.actualizarValidacionInventario(prod.controla_inventario);
+        this.imagenDataUrl.set(prod.imagen || null);
 
         // Asegurar que la categoría del producto figure en la lista si es personalizada
         if (prod.categoria && !this.categorias().includes(prod.categoria)) {
@@ -268,6 +274,123 @@ export class ProductoFormComponent implements OnInit {
     this.nuevoIngredienteInput.set('');
   }
 
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      this.procesarArchivo(input.files[0]);
+      input.value = '';
+    }
+  }
+
+  procesarArchivo(file: File): void {
+    if (!file.type.startsWith('image/')) {
+      this.mensajeFeedback.set({
+        tipo: 'error',
+        texto: 'El archivo seleccionado no es una imagen válida (formatos permitidos: JPG, PNG, WebP).',
+      });
+      return;
+    }
+
+    this.isCompressingImage.set(true);
+    const reader = new FileReader();
+
+    reader.onload = (e: ProgressEvent<FileReader>) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const maxDim = 400;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+
+          if (!ctx) {
+            throw new Error('No se pudo inicializar el lienzo de compresión.');
+          }
+
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Comprimir a formato WebP ligero (calidad 82%) o fallback a JPEG
+          let dataUrl = canvas.toDataURL('image/webp', 0.82);
+          if (!dataUrl.startsWith('data:image/webp')) {
+            dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+          }
+
+          this.imagenDataUrl.set(dataUrl);
+          this.isCompressingImage.set(false);
+        } catch (err) {
+          console.error('Error al comprimir imagen de producto:', err);
+          this.isCompressingImage.set(false);
+          this.mensajeFeedback.set({
+            tipo: 'error',
+            texto: 'No se pudo optimizar la imagen seleccionada.',
+          });
+        }
+      };
+
+      img.onerror = () => {
+        this.isCompressingImage.set(false);
+        this.mensajeFeedback.set({
+          tipo: 'error',
+          texto: 'No se pudo leer la imagen seleccionada.',
+        });
+      };
+
+      img.src = e.target?.result as string;
+    };
+
+    reader.onerror = () => {
+      this.isCompressingImage.set(false);
+      this.mensajeFeedback.set({
+        tipo: 'error',
+        texto: 'Error de lectura al cargar el archivo de imagen.',
+      });
+    };
+
+    reader.readAsDataURL(file);
+  }
+
+  eliminarImagen(): void {
+    this.imagenDataUrl.set(null);
+  }
+
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging.set(true);
+  }
+
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging.set(false);
+  }
+
+  onDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging.set(false);
+
+    if (event.dataTransfer?.files && event.dataTransfer.files[0]) {
+      this.procesarArchivo(event.dataTransfer.files[0]);
+    }
+  }
+
   onSave(): void {
     if (this.productForm.invalid) {
       this.productForm.markAllAsTouched();
@@ -315,6 +438,7 @@ export class ProductoFormComponent implements OnInit {
       cantidad_inventario: cantidadInventario,
       disponible: Boolean(this.productForm.value.disponible),
       ingredientes_removibles: ingredientesRemovibles,
+      imagen: this.imagenDataUrl(),
     };
 
     if (this.isEditMode() && this.productId()) {

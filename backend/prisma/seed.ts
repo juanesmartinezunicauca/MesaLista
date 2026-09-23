@@ -1,5 +1,6 @@
 import { PrismaClient, RolUsuario, EstadoUsuario, EstadoMesa } from '@prisma/client';
 import * as argon2 from 'argon2';
+import process from 'node:process';
 
 const prisma = new PrismaClient();
 

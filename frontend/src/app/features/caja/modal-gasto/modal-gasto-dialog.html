@@ -1,0 +1,105 @@
+<div class="dialog-container">
+  <div class="dialog-header">
+    <div class="header-icon">
+      <mat-icon>shopping_bag</mat-icon>
+    </div>
+    <div class="header-titles">
+      <h2 mat-dialog-title>Registrar Gasto de Caja</h2>
+      <p>Registra salidas de dinero para compras imprevistas o insumos del turno.</p>
+    </div>
+    <button type="button" mat-icon-button (click)="cancelar()" class="btn-close" [disabled]="isSaving()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  @if (errorMessage(); as err) {
+    <div class="error-banner">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ err }}</span>
+    </div>
+  }
+
+  <mat-dialog-content class="dialog-body">
+    <form [formGroup]="gastoForm" class="form-content" (ngSubmit)="guardar()">
+      <!-- Descripción / Concepto -->
+      <div class="field-group">
+        <label>Concepto o Descripción *</label>
+        <mat-form-field appearance="outline" class="full-width">
+          <input matInput formControlName="descripcion" placeholder="Ej. Compra de 2 bolsas de hielo" />
+          @if (gastoForm.get('descripcion')?.hasError('required') && gastoForm.get('descripcion')?.touched) {
+            <mat-error>La descripción es obligatoria.</mat-error>
+          }
+        </mat-form-field>
+      </div>
+
+      <!-- Fila Doble: Monto y Tipo de Gasto -->
+      <div class="form-row">
+        <div class="field-group">
+          <label>Monto a Retirar *</label>
+          <mat-form-field appearance="outline" class="full-width">
+            <span matPrefix style="margin-left: 10px">$ &nbsp;</span>
+            <input matInput type="number" formControlName="total" placeholder="0" min="1" />
+            @if (gastoForm.get('total')?.hasError('required') && gastoForm.get('total')?.touched) {
+              <mat-error>El monto es obligatorio.</mat-error>
+            } @else if (gastoForm.get('total')?.hasError('min')) {
+              <mat-error>El valor debe ser mayor a 0.</mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        <div class="field-group">
+          <label>Categoría / Tipo *</label>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-select formControlName="tipo_gasto">
+              @for (tipo of tiposGasto; track tipo) {
+                <mat-option [value]="tipo">{{ tipo }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
+      </div>
+
+      <!-- Fila Doble: Medio de Pago y Observación -->
+      <div class="form-row">
+        <div class="field-group">
+          <label>Medio de Salida *</label>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-select formControlName="medio_pago">
+              @for (m of mediosPago; track m) {
+                <mat-option [value]="m">{{ m }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <div class="field-group">
+          <label>Observaciones (Opcional)</label>
+          <mat-form-field appearance="outline" class="full-width">
+            <input matInput formControlName="observacion" placeholder="Ej. Factura #4921 de la tienda" />
+          </mat-form-field>
+        </div>
+      </div>
+    </form>
+  </mat-dialog-content>
+
+  <mat-dialog-actions class="dialog-actions">
+    <button type="button" mat-stroked-button (click)="cancelar()" [disabled]="isSaving()">
+      Cancelar
+    </button>
+    <button
+      type="button"
+      mat-flat-button
+      color="primary"
+      class="btn-save"
+      (click)="guardar()"
+      [disabled]="isSaving() || gastoForm.invalid"
+    >
+      @if (isSaving()) {
+        <mat-spinner diameter="18" class="spinner-btn"></mat-spinner>
+      } @else {
+        <mat-icon>check</mat-icon>
+      }
+      <span>Registrar Salida</span>
+    </button>
+  </mat-dialog-actions>
+</div>

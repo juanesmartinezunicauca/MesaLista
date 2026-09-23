@@ -15,9 +15,21 @@ import {
 export class PedidosService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // Proyección optimizada para excluir imágenes Base64 pesadas en consultas operativas de comandas y cocina
+  private readonly productoSelectOperativo = {
+    id_producto: true,
+    nombre: true,
+    categoria: true,
+    precio_venta: true,
+    costo: true,
+    controla_inventario: true,
+    cantidad_inventario: true,
+    disponible: true,
+  } as const;
+
   /**
    * Registra una nueva comanda (salón o domicilio) congelando los precios históricos
-   * de cada producto y actualizando la mesa a ocupada en caso de pedido en salón.
+   * de cada producto, validando/descontando inventario y actualizando la mesa a ocupada.
    */
   async crear(createPedidoDto: CreatePedidoDto, id_usuario: number) {
     // 1. Validaciones de coherencia según el tipo de pedido
@@ -62,7 +74,7 @@ export class PedidosService {
       }
     }
 
-    // 3. Verificar productos en catálogo y disponibilidad
+    // 3. Verificar productos en catálogo, disponibilidad y stock
     const productIds = createPedidoDto.items.map((i) => i.id_producto);
     const productos = await this.prisma.producto.findMany({
       where: { id_producto: { in: productIds } },
@@ -82,21 +94,33 @@ export class PedidosService {
           `El producto '${prod.nombre}' no se encuentra disponible actualmente.`,
         );
       }
+      if (prod.controla_inventario && (prod.cantidad_inventario ?? 0) < item.cantidad) {
+        throw new BadRequestException(
+          `Stock insuficiente para '${prod.nombre}'. Disponible: ${prod.cantidad_inventario}, solicitado: ${item.cantidad}.`,
+        );
+      }
     }
 
-    // 4. Calcular el consecutivo diario del pedido
-    const inicioDia = new Date();
-    inicioDia.setHours(0, 0, 0, 0);
-
-    const ultimoPedidoHoy = await this.prisma.pedido.findFirst({
-      where: { fecha_hora: { gte: inicioDia } },
-      orderBy: { numero_pedido: 'desc' },
-    });
-
-    const numero_pedido = (ultimoPedidoHoy?.numero_pedido ?? 0) + 1;
-
-    // 5. Transacción de persistencia con congelamiento de precio y transición de mesa
+    // 4. Transacción atómica de persistencia, descuento de inventario y transición de mesa
     return this.prisma.$transaction(async (tx) => {
+      // Calcular consecutivo diario en zona horaria local de Colombia (America/Bogota - UTC-5)
+      const ahora = new Date();
+      const fechaColStr = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Bogota',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(ahora);
+
+      const inicioDiaCol = new Date(`${fechaColStr}T00:00:00.000-05:00`);
+
+      const ultimoPedidoHoy = await tx.pedido.findFirst({
+        where: { fecha_hora: { gte: inicioDiaCol } },
+        orderBy: { numero_pedido: 'desc' },
+      });
+
+      const numero_pedido = (ultimoPedidoHoy?.numero_pedido ?? 0) + 1;
+
       const pedidoCreado = await tx.pedido.create({
         data: {
           numero_pedido,
@@ -135,11 +159,28 @@ export class PedidosService {
           },
           items: {
             include: {
-              producto: true,
+              producto: {
+                select: this.productoSelectOperativo,
+              },
             },
           },
         },
       });
+
+      // Descontar inventario automáticamente para productos con control de stock
+      for (const item of createPedidoDto.items) {
+        const prod = productMap.get(item.id_producto);
+        if (prod?.controla_inventario) {
+          await tx.producto.update({
+            where: { id_producto: item.id_producto },
+            data: {
+              cantidad_inventario: {
+                decrement: item.cantidad,
+              },
+            },
+          });
+        }
+      }
 
       // Si es salón, transicionar la mesa a 'ocupada'
       if (
@@ -206,7 +247,9 @@ export class PedidosService {
         },
         items: {
           include: {
-            producto: true,
+            producto: {
+              select: this.productoSelectOperativo,
+            },
           },
         },
       },
@@ -231,7 +274,9 @@ export class PedidosService {
         },
         items: {
           include: {
-            producto: true,
+            producto: {
+              select: this.productoSelectOperativo,
+            },
           },
         },
       },
@@ -263,7 +308,9 @@ export class PedidosService {
         },
         items: {
           include: {
-            producto: true,
+            producto: {
+              select: this.productoSelectOperativo,
+            },
           },
         },
       },
@@ -291,7 +338,9 @@ export class PedidosService {
         cliente: true,
         items: {
           include: {
-            producto: true,
+            producto: {
+              select: this.productoSelectOperativo,
+            },
           },
         },
       },
@@ -314,6 +363,25 @@ export class PedidosService {
           where: { id_mesa: pedido.id_mesa },
           data: { estado: EstadoMesa.libre },
         });
+      }
+    }
+
+    // Si se cancela la comanda, restituir existencias en inventario para productos controlados
+    if (
+      cambiarEstadoDto.estado === EstadoPedido.cancelada &&
+      pedido.estado !== EstadoPedido.cancelada
+    ) {
+      for (const item of (pedido.items || [])) {
+        if (item.producto?.controla_inventario) {
+          await this.prisma.producto.update({
+            where: { id_producto: item.id_producto },
+            data: {
+              cantidad_inventario: {
+                increment: item.cantidad,
+              },
+            },
+          });
+        }
       }
     }
 

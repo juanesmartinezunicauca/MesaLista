@@ -43,4 +43,8 @@ export class CreateProductoDto {
   @IsOptional()
   @IsBoolean({ message: 'La disponibilidad debe ser un valor booleano.' })
   disponible?: boolean;
+
+  @IsOptional()
+  @IsString({ message: 'La imagen debe ser una cadena de texto válida.' })
+  imagen?: string;
 }

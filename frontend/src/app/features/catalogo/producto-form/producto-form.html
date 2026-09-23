@@ -231,8 +231,84 @@
           </section>
         </div>
 
-        <!-- Columna Derecha: Ingredientes -->
+        <!-- Columna Derecha: Multimedia (Foto) e Ingredientes -->
         <div class="right-column">
+          <!-- Tarjeta: Foto del Producto -->
+          <section class="card-section photo-card">
+            <div class="section-header-row">
+              <h3>Foto del Producto</h3>
+              <span class="photo-badge">Base de Datos POS</span>
+            </div>
+            <p class="section-subtitle">
+              Sube una fotografía para la carta y monitor de pedidos. Se optimiza y almacena de forma persistente en PostgreSQL.
+            </p>
+
+            <input
+              type="file"
+              #fileInput
+              accept="image/png, image/jpeg, image/webp"
+              style="display: none;"
+              (change)="onFileSelected($event)"
+            >
+
+            @if (imagenDataUrl(); as imgUrl) {
+              <div class="photo-preview-box">
+                <div class="photo-img-wrapper">
+                  <img [src]="imgUrl" alt="Foto del producto" class="preview-img">
+                </div>
+                <div class="photo-actions">
+                  <button
+                    type="button"
+                    mat-stroked-button
+                    class="btn-change-photo"
+                    (click)="fileInput.click()"
+                    [disabled]="isSaving() || isCompressingImage()"
+                  >
+                    <mat-icon>photo_camera</mat-icon>
+                    <span>Cambiar Foto</span>
+                  </button>
+                  <button
+                    type="button"
+                    mat-stroked-button
+                    color="warn"
+                    class="btn-delete-photo"
+                    (click)="eliminarImagen()"
+                    [disabled]="isSaving() || isCompressingImage()"
+                    matTooltip="Quitar foto del producto"
+                  >
+                    <mat-icon>delete</mat-icon>
+                    <span>Eliminar</span>
+                  </button>
+                </div>
+              </div>
+            } @else {
+              <div
+                class="photo-dropzone"
+                [class.is-dragging]="isDragging()"
+                (click)="fileInput.click()"
+                (dragover)="onDragOver($event)"
+                (dragleave)="onDragLeave($event)"
+                (drop)="onDrop($event)"
+              >
+                @if (isCompressingImage()) {
+                  <div class="compressing-indicator">
+                    <mat-spinner diameter="32"></mat-spinner>
+                    <span>Optimizando y comprimiendo imagen...</span>
+                  </div>
+                } @else {
+                  <div class="dropzone-content">
+                    <div class="upload-icon-circle">
+                      <mat-icon>add_photo_alternate</mat-icon>
+                    </div>
+                    <span class="upload-title">Arrastra o haz clic para subir foto</span>
+                    <span class="upload-hint">Formatos: JPG, PNG o WebP (Comprimido a máx 400x400)</span>
+                  </div>
+                }
+              </div>
+            }
+          </section>
+
+          <!-- Tarjeta: Ingredientes -->
           <section class="card-section ingredients-card">
             <div class="section-header-row">
               <h3>Ingredientes</h3>

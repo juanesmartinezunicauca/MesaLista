@@ -1,36 +1,64 @@
 <div class="apertura-caja-layout">
+  @if (isLoading()) {
+    <div class="loading-state">
+      <mat-spinner diameter="44"></mat-spinner>
+      <p>Comprobando estado del turno de caja...</p>
+    </div>
+  } @else {
+    <mat-card class="caja-card">
+      <mat-card-content class="card-container">
+        <!-- Icono de Candado Superior -->
+        <div class="lock-icon-container">
+          <mat-icon class="lock-icon-top">lock</mat-icon>
+        </div>
 
-  <mat-card class="caja-card">
-    <mat-card-content class="card-container">
+        <!-- Títulos e Información -->
+        <h2 class="card-title">Caja Cerrada</h2>
+        <p class="card-description">
+          No hay caja abierta en este momento. Ingresa el valor base en efectivo para comenzar las operaciones del turno.
+        </p>
 
-      <!-- Icono de Candado Superior -->
-      <div class="lock-icon-container">
-        <mat-icon class="lock-icon-top">lock</mat-icon>
-      </div>
+        @if (errorMessage(); as err) {
+          <div class="error-banner">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ err }}</span>
+          </div>
+        }
 
-      <!-- Títulos e Información -->
-      <h2 class="card-title">Caja Cerrada</h2>
-      <p class="card-description">
-        No hay caja abierta hoy. Ingrese el valor base para comenzar las operaciones del día.
-      </p>
+        <!-- Campo de Entrada (Input Base) -->
+        <div class="input-container">
+          <label class="input-label">Valor base inicial en efectivo *</label>
+          <mat-form-field appearance="outline" class="full-width">
+            <span matPrefix style="margin-left: 15px; font-weight: 700;" class="currency-prefix">$ &nbsp;</span>
+            <input
+              matInput
+              type="number"
+              placeholder="0"
+              min="0"
+              [ngModel]="valorBase()"
+              (ngModelChange)="valorBase.set($event)"
+              (keydown.enter)="abrirCaja()"
+            />
+          </mat-form-field>
+        </div>
 
-      <!-- Campo de Entrada (Input) -->
-      <div class="input-container">
-        <label class="input-label">Valor base inicial</label>
-        <mat-form-field appearance="outline" class="full-width">
-          <span matPrefix style="margin-left: 15px" class="currency-prefix">$ &nbsp;</span>
-          <input matInput type="text" placeholder="0" (keypress)="soloNumeros($event)">
-        </mat-form-field>
-      </div>
-
-
-      <!-- Botón de Acción -->
-      <button mat-flat-button color="primary" class="btn-abrir-caja" [routerLink]="['/caja', 'dashboard']">
-        <mat-icon>lock</mat-icon>
-        Abrir Caja
-      </button>
-
-    </mat-card-content>
-  </mat-card>
-
+        <!-- Botón de Acción -->
+        <button
+          type="button"
+          mat-flat-button
+          color="primary"
+          class="btn-abrir-caja"
+          (click)="abrirCaja()"
+          [disabled]="isOpening() || valorBase() === null"
+        >
+          @if (isOpening()) {
+            <mat-spinner diameter="18" class="spinner-btn"></mat-spinner>
+          } @else {
+            <mat-icon>lock_open</mat-icon>
+          }
+          <span>Abrir Turno de Caja</span>
+        </button>
+      </mat-card-content>
+    </mat-card>
+  }
 </div>

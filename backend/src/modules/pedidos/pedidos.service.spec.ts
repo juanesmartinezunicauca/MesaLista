@@ -19,6 +19,7 @@ describe('PedidosService', () => {
     };
     producto: {
       findMany: jest.Mock;
+      update: jest.Mock;
     };
     pedido: {
       findFirst: jest.Mock;
@@ -42,6 +43,7 @@ describe('PedidosService', () => {
       },
       producto: {
         findMany: jest.fn(),
+        update: jest.fn(),
       },
       pedido: {
         findFirst: jest.fn(),
