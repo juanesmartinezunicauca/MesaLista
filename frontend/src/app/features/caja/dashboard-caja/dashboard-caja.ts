@@ -20,7 +20,7 @@ import {
   ResumenCajaTurno,
 } from '../../../core/services/api/caja-api.service';
 import { ModalGastoDialogComponent } from '../modal-gasto/modal-gasto-dialog';
-import { ArqueoCierreDialogComponent } from '../arqueo-cierre/arqueo-cierre-dialog';
+import { CierreDeCaja } from '../arqueo-cierre/arqueo-caja';
 
 @Component({
   selector: 'app-dashboard-caja',
@@ -153,9 +153,10 @@ export class DashboardCajaComponent implements OnInit {
     const caj = this.caja();
     if (!res || !caj) return;
 
-    const dialogRef = this.dialog.open(ArqueoCierreDialogComponent, {
+    const dialogRef = this.dialog.open(CierreDeCaja, {
+      disableClose: true,
       data: { resumen: res, caja: caj },
-      width: '560px',
+      width: '600px',
       maxWidth: '95vw',
     });
 
