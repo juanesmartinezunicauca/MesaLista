@@ -19,6 +19,7 @@ export interface CreateProductoPayload {
   controla_inventario?: boolean;
   disponible?: boolean;
   ingredientes_removibles?: string[];
+  imagen?: string | null;
 }
 
 @Injectable({
@@ -112,6 +113,7 @@ export class CatalogoApiService {
       controla_inventario: Boolean(raw.controla_inventario ?? false),
       disponible: Boolean(raw.disponible),
       ingredientes_removibles: ingredientes,
+      imagen: raw.imagen ?? null,
     };
   }
 }

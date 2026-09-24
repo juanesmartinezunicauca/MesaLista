@@ -8,6 +8,7 @@ export interface Producto {
   cantidad_inventario: number;
   controla_inventario: boolean;
   disponible: boolean;
+  imagen?: string | null;
 }
 
 export type TipoAjusteInventario = 'Entrada' | 'Merma' | 'Arqueo';

@@ -15,7 +15,7 @@ import {
 
 @Injectable()
 export class CatalogoService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   /**
    * Registra un nuevo producto en la carta/catálogo asegurando nombre único.
@@ -60,6 +60,8 @@ export class CatalogoService {
         controla_inventario: controlaInventario,
         cantidad_inventario: cantidadInventario,
         disponible: createProductoDto.disponible ?? true,
+        // Fotografía optimizada en Base64/WebP
+        imagen: createProductoDto.imagen ?? null,
       },
     });
   }
@@ -168,6 +170,9 @@ export class CatalogoService {
         }),
         ...(updateProductoDto.disponible !== undefined && {
           disponible: updateProductoDto.disponible,
+        }),
+        ...(updateProductoDto.imagen !== undefined && {
+          imagen: updateProductoDto.imagen,
         }),
       },
     });

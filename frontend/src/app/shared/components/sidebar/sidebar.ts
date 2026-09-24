@@ -42,6 +42,7 @@ export class SidebarComponent {
   // Menú de navegación adaptado a Luigie's POS con roles permitidos
   navItems: NavItem[] = [
     { icon: 'table_restaurant', label: 'Mesas', route: '/mesas', roles: ['administrador', 'cajero', 'mesero'] },
+    { icon: 'soup_kitchen', label: 'Cocina', route: '/cocina', roles: ['administrador', 'cajero', 'mesero', 'cocina'] },
     { icon: 'delivery_dining', label: 'Domicilios', route: '/domicilios', roles: ['administrador', 'cajero', 'mesero'] },
     { icon: 'point_of_sale', label: 'Caja', route: '/caja', roles: ['administrador', 'cajero'] },
     { icon: 'inventory_2', label: 'Catálogo', route: '/catalogo', roles: ['administrador', 'cajero'] },

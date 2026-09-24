@@ -1,0 +1,124 @@
+<div class="comandas-layout">
+  <!-- Cabecera -->
+  <header class="comandas-header">
+    <div class="header-left">
+      <div class="breadcrumbs">
+        <mat-icon>soup_kitchen</mat-icon>
+        <span>Cocina / Visor de Comandas</span>
+      </div>
+      <h1 class="page-title">Comandas en Cocina</h1>
+      <p class="page-subtitle">
+        Vista previa de las comandas activas enviadas a cocina para pruebas y visualización de tickets.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <button
+        type="button"
+        mat-stroked-button
+        class="btn-refresh"
+        (click)="cargarComandas()"
+        [disabled]="isLoading()"
+        matTooltip="Actualizar lista de comandas"
+      >
+        <mat-icon [class.spin]="isLoading()">refresh</mat-icon>
+        <span>Refrescar</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Mensaje de Error si falla la conexión -->
+  @if (errorMensaje()) {
+    <div class="error-banner">
+      <mat-icon>cloud_off</mat-icon>
+      <span>{{ errorMensaje() }}</span>
+      <button mat-flat-button class="btn-reintentar" (click)="cargarComandas()">Reintentar</button>
+    </div>
+  }
+
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="loading-state">
+      <mat-spinner diameter="44"></mat-spinner>
+      <p>Cargando comandas activas...</p>
+    </div>
+  } @else {
+    <!-- Empty State -->
+    @if (comandas().length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon-circle">
+          <mat-icon>done_all</mat-icon>
+        </div>
+        <h3>No hay comandas pendientes</h3>
+        <p>Actualmente no hay comandas activas por preparar. Los nuevos pedidos despachados desde las mesas aparecerán aquí automáticamente.</p>
+      </div>
+    } @else {
+      <!-- Grilla de Tarjetas de Comanda (Estilo Ticket Térmico) -->
+      <div class="tickets-grid">
+        @for (comanda of comandas(); track comanda.id_pedido) {
+          <article class="ticket-card">
+            <!-- Encabezado del Ticket -->
+            <header class="ticket-header">
+              <div class="ticket-dest">
+                @if (comanda.tipo === 'salon') {
+                  <span class="mesa-badge">Mesa #{{ comanda.numero_mesa }}</span>
+                } @else {
+                  <span class="domicilio-badge">Domicilio</span>
+                }
+                <span class="consecutivo-tag">Comanda #{{ comanda.numero_pedido }}</span>
+              </div>
+
+              <div class="ticket-time">
+                <span class="hora">{{ formatearHora(comanda.fecha_hora) }}</span>
+                <span class="minutos" [class.alerta-demora]="comanda.minutos_transcurridos >= 15">
+                  hace {{ comanda.minutos_transcurridos }} min
+                </span>
+              </div>
+            </header>
+
+            <div class="ticket-mesero">
+              <mat-icon>person</mat-icon>
+              <span>Atendido por: <strong>{{ comanda.nombre_mesero }}</strong></span>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <!-- Lista de Ítems del Pedido -->
+            <ul class="ticket-items">
+              @for (item of comanda.items; track item.id_item) {
+                <li class="ticket-item">
+                  <div class="item-main">
+                    <span class="item-qty">{{ item.cantidad }}x</span>
+                    <span class="item-name">{{ item.nombre_producto }}</span>
+                  </div>
+
+                  @if (item.ingredientes_removidos) {
+                    <div class="item-sin">
+                      <mat-icon>block</mat-icon>
+                      <span>SIN: {{ item.ingredientes_removidos }}</span>
+                    </div>
+                  }
+
+                  @if (item.observacion) {
+                    <div class="item-nota">
+                      <mat-icon>edit_note</mat-icon>
+                      <span>{{ item.observacion }}</span>
+                    </div>
+                  }
+                </li>
+              }
+            </ul>
+
+            <!-- Observación General si la hay -->
+            @if (comanda.observacion_general) {
+              <div class="ticket-observacion-general">
+                <mat-icon>info</mat-icon>
+                <span><strong>Nota General:</strong> {{ comanda.observacion_general }}</span>
+              </div>
+            }
+          </article>
+        }
+      </div>
+    }
+  }
+</div>

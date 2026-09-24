@@ -205,6 +205,17 @@
               }
             </div>
 
+            <!-- Imagen del Producto / Placeholder -->
+            <div class="card-img-banner" (click)="esAdmin() ? irAEditar(prod) : null" [style.cursor]="esAdmin() ? 'pointer' : 'default'">
+              @if (prod.imagen) {
+                <img [src]="prod.imagen" [alt]="prod.nombre" class="prod-img" loading="lazy">
+              } @else {
+                <div class="prod-placeholder-img">
+                  <mat-icon>fastfood</mat-icon>
+                </div>
+              }
+            </div>
+
             <!-- Cuerpo: Nombre y Receta -->
             <div class="card-main">
               <h3

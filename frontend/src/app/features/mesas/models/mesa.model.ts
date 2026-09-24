@@ -22,5 +22,5 @@ export type PedidoMesa = Pedido;
 // Alias de producto en catálogo para selección rápida
 export type ProductoCatalogo = Pick<
   Producto,
-  'id_producto' | 'nombre' | 'categoria' | 'precio_venta' | 'disponible' | 'ingredientes_removibles'
+  'id_producto' | 'nombre' | 'categoria' | 'precio_venta' | 'disponible' | 'ingredientes_removibles' | 'imagen'
 >;

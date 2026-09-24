@@ -101,6 +101,7 @@ model Producto {
   cantidad_inventario     Int     @default(0)
   controla_inventario     Boolean @default(false)
   disponible              Boolean @default(true)
+  imagen                  String? @db.Text
 
   ajustesInventario AjusteInventario[]
   itemsPedido       ItemPedido[]

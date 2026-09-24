@@ -30,7 +30,18 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'cocina',
+        canActivate: [roleGuard],
+        data: { roles: ['administrador', 'cajero', 'mesero', 'cocina'] },
+        loadComponent: () =>
+          import('./features/cocina/vista-cocina/vista-cocina').then(
+            (m) => m.VistaCocinaComponent
+          ),
+      },
+      {
         path: 'caja',
+        canActivate: [roleGuard],
+        data: { roles: ['administrador', 'cajero'] },
         loadComponent: () =>
           import('./features/caja/apertura-caja/apertura-caja').then(
             (m) => m.AperturaCajaComponent
@@ -38,6 +49,8 @@ export const routes: Routes = [
       },
       {
         path: 'caja/dashboard',
+        canActivate: [roleGuard],
+        data: { roles: ['administrador', 'cajero'] },
         loadComponent: () =>
           import('./features/caja/dashboard-caja/dashboard-caja').then(
             (m) => m.DashboardCajaComponent
@@ -78,6 +91,24 @@ export const routes: Routes = [
           import('./features/usuarios/lista-usuarios/lista-usuarios').then(
             (m) => m.ListaUsuariosComponent
           ),
+      },
+      {
+        path: 'domicilios',
+        canActivate: [roleGuard],
+        data: { roles: ['administrador', 'cajero', 'mesero'] },
+        loadComponent: () =>
+          import(
+            './shared/components/en-construccion/en-construccion'
+          ).then((m) => m.EnConstruccionComponent),
+      },
+      {
+        path: 'reportes',
+        canActivate: [roleGuard],
+        data: { roles: ['administrador'] },
+        loadComponent: () =>
+          import(
+            './shared/components/en-construccion/en-construccion'
+          ).then((m) => m.EnConstruccionComponent),
       },
       // Compatibilidad con enlace previo
       { path: 'inventory', redirectTo: 'catalogo', pathMatch: 'full' },

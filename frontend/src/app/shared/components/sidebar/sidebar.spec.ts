@@ -69,6 +69,7 @@ describe('SidebarComponent', () => {
 
     expect(rutas).toEqual([
       '/mesas',
+      '/cocina',
       '/domicilios',
       '/caja',
       '/catalogo',

@@ -1,182 +1,248 @@
 <div class="cash-register-layout">
-
+  @if (isLoading()) {
+    <div class="loading-state">
+      <mat-spinner diameter="44"></mat-spinner>
+      <p>Cargando datos del turno actual de caja...</p>
+    </div>
+  } @else {
     <!-- Header Principal -->
     <header class="cash-header">
-        <div class="header-title-container">
-            <h1>Gestión de Caja</h1>
-            <mat-chip-set>
-                <mat-chip class="status-chip open">
-                    <mat-icon>lock_open</mat-icon> ABIERTA
-                </mat-chip>
-            </mat-chip-set>
+      <div class="header-title-container">
+        <div class="header-badge">
+          <mat-icon>point_of_sale</mat-icon>
+          <span>Operación de Caja</span>
         </div>
+        <div class="title-with-chip">
+          <h1>Gestión de Caja</h1>
+          <mat-chip-set>
+            <mat-chip class="status-chip open">
+              <mat-icon>lock_open</mat-icon> TURNO ACTIVO
+            </mat-chip>
+          </mat-chip-set>
+        </div>
+        <p class="subtitle">Turno actual en progreso. Registra salidas de dinero o realiza el arqueo al finalizar.</p>
+      </div>
 
-        <div class="header-actions">
-            <button mat-stroked-button class="btn-action" (click)="registrarGasto()">
-                <mat-icon>receipt_long</mat-icon>
-                Registrar Gasto
-            </button>
-            <button mat-flat-button color="primary" class="btn-action btn-danger" (click)="cerrarCaja()">
-                <mat-icon>point_of_sale</mat-icon>
-                Cerrar Caja
-            </button>
-        </div>
+      <div class="header-actions">
+        <button
+          type="button"
+          mat-stroked-button
+          class="btn-action"
+          (click)="cargarDatos(false)"
+          matTooltip="Actualizar datos"
+        >
+          <mat-icon>refresh</mat-icon>
+          Refrescar
+        </button>
+        <button
+          type="button"
+          mat-stroked-button
+          class="btn-action"
+          (click)="registrarGasto()"
+        >
+          <mat-icon>receipt_long</mat-icon>
+          Registrar Gasto
+        </button>
+        <button
+          type="button"
+          mat-flat-button
+          color="warn"
+          class="btn-action btn-danger"
+          (click)="cerrarCaja()"
+        >
+          <mat-icon>point_of_sale</mat-icon>
+          Cerrar Caja (Arqueo)
+        </button>
+      </div>
     </header>
 
-    <p class="subtitle">Turno actual en progreso. Registre gastos o cierre la caja al finalizar.</p>
+    @if (errorMensaje(); as err) {
+      <div class="error-banner">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ err }}</span>
+        <button mat-button color="warn" (click)="cargarDatos()">Reintentar</button>
+      </div>
+    }
 
     <!-- Panel Superior de Tarjetas Resumen -->
     <section class="summary-grid">
+      <!-- 1. Apertura -->
+      <mat-card class="summary-card aperture-card">
+        <mat-card-content>
+          <div class="card-icon-title">
+            <mat-icon>schedule</mat-icon>
+            <span>APERTURA</span>
+          </div>
 
-        <!-- 1. Apertura -->
-        <mat-card class="summary-card aperture-card">
-            <mat-card-content>
-                <div class="card-icon-title">
-                    <mat-icon>schedule</mat-icon>
-                    <span>APERTURA</span>
+          <div class="info-block">
+            <span class="label">FECHA / HORA</span>
+            <span class="value-main">{{ fechaApertura }}</span>
+          </div>
+
+          <div class="info-block">
+            <span class="label">CAJERO RESPONSABLE</span>
+            <span class="value-main">{{ usuarioApertura }}</span>
+          </div>
+
+          <mat-divider></mat-divider>
+
+          <div class="info-block">
+            <span class="label">VALOR BASE INICIAL</span>
+            <span class="value-highlight">$ {{ valorBase | number:'1.0-0' }}</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- 2. Ventas del Día -->
+      <mat-card class="summary-card">
+        <mat-card-content>
+          <div class="card-header-row">
+            <div class="card-icon-title">
+              <mat-icon class="icon-title">payments</mat-icon>
+              <span>VENTAS DEL DÍA</span>
+            </div>
+            <div class="trend-badge positive">
+              <mat-icon>trending_up</mat-icon>
+            </div>
+          </div>
+
+          <div class="amount-display text-success">$ {{ ventasDia | number:'1.0-0' }}</div>
+          <span class="subtext-green">{{ totalTransacciones }} Factura{{ totalTransacciones === 1 ? '' : 's' }} Cobrada{{ totalTransacciones === 1 ? '' : 's' }}</span>
+
+          <div class="sub-metrics">
+            <div class="metric-pill">
+              <span>Efe:</span> <strong>$ {{ efectivoVentas | number:'1.0-0' }}</strong>
+            </div>
+            <div class="metric-pill">
+              <span>Tarj:</span> <strong>$ {{ tarjetaVentas | number:'1.0-0' }}</strong>
+            </div>
+            <div class="metric-pill">
+              <span>Transf:</span> <strong>$ {{ transferenciaVentas | number:'1.0-0' }}</strong>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- 3. Gastos / Retiros -->
+      <mat-card class="summary-card">
+        <mat-card-content>
+          <div class="card-header-row">
+            <div class="card-icon-title">
+              <mat-icon class="icon-title">shopping_bag</mat-icon>
+              <span>GASTOS / EGRESOS</span>
+            </div>
+            <div class="trend-badge negative">
+              <mat-icon>trending_down</mat-icon>
+            </div>
+          </div>
+
+          <div class="amount-display text-danger">- $ {{ gastosRetiros | number:'1.0-0' }}</div>
+          <span class="subtext-red">{{ movimientosGastos }} Egreso{{ movimientosGastos === 1 ? '' : 's' }} Registrado{{ movimientosGastos === 1 ? '' : 's' }}</span>
+
+          <div class="details-list">
+            @if (desgloseGastosArray.length === 0) {
+              <p class="no-gastos-hint">Sin egresos registrados en el turno.</p>
+            } @else {
+              @for (g of desgloseGastosArray; track g.tipo) {
+                <div class="detail-row">
+                  <span>{{ g.tipo }}</span>
+                  <strong>$ {{ g.monto | number:'1.0-0' }}</strong>
                 </div>
+              }
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
 
-                <div class="info-block">
-                    <span class="label">FECHA / HORA</span>
-                    <span class="value-main">{{ fechaApertura() }}</span>
-                </div>
+      <!-- 4. Efectivo Esperado (Destacado Azul) -->
+      <mat-card class="summary-card highlight-blue">
+        <mat-card-content>
+          <div class="card-header-row white-text">
+            <div class="card-icon-title">
+              <mat-icon>account_balance_wallet</mat-icon>
+              <span>EFECTIVO ESPERADO</span>
+            </div>
+          </div>
 
-                <div class="info-block">
-                    <span class="label">USUARIO</span>
-                    <span class="value-main">{{ usuario() }}</span>
-                </div>
+          <span class="formula-text">Base + Ventas Efectivo - Gastos Efectivo</span>
 
-                <mat-divider></mat-divider>
-
-                <div class="info-block">
-                    <span class="label">VALOR BASE</span>
-                    <span class="value-highlight">$ {{ valorBase() | number:'1.0-0' }}</span>
-                </div>
-            </mat-card-content>
-        </mat-card>
-
-        <!-- 2. Ventas del Día -->
-        <mat-card class="summary-card">
-            <mat-card-content>
-                <div class="card-header-row">
-                    <div class="card-icon-title">
-                        <span>VENTAS DEL DÍA</span>
-                    </div>
-                    <div class="trend-badge positive">
-                        <mat-icon>trending_up</mat-icon>
-                    </div>
-                </div>
-
-                <div class="amount-display">$ {{ ventasDia() | number:'1.0-0' }}</div>
-                <span class="subtext-green">+ {{ totalTransacciones() }} Transacciones</span>
-
-                <div class="sub-metrics">
-                    <div class="metric-pill">
-                        <span>Efe:</span> <strong>$ {{ efectivoVentas() | number:'1.0-0' }}</strong>
-                    </div>
-                    <div class="metric-pill">
-                        <span>Tarj:</span> <strong>$ {{ tarjetaVentas() | number:'1.0-0' }}</strong>
-                    </div>
-                </div>
-            </mat-card-content>
-        </mat-card>
-
-        <!-- 3. Gastos / Retiros -->
-        <mat-card class="summary-card">
-            <mat-card-content>
-                <div class="card-header-row">
-                    <div class="card-icon-title">
-                        <span>GASTOS / RETIROS</span>
-                    </div>
-                    <div class="trend-badge negative">
-                        <mat-icon>trending_down</mat-icon>
-                    </div>
-                </div>
-
-                <div class="amount-display text-danger">- $ {{ gastosRetiros() | number:'1.0-0' }}</div>
-                <span class="subtext-red">{{ movimientosGastos() }} Movimientos</span>
-
-                <div class="details-list">
-                    <div class="detail-row">
-                        <span>Insumos</span>
-                        <span>$ {{ gastoInsumos() | number:'1.0-0' }}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span>Aseo</span>
-                        <span>$ {{ gastoAseo() | number:'1.0-0' }}</span>
-                    </div>
-                </div>
-            </mat-card-content>
-        </mat-card>
-
-        <!-- 4. Efectivo Esperado (Destacado Azul) -->
-        <mat-card class="summary-card highlight-blue">
-            <mat-card-content>
-                <div class="card-header-row white-text">
-                    <div class="card-icon-title">
-                        <span>EFECTIVO ESPERADO</span>
-                    </div>
-                    <mat-icon>account_balance_wallet</mat-icon>
-                </div>
-
-                <span class="formula-text">Base + Ventas(E) - Gastos</span>
-
-                <div class="amount-display white-text">$ {{ efectivoEsperado | number:'1.0-0' }}</div>
-            </mat-card-content>
-        </mat-card>
-
+          <div class="amount-display white-text">$ {{ efectivoEsperado | number:'1.0-0' }}</div>
+          <p class="expected-hint">Dinero que debe haber físicamente en el cajón.</p>
+        </mat-card-content>
+      </mat-card>
     </section>
 
     <!-- Sección de Movimientos Recientes -->
     <section class="recent-movements-section">
-        <div class="section-header">
-            <h2>Movimientos Recientes</h2>
-            <button mat-button color="primary" (click)="verTodosMovimientos()">Ver todos</button>
+      <div class="section-header">
+        <div class="section-title-box">
+          <h2>Movimientos del Turno ({{ movimientos().length }})</h2>
+          <p>Registro cronológico de todas las ventas y egresos de este turno.</p>
         </div>
+      </div>
 
-        <mat-card class="table-card">
-            <table mat-table [dataSource]="movimientos()" class="modern-table">
+      <mat-card class="table-card">
+        @if (movimientos().length === 0) {
+          <div class="empty-movements">
+            <mat-icon>receipt</mat-icon>
+            <p>Aún no hay movimientos registrados en este turno. Las ventas de mesas y gastos aparecerán aquí en vivo.</p>
+          </div>
+        } @else {
+          <table mat-table [dataSource]="movimientos()" class="modern-table">
+            <!-- Columna Hora -->
+            <ng-container matColumnDef="hora">
+              <th mat-header-cell *matHeaderCellDef> Hora </th>
+              <td mat-cell *matCellDef="let element"> {{ formatearHora(element.hora) }} </td>
+            </ng-container>
 
-                <!-- Columna Hora -->
-                <ng-container matColumnDef="hora">
-                    <th mat-header-cell *matHeaderCellDef> Hora </th>
-                    <td mat-cell *matCellDef="let element"> {{element.hora}} </td>
-                </ng-container>
+            <!-- Columna Descripción -->
+            <ng-container matColumnDef="descripcion">
+              <th mat-header-cell *matHeaderCellDef> Descripción </th>
+              <td mat-cell *matCellDef="let element" class="font-medium">
+                {{ element.descripcion }}
+                <span class="responsable-hint">por {{ element.responsable }}</span>
+              </td>
+            </ng-container>
 
-                <!-- Columna Descripción -->
-                <ng-container matColumnDef="descripcion">
-                    <th mat-header-cell *matHeaderCellDef> Descripción </th>
-                    <td mat-cell *matCellDef="let element" class="font-medium"> {{element.descripcion}} </td>
-                </ng-container>
+            <!-- Columna Tipo -->
+            <ng-container matColumnDef="tipo">
+              <th mat-header-cell *matHeaderCellDef> Tipo </th>
+              <td mat-cell *matCellDef="let element">
+                <span
+                  class="type-badge"
+                  [ngClass]="element.tipo === 'Ingreso' ? 'badge-ingreso' : 'badge-gasto'"
+                >
+                  {{ element.tipo }}
+                </span>
+              </td>
+            </ng-container>
 
-                <!-- Columna Tipo -->
-                <ng-container matColumnDef="tipo">
-                    <th mat-header-cell *matHeaderCellDef> Tipo </th>
-                    <td mat-cell *matCellDef="let element">
-                        <span class="type-badge" [ngClass]="{
-              'badge-ingreso': element.tipo === 'Ingreso',
-              'badge-tarjeta': element.tipo === 'Ingreso (T)',
-              'badge-gasto': element.tipo === 'Gasto'
-            }">
-                            {{element.tipo}}
-                        </span>
-                    </td>
-                </ng-container>
+            <!-- Columna Medio de Pago -->
+            <ng-container matColumnDef="medio_pago">
+              <th mat-header-cell *matHeaderCellDef> Método </th>
+              <td mat-cell *matCellDef="let element">
+                <span class="medio-badge">{{ element.medio_pago }}</span>
+              </td>
+            </ng-container>
 
-                <!-- Columna Monto -->
-                <ng-container matColumnDef="monto">
-                    <th mat-header-cell *matHeaderCellDef class="text-right"> Monto </th>
-                    <td mat-cell *matCellDef="let element" class="text-right font-bold"
-                        [ngClass]="element.monto > 0 ? 'text-success' : 'text-danger'">
-                        {{ element.monto > 0 ? ('+$ ' + (element.monto | number:'1.0-0')) : ('-$ ' + (-element.monto |
-                        number:'1.0-0')) }}
-                    </td>
-                </ng-container>
+            <!-- Columna Monto -->
+            <ng-container matColumnDef="monto">
+              <th mat-header-cell *matHeaderCellDef class="text-right"> Monto </th>
+              <td
+                mat-cell
+                *matCellDef="let element"
+                class="text-right font-bold"
+                [ngClass]="element.monto > 0 ? 'text-success' : 'text-danger'"
+              >
+                {{ element.monto > 0 ? ('+$ ' + (element.monto | number:'1.0-0')) : ('-$ ' + (-element.monto | number:'1.0-0')) }}
+              </td>
+            </ng-container>
 
-                <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-                <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-            </table>
-        </mat-card>
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          </table>
+        }
+      </mat-card>
     </section>
-
+  }
 </div>

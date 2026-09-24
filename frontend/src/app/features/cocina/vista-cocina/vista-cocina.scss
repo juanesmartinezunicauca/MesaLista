@@ -1,0 +1,338 @@
+@use 'tokens' as *;
+@use 'mixins' as *;
+
+.comandas-layout {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 24px;
+  gap: 20px;
+  width: 100%;
+}
+
+.comandas-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+
+  .header-left {
+    .breadcrumbs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: $text-muted;
+      margin-bottom: 4px;
+
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        color: $brand-blue;
+      }
+    }
+
+    .page-title {
+      font-size: 1.625rem;
+      font-weight: 700;
+      color: $text-primary;
+      margin: 0 0 4px 0;
+    }
+
+    .page-subtitle {
+      font-size: 0.875rem;
+      color: $text-muted;
+      margin: 0;
+    }
+  }
+
+  .header-actions {
+    .btn-refresh {
+      border-radius: $radius-md !important;
+      font-weight: 500;
+
+      .spin {
+        animation: spin 1s linear infinite;
+      }
+    }
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: $color-danger-bg;
+  color: $color-danger;
+  padding: 12px 16px;
+  border-radius: $radius-md;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  font-size: 0.875rem;
+
+  .btn-reintentar {
+    margin-left: auto;
+    background-color: $color-danger !important;
+    color: white !important;
+  }
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 16px;
+  color: $text-muted;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  text-align: center;
+  background: $bg-card;
+  border: 1px dashed $border-color;
+  border-radius: $radius-xl;
+  gap: 10px;
+
+  .empty-icon-circle {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background-color: $color-success-bg;
+    color: $color-success;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 6px;
+
+    mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+    }
+  }
+
+  h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: $text-primary;
+    margin: 0;
+  }
+
+  p {
+    font-size: 0.875rem;
+    color: $text-muted;
+    max-width: 440px;
+    margin: 0;
+    line-height: 1.5;
+  }
+}
+
+// ==========================================
+// GRILLA DE TICKETS DE COMANDA
+// ==========================================
+.tickets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 18px;
+}
+
+.ticket-card {
+  @include card-surface($bg: #ffffff, $border: #e2e8f0, $radius: $radius-lg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 12px;
+  border-top: 4px solid $brand-blue;
+  transition: transform $transition-fast, box-shadow $transition-fast;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  }
+
+  .ticket-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+
+    .ticket-dest {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      .mesa-badge {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: $text-primary;
+      }
+
+      .domicilio-badge {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: $brand-blue;
+      }
+
+      .consecutivo-tag {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: $text-muted;
+      }
+    }
+
+    .ticket-time {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+
+      .hora {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: $text-secondary;
+      }
+
+      .minutos {
+        font-size: 0.6875rem;
+        font-weight: 600;
+        color: $color-success;
+        background-color: $color-success-bg;
+        padding: 2px 6px;
+        border-radius: $radius-sm;
+
+        &.alerta-demora {
+          color: $color-danger;
+          background-color: $color-danger-bg;
+        }
+      }
+    }
+  }
+
+  .ticket-mesero {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8125rem;
+    color: $text-muted;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  .ticket-items {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    .ticket-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed #f1f5f9;
+
+      &:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+
+      .item-main {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+
+        .item-qty {
+          font-size: 1rem;
+          font-weight: 700;
+          color: $brand-blue;
+          background-color: rgba($brand-blue, 0.08);
+          padding: 2px 7px;
+          border-radius: $radius-sm;
+          min-width: 28px;
+          text-align: center;
+        }
+
+        .item-name {
+          font-size: 0.9375rem;
+          font-weight: 600;
+          color: $text-primary;
+        }
+      }
+
+      .item-sin {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #b91c1c;
+        background-color: #fef2f2;
+        padding: 2px 6px;
+        border-radius: $radius-sm;
+        width: fit-content;
+        margin-left: 36px;
+
+        mat-icon {
+          font-size: 13px;
+          width: 13px;
+          height: 13px;
+        }
+      }
+
+      .item-nota {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.75rem;
+        font-style: italic;
+        color: #b45309;
+        background-color: #fffbeb;
+        padding: 2px 6px;
+        border-radius: $radius-sm;
+        width: fit-content;
+        margin-left: 36px;
+
+        mat-icon {
+          font-size: 13px;
+          width: 13px;
+          height: 13px;
+        }
+      }
+    }
+  }
+
+  .ticket-observacion-general {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 0.8125rem;
+    color: #92400e;
+    background-color: #fef3c7;
+    padding: 8px 10px;
+    border-radius: $radius-md;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      margin-top: 1px;
+    }
+  }
+}

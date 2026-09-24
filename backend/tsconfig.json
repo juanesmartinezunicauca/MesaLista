@@ -20,6 +20,6 @@
     // A-01: strict completo — usar ! (non-null assertion) solo donde NestJS lo requiere
     "strict": true
   },
-  "include": ["src/**/*", "test/**/*"],
+  "include": ["src/**/*", "test/**/*", "prisma/**/*"],
   "exclude": ["node_modules", "dist"]
 }

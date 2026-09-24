@@ -489,3 +489,159 @@
     }
   }
 }
+
+// --- TARJETA DE FOTO DEL PRODUCTO ---
+.photo-card {
+  margin-bottom: 24px;
+
+  .photo-badge {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: $brand-blue;
+    background: rgba($brand-blue, 0.08);
+    border: 1px solid rgba($brand-blue, 0.2);
+    padding: 3px 8px;
+    border-radius: 999px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .photo-dropzone {
+    border: 2px dashed $border-color;
+    border-radius: $radius-lg;
+    background: #f8fafc;
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all $transition-fast;
+    user-select: none;
+
+    &:hover {
+      border-color: $brand-blue;
+      background: rgba($brand-blue, 0.02);
+      transform: translateY(-1px);
+    }
+
+    &.is-dragging {
+      border-color: $brand-blue;
+      background: rgba($brand-blue, 0.06);
+      transform: scale(1.01);
+    }
+
+    .dropzone-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 8px;
+
+      .upload-icon-circle {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: rgba($brand-blue, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 4px;
+
+        mat-icon {
+          font-size: 26px;
+          width: 26px;
+          height: 26px;
+          color: $brand-blue;
+        }
+      }
+
+      .upload-title {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: $text-primary;
+      }
+
+      .upload-hint {
+        font-size: 0.75rem;
+        color: $text-muted;
+      }
+    }
+
+    .compressing-indicator {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      color: $brand-blue;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+  }
+
+  .photo-preview-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+
+    .photo-img-wrapper {
+      width: 100%;
+      max-width: 240px;
+      height: 190px;
+      border-radius: $radius-lg;
+      overflow: hidden;
+      border: 1px solid $border-color;
+      background: #f1f5f9;
+      box-shadow: $shadow-sm;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .preview-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        transition: transform $transition-fast;
+
+        &:hover {
+          transform: scale(1.03);
+        }
+      }
+    }
+
+    .photo-actions {
+      display: flex;
+      gap: 10px;
+
+      .btn-change-photo {
+        border-radius: $radius-md !important;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        border-color: $border-color !important;
+        color: $text-primary !important;
+
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+          margin-right: 4px;
+        }
+      }
+
+      .btn-delete-photo {
+        border-radius: $radius-md !important;
+        font-size: 0.8125rem;
+        font-weight: 500;
+
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+          margin-right: 4px;
+        }
+      }
+    }
+  }
+}
