@@ -1,0 +1,211 @@
+.delivery-dashboard-layout {
+    padding: 24px;
+    background-color: #f8fafc;
+    min-height: 100vh;
+    font-family: Roboto, "Helvetica Neue", sans-serif;
+
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 24px;
+
+        .title-group {
+            h1 {
+                margin: 0;
+                font-size: 24px;
+                font-weight: 700;
+                color: #0f172a;
+            }
+
+            .subtitle {
+                margin: 4px 0 0 0;
+                font-size: 13px;
+                color: #64748b;
+            }
+        }
+
+        .btn-create {
+            border-radius: 8px;
+            font-weight: 500;
+            padding: 0 20px;
+            height: 42px;
+        }
+    }
+
+    .filters-bar {
+        margin-bottom: 24px;
+
+        .modern-toggle-group {
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+
+            ::ng-deep .mat-button-toggle {
+                font-weight: 500;
+                color: #475569;
+                border-color: #e2e8f0;
+
+                &.mat-button-toggle-checked {
+                    background-color: #eff6ff;
+                    color: #2563eb;
+                    font-weight: 600;
+                }
+            }
+        }
+    }
+
+    .cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+
+        .delivery-card {
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+            &:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+            }
+
+            .card-top-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 16px 16px 0 16px;
+
+                .order-id-time {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2px;
+
+                    .order-id {
+                        font-size: 16px;
+                        font-weight: 700;
+                        color: #0f172a;
+                    }
+
+                    .order-time {
+                        display: flex;
+                        align-items: center;
+                        gap: 4px;
+                        font-size: 12px;
+                        color: #64748b;
+
+                        mat-icon {
+                            font-size: 14px;
+                            width: 14px;
+                            height: 14px;
+                        }
+                    }
+                }
+
+                .status-chip {
+                    font-size: 11px;
+                    font-weight: 600;
+                    border-radius: 6px;
+
+                    &.chip-preparation {
+                        background-color: #fef3c7 !important;
+                        color: #d97706 !important;
+                    }
+
+                    &.chip-delivery {
+                        background-color: #dbeafe !important;
+                        color: #1d4ed8 !important;
+                    }
+                }
+            }
+
+            .card-body {
+                padding: 16px;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+
+                .label {
+                    display: block;
+                    font-size: 10px;
+                    font-weight: 700;
+                    color: #94a3b8;
+                    letter-spacing: 0.5px;
+                    margin-bottom: 2px;
+                }
+
+                .value {
+                    font-size: 14px;
+                    color: #1e293b;
+
+                    &.name {
+                        font-weight: 600;
+                    }
+
+                    &.address {
+                        display: flex;
+                        align-items: center;
+                        gap: 4px;
+                        color: #475569;
+
+                        mat-icon {
+                            font-size: 16px;
+                            width: 16px;
+                            height: 16px;
+                            color: #cbd5e1;
+                        }
+                    }
+                }
+            }
+
+            .card-footer-row {
+                padding: 12px 16px;
+                background-color: #f8fafc;
+                border-top: 1px solid #f1f5f9;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom-left-radius: 12px;
+                border-bottom-right-radius: 12px;
+
+                .total-label {
+                    font-size: 12px;
+                    color: #64748b;
+                    font-weight: 500;
+                }
+
+                .total-amount {
+                    font-size: 16px;
+                    font-weight: 800;
+                    color: #0f172a;
+                }
+            }
+        }
+
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 48px;
+            color: #94a3b8;
+
+            mat-icon {
+                font-size: 48px;
+                width: 48px;
+                height: 48px;
+                margin-bottom: 8px;
+            }
+
+            p {
+                margin: 0;
+                font-size: 14px;
+            }
+        }
+    }
+}

@@ -1,0 +1,130 @@
+<div class="new-delivery-container">
+
+    <!-- Header del Modal -->
+    <div class="dialog-header">
+        <div class="header-title-group">
+            <div class="icon-wrapper">
+                <mat-icon>local_shipping</mat-icon>
+            </div>
+            <div>
+                <h2>Registrar Nuevo Domicilio</h2>
+                <span class="subtitle">Complete los datos del cliente y los productos</span>
+            </div>
+        </div>
+        <button mat-icon-button class="btn-close" (click)="onCancel()">
+            <mat-icon>close</mat-icon>
+        </button>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <!-- Cuerpo del Formulario -->
+    <div class="dialog-body" [formGroup]="deliveryForm">
+
+        <!-- Sección: Datos del Cliente -->
+        <h3 class="section-title">Información de Contacto</h3>
+
+        <div class="form-row-dual">
+            <div class="field-group">
+                <label>Nombre Completo *</label>
+                <mat-form-field appearance="outline" class="modern-field">
+                    <input matInput formControlName="nombreCompleto" placeholder="Ej. Andrea Pérez">
+                    @if (deliveryForm.get('nombreCompleto')?.hasError('required')) {
+                    <mat-error>El nombre es obligatorio</mat-error>
+                    }
+                </mat-form-field>
+            </div>
+
+            <div class="field-group">
+                <label>Teléfono de Contacto *</label>
+                <mat-form-field appearance="outline" class="modern-field">
+                    <input matInput formControlName="telefono" placeholder="Ej. 3103456789">
+                    @if (deliveryForm.get('telefono')?.hasError('required')) {
+                    <mat-error>El teléfono es obligatorio</mat-error>
+                    } @else if (deliveryForm.get('telefono')?.hasError('pattern')) {
+                    <mat-error>Ingrese un número válido</mat-error>
+                    }
+                </mat-form-field>
+            </div>
+        </div>
+
+        <div class="field-group">
+            <label>Dirección de Residencia *</label>
+            <mat-form-field appearance="outline" class="modern-field">
+                <input matInput formControlName="direccion" placeholder="Ej. Calle 10 # 5-23, Barrio Centro">
+                <mat-icon matSuffix>location_on</mat-icon>
+                @if (deliveryForm.get('direccion')?.hasError('required')) {
+                <mat-error>La dirección es obligatoria</mat-error>
+                }
+            </mat-form-field>
+        </div>
+
+        <div class="field-group">
+            <label>Notas Adicionales (Opcional)</label>
+            <mat-form-field appearance="outline" class="modern-field">
+                <textarea matInput formControlName="notas" rows="2"
+                    placeholder="Ej. Timbre dañado, dejar en recepción..."></textarea>
+            </mat-form-field>
+        </div>
+
+        <mat-divider class="divider-space"></mat-divider>
+
+        <!-- Sección: Ítems del Pedido -->
+        <div class="items-header-row">
+            <h3 class="section-title margin-none">Ítems del Pedido</h3>
+            <button mat-flat-button color="accent" type="button" class="btn-select-items"
+                (click)="abrirSelectorDeItems()">
+                <mat-icon>restaurant_menu</mat-icon>
+                <span>Seleccionar del Menú</span>
+            </button>
+        </div>
+
+        <!-- Lista de Productos Agregados -->
+        <div class="selected-items-container">
+            @if (itemsSeleccionados().length === 0) {
+            <div class="empty-items-state">
+                <mat-icon>shopping_cart_checkout</mat-icon>
+                <p>Aún no hay productos agregados. Haz clic en "Seleccionar del Menú".</p>
+            </div>
+            } @else {
+            <div class="items-list">
+                @for (item of itemsSeleccionados(); track item.id) {
+                <div class="item-row">
+                    <div class="item-details">
+                        <span class="item-name">{{ item.nombre }}</span>
+                        <span class="item-calc">{{ item.cantidad }} x $ {{ item.precioUnitario | number:'1.0-0'
+                            }}</span>
+                    </div>
+                    <div class="item-right">
+                        <span class="item-subtotal">$ {{ (item.cantidad * item.precioUnitario) | number:'1.0-0'
+                            }}</span>
+                        <button mat-icon-button color="warn" (click)="eliminarItem(item.id)"
+                            matTooltip="Eliminar producto">
+                            <mat-icon>remove_circle_outline</mat-icon>
+                        </button>
+                    </div>
+                </div>
+                }
+            </div>
+
+            <div class="order-total-row">
+                <span>Total del Pedido:</span>
+                <span class="total-price">$ {{ totalPedido | number:'1.0-0' }}</span>
+            </div>
+            }
+        </div>
+
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <!-- Acciones del Modal -->
+    <div class="dialog-actions">
+        <button mat-stroked-button class="btn-cancel" (click)="onCancel()">Cancelar</button>
+        <button mat-flat-button color="primary" class="btn-save" (click)="onSave()">
+            <mat-icon>check_circle</mat-icon>
+            <span>Guardar Pedido</span>
+        </button>
+    </div>
+
+</div>

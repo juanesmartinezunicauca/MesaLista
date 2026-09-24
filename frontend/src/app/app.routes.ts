@@ -24,6 +24,13 @@ export const routes: Routes = [
           import('./features/mesas/plano-mesas/plano-mesas').then((m) => m.PlanoMesasComponent),
       },
       {
+        path: 'domicilios',
+        loadComponent: () =>
+          import('./features/domicilios/lista-domicilios/dashboard-domis').then(
+            (m) => m.DashboardDomisComponent,
+          ),
+      },
+      {
         path: 'caja/dashboard',
         loadComponent: () =>
           import('./features/caja/dashboard-caja/dashboard-caja').then(
