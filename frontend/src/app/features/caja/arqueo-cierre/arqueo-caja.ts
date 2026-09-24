@@ -67,8 +67,15 @@ export class CierreDeCaja {
   // Diferencia = Conteo Físico Real - Valor Esperado
   diferencia = computed(() => {
     const real = this.conteoFisico();
-    if (real === null || isNaN(real)) return null;
-    return real - this.valorEsperado();
+    if (
+      real === null ||
+      real === undefined ||
+      (typeof real === 'string' && (real as string).trim() === '') ||
+      isNaN(Number(real))
+    ) {
+      return null;
+    }
+    return Number(real) - this.valorEsperado();
   });
 
   turnoInfo = computed(() => {
@@ -104,7 +111,13 @@ export class CierreDeCaja {
 
   onConfirm(): void {
     const real = this.conteoFisico();
-    if (real === null || isNaN(real) || real < 0) {
+    if (
+      real === null ||
+      real === undefined ||
+      (typeof real === 'string' && (real as string).trim() === '') ||
+      isNaN(Number(real)) ||
+      Number(real) < 0
+    ) {
       this.errorMessage.set('Por favor, ingresa un valor de conteo físico válido (0 o superior).');
       return;
     }

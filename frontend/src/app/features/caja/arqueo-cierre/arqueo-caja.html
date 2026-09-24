@@ -114,7 +114,7 @@
             Cancelar
         </button>
         <button mat-flat-button color="primary" class="btn-confirm" (click)="onConfirm()"
-            [disabled]="isClosing() || conteoFisico() === null || conteoFisico()! < 0">
+            [disabled]="isClosing() || diferencia() === null || conteoFisico()! < 0">
             @if (isClosing()) {
                 <mat-progress-spinner diameter="18" mode="indeterminate" class="spinner-btn"></mat-progress-spinner>
                 <span>Cerrando...</span>
