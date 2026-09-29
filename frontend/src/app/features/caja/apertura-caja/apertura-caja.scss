@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+@use 'tokens' as *;
 
 /* Contenedor Principal de la Tarjeta */
 .caja-card {
@@ -8,6 +8,7 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05) !important; /* Sombra sutil */
   border: 1px solid #f0f0f0;
   background-color: #ffffff;
+  font-family: $font-family-base;
 }
 
 .card-container {
@@ -16,6 +17,7 @@
   align-items: center;
   text-align: center;
   padding: 24px !important;
+  font-family: $font-family-base;
 }
 
 /* Círculo del Candado Superior */
@@ -39,7 +41,7 @@
 
 /* Textos */
 .card-title {
-  font-family: 'Poppins', sans-serif;
+  font-family: $font-family-base;
   font-size: 1.4rem;
   font-weight: 700;
   color: #000000;
@@ -47,7 +49,7 @@
 }
 
 .card-description {
-  font-family: 'Poppins', sans-serif;
+  font-family: $font-family-base;
   font-size: 0.92rem;
   color: #555555;
   line-height: 1.5;
@@ -86,7 +88,7 @@
 
 /* Botón "Abrir Caja" */
 .btn-abrir-caja {
-  font-family: 'Poppins', sans-serif;
+  font-family: $font-family-base;
   width: 100%;
   height: 48px !important;
   background-color: #e36d05 !important;

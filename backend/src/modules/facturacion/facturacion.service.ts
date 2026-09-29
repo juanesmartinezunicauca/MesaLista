@@ -27,9 +27,10 @@ export class FacturacionService {
       );
     }
 
-    // 2. Si es una mesa, buscar los pedidos activos
+    // 2. Si es una mesa o un pedido específico (ej. domicilio), buscar los pedidos activos
     let subtotal = 0;
     let pedidosActivos: any[] = [];
+    let idClienteFinal = dto.id_cliente;
 
     if (dto.id_mesa) {
       const mesa = await this.prisma.mesa.findUnique({
@@ -61,8 +62,33 @@ export class FacturacionService {
           subtotal += it.cantidad * Number(it.precio_unitario);
         }
       }
+    } else if (dto.id_pedido) {
+      const pedido = await this.prisma.pedido.findUnique({
+        where: { id_pedido: dto.id_pedido },
+        include: {
+          items: true,
+          cliente: true,
+        },
+      });
+
+      if (!pedido) {
+        throw new NotFoundException(`El pedido #${dto.id_pedido} no existe.`);
+      }
+
+      if (pedido.estado !== EstadoPedido.enviada) {
+        throw new BadRequestException(
+          `El pedido #${dto.id_pedido} no puede ser cobrado porque se encuentra en estado '${pedido.estado}'.`,
+        );
+      }
+
+      pedidosActivos = [pedido];
+      idClienteFinal = idClienteFinal || pedido.id_cliente || undefined;
+
+      for (const it of pedido.items) {
+        subtotal += it.cantidad * Number(it.precio_unitario);
+      }
     } else {
-      // Venta directa sin mesa: el subtotal se toma del pago total
+      // Venta directa sin mesa ni pedido: el subtotal se toma del pago total
       subtotal = dto.pagos.reduce((acc, p) => acc + p.monto, 0);
     }
 
@@ -85,7 +111,7 @@ export class FacturacionService {
           id_caja: cajaActiva.id_caja,
           id_usuario,
           id_mesa: dto.id_mesa || null,
-          id_cliente: dto.id_cliente || null,
+          id_cliente: idClienteFinal || null,
           valor: new Prisma.Decimal(subtotal),
           propina: new Prisma.Decimal(propina),
           valor_total: new Prisma.Decimal(valorTotal),

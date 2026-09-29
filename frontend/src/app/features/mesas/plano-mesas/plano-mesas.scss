@@ -6,6 +6,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+  font-family: $font-family-base;
 }
 
 .plano-main-view {
@@ -16,48 +17,12 @@
 
 // --- 1. HEADER ---
 .plano-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  .page-title {
-    margin: 0;
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: $text-primary;
-    letter-spacing: -0.5px;
-  }
-
-  .page-subtitle {
-    margin: 4px 0 0 0;
-    font-size: 0.9rem;
-    color: $text-muted;
-  }
+  @include unified-view-header;
 
   .btn-nueva-mesa {
     background-color: $brand-orange !important;
     color: #ffffff !important;
-    font-weight: 600;
-    border-radius: $radius-md;
     box-shadow: $shadow-orange;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  @include respond-to('sm') {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-
-    .page-title {
-      font-size: 1.4rem;
-    }
-
-    .btn-nueva-mesa {
-      width: 100%;
-      justify-content: center;
-    }
   }
 }
 

@@ -2,12 +2,10 @@
   <!-- Header de la Vista -->
   <header class="catalogo-header">
     <div class="header-info">
-      <div class="header-breadcrumbs">
-        <mat-icon>restaurant_menu</mat-icon>
-        <span>Administración / Catálogo de Productos</span>
+      <div class="title-row">
+        <mat-icon class="header-icon">restaurant_menu</mat-icon>
+        <h1 class="header-title">Catálogo y Carta</h1>
       </div>
-      <br>
-      <h1 class="header-title">Catálogo y Carta</h1>
       <p class="header-subtitle">
         Gestiona los productos disponibles para pedidos, precios de venta, costos e inventario en tiempo real.
       </p>
@@ -21,7 +19,7 @@
       </button>
 
       @if (esAdmin()) {
-        <button type="button" mat-flat-button class="btn-create" (click)="irACrear()">
+        <button type="button" mat-flat-button color="primary" class="btn-create" (click)="irACrear()">
           <mat-icon>add</mat-icon>
           <span>Nuevo Producto</span>
         </button>

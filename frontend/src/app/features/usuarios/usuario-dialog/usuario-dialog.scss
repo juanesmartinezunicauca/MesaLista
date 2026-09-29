@@ -98,6 +98,29 @@
   width: 100%;
 }
 
+.selected-role-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  color: $text-primary;
+  vertical-align: middle;
+
+  .trigger-role-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: $brand-blue;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .trigger-role-name {
+    line-height: 1;
+  }
+}
+
 .role-option-item {
   display: flex;
   align-items: center;

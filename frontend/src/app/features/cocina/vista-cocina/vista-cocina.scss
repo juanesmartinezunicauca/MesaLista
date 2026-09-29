@@ -7,51 +7,14 @@
   padding: 16px 24px;
   gap: 20px;
   width: 100%;
+  font-family: $font-family-base;
 }
 
 .comandas-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-
-  .header-left {
-    .breadcrumbs {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.8125rem;
-      font-weight: 500;
-      color: $text-muted;
-      margin-bottom: 4px;
-
-      mat-icon {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-        color: $brand-blue;
-      }
-    }
-
-    .page-title {
-      font-size: 1.625rem;
-      font-weight: 700;
-      color: $text-primary;
-      margin: 0 0 4px 0;
-    }
-
-    .page-subtitle {
-      font-size: 0.875rem;
-      color: $text-muted;
-      margin: 0;
-    }
-  }
+  @include unified-view-header;
 
   .header-actions {
     .btn-refresh {
-      border-radius: $radius-md !important;
-      font-weight: 500;
-
       .spin {
         animation: spin 1s linear infinite;
       }

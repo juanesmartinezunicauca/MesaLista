@@ -1,63 +1,74 @@
+@use 'tokens' as *;
+@use 'mixins' as *;
+
 .cash-register-layout {
-    padding: 24px;
+    padding: 24px 32px;
     background-color: #f8fafc;
-    min-height: 100vh;
-    font-family: Roboto, "Helvetica Neue", sans-serif;
+    min-height: calc(100vh - 64px);
+    font-family: $font-family-base;
+
+    @media (max-width: 768px) {
+        padding: 16px;
+    }
 
     .cash-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 16px;
+        @include unified-view-header;
 
         .header-title-container {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-
-            h1 {
-                margin: 0;
-                font-size: 26px;
-                font-weight: 700;
-                color: #0f172a;
-            }
-
-            .status-chip {
-                background-color: #dcfce7 !important;
-                color: #15803d !important;
-                font-weight: 600;
-                font-size: 12px;
-
-                mat-icon {
-                    font-size: 16px;
-                    height: 16px;
-                    width: 16px;
+            .title-with-chip {
+                .status-chip {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    background-color: #dcfce7;
                     color: #15803d;
+                    font-weight: 700;
+                    font-size: 11px;
+                    padding: 4px 10px;
+                    border-radius: 9999px;
+                    border: 1px solid rgba(22, 163, 74, 0.25);
+
+                    .status-dot {
+                        width: 7px;
+                        height: 7px;
+                        border-radius: 50%;
+                        background-color: #16a34a;
+                        display: inline-block;
+                    }
                 }
             }
         }
 
         .header-actions {
-            display: flex;
-            gap: 12px;
-
             .btn-action {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                height: 40px;
+                padding: 0 16px;
                 border-radius: 8px;
-                font-weight: 500;
+                font-weight: 600;
+                font-size: 13px;
+                transition: all 0.2s ease;
+
+                mat-icon {
+                    font-size: 18px;
+                    width: 18px;
+                    height: 18px;
+                }
             }
 
-            .btn-danger {
-                background-color: #1d4ed8; // Azul corporativo de acciones principales
+            .btn-close-cash {
+                background-color: #dc2626 !important;
+                color: #ffffff !important;
+                box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
+
+                &:hover {
+                    background-color: #b91c1c !important;
+                    transform: translateY(-1px);
+                }
             }
         }
-    }
-
-    .subtitle {
-        color: #64748b;
-        font-size: 14px;
-        margin-top: 4px;
-        margin-bottom: 24px;
     }
 
     // Grid de tarjetas de resumen
@@ -69,109 +80,170 @@
 
         .summary-card {
             border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.03);
             border: 1px solid #e2e8f0;
             background: #ffffff;
-            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
 
-            .card-icon-title {
+            &:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+            }
+
+            mat-card-content {
+                padding: 20px !important;
                 display: flex;
-                align-items: center;
-                gap: 8px;
-                color: #64748b;
-                font-size: 12px;
-                font-weight: 700;
-                letter-spacing: 0.5px;
-                margin-bottom: 12px;
-
-                mat-icon {
-                    font-size: 18px;
-                    height: 18px;
-                    width: 18px;
-                }
+                flex-direction: column;
+                height: 100%;
+                box-sizing: border-box;
             }
 
             .card-header-row {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-            }
-
-            .info-block {
+                min-height: 28px;
                 margin-bottom: 12px;
-
-                .label {
-                    display: block;
-                    font-size: 11px;
-                    color: #94a3b8;
-                    font-weight: 600;
-                }
-
-                .value-main {
-                    font-size: 15px;
-                    font-weight: 600;
-                    color: #1e293b;
-                }
-
-                .value-highlight {
-                    font-size: 20px;
-                    font-weight: 700;
-                    color: #0f172a;
-                }
             }
 
-            mat-divider {
-                margin: 12px 0;
+            .card-icon-title {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                color: #64748b;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.6px;
+                text-transform: uppercase;
+
+                mat-icon {
+                    font-size: 18px;
+                    height: 18px;
+                    width: 18px;
+                    color: #64748b;
+
+                    &.text-success {
+                        color: #10b981;
+                    }
+
+                    &.text-danger {
+                        color: #ef4444;
+                    }
+                }
             }
 
             .amount-display {
-                font-size: 28px;
+                font-size: 26px;
                 font-weight: 800;
                 color: #0f172a;
-                margin: 8px 0 4px 0;
+                margin: 0 0 4px 0;
+                line-height: 1.2;
+                letter-spacing: -0.5px;
+            }
+
+            .subtext-neutral {
+                color: #64748b;
+                font-size: 12px;
+                font-weight: 500;
+                margin-bottom: 16px;
             }
 
             .subtext-green {
                 color: #10b981;
-                font-size: 13px;
+                font-size: 12px;
                 font-weight: 600;
+                margin-bottom: 16px;
             }
 
             .subtext-red {
                 color: #ef4444;
-                font-size: 13px;
+                font-size: 12px;
                 font-weight: 600;
+                margin-bottom: 16px;
+            }
+
+            .formula-text {
+                color: #bfdbfe;
+                font-size: 11px;
+                font-weight: 500;
+                margin-bottom: 16px;
+            }
+
+            .details-bottom {
+                margin-top: auto;
+                padding-top: 14px;
+                border-top: 1px solid #f1f5f9;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+
+                .info-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    font-size: 12px;
+
+                    .info-label {
+                        color: #94a3b8;
+                        font-weight: 500;
+                    }
+
+                    .info-val {
+                        color: #334155;
+                        font-weight: 600;
+                    }
+                }
             }
 
             .sub-metrics {
                 display: flex;
-                gap: 8px;
-                margin-top: 16px;
+                gap: 6px;
+                flex-wrap: wrap;
 
                 .metric-pill {
                     background: #f1f5f9;
-                    padding: 6px 10px;
+                    padding: 4px 8px;
                     border-radius: 6px;
-                    font-size: 12px;
+                    font-size: 11px;
                     color: #475569;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+
+                    strong {
+                        color: #0f172a;
+                    }
                 }
             }
 
             .details-list {
-                margin-top: 16px;
-                font-size: 13px;
+                font-size: 12px;
                 color: #64748b;
 
                 .detail-row {
                     display: flex;
                     justify-content: space-between;
-                    margin-bottom: 4px;
+                    margin-bottom: 3px;
+
+                    strong {
+                        color: #334155;
+                    }
+                }
+
+                .no-gastos-hint {
+                    color: #94a3b8;
+                    font-size: 12px;
+                    margin: 0;
+                    font-style: italic;
                 }
             }
 
             .trend-badge {
-                width: 28px;
-                height: 28px;
+                width: 26px;
+                height: 26px;
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
@@ -188,80 +260,101 @@
                 }
 
                 mat-icon {
-                    font-size: 16px;
-                    width: 16px;
-                    height: 16px;
+                    font-size: 15px;
+                    width: 15px;
+                    height: 15px;
                 }
             }
         }
 
-        // Tarjeta Azul Destacada
+        // Tarjeta Azul Destacada (Efectivo Esperado)
         .highlight-blue {
-            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-            color: #ffffff;
-            border: none;
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+            border-color: #1d4ed8;
 
             .card-icon-title,
-            .formula-text,
-            .white-text {
-                color: #93c5fd;
+            .card-icon-title mat-icon {
+                color: #93c5fd !important;
+            }
+
+            .amount-display.white-text {
+                color: #ffffff;
             }
 
             .formula-text {
-                font-size: 11px;
-                display: block;
+                color: #bfdbfe;
             }
 
-            .amount-display {
-                color: #ffffff;
-                font-size: 32px;
-                margin-top: 12px;
+            .details-bottom {
+                border-top-color: rgba(255, 255, 255, 0.15);
+            }
+
+            .expected-hint {
+                color: rgba(255, 255, 255, 0.9);
+                font-size: 12px;
+                margin: 0;
+                line-height: 1.4;
             }
         }
     }
 
-    // Sección de Tabla
+    // Sección de Tabla de Movimientos
     .recent-movements-section {
         .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
 
-            h2 {
-                font-size: 18px;
-                font-weight: 700;
-                color: #1e293b;
-                margin: 0;
+            .section-title-box {
+                h2 {
+                    font-size: 18px;
+                    font-weight: 700;
+                    color: #0f172a;
+                    margin: 0 0 4px 0;
+                }
+
+                p {
+                    font-size: 13px;
+                    color: #64748b;
+                    margin: 0;
+                }
             }
         }
 
         .table-card {
             border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
             border: 1px solid #e2e8f0;
             overflow: hidden;
+            background: #ffffff;
 
             .modern-table {
                 width: 100%;
 
                 th.mat-header-cell {
-                    color: #64748b;
-                    font-weight: 600;
-                    font-size: 13px;
+                    color: #475569;
+                    font-weight: 700;
+                    font-size: 12px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
                     background-color: #f8fafc;
                     border-bottom: 1px solid #e2e8f0;
+                    padding: 14px 16px;
                 }
 
                 td.mat-cell {
                     color: #334155;
-                    font-size: 14px;
+                    font-size: 13.5px;
                     border-bottom: 1px solid #f1f5f9;
-                    padding: 16px 8px;
+                    padding: 14px 16px;
+                    vertical-align: middle;
+                }
+
+                tr.mat-row:hover {
+                    background-color: #f8fafc;
                 }
 
                 .font-medium {
                     font-weight: 500;
+                    color: #0f172a;
                 }
 
                 .font-bold {
@@ -273,15 +366,16 @@
                 }
 
                 .text-success {
-                    color: #10b981;
+                    color: #15803d;
                 }
 
                 .text-danger {
-                    color: #ef4444;
+                    color: #dc2626;
                 }
 
                 .type-badge {
-                    padding: 4px 10px;
+                    display: inline-block;
+                    padding: 3px 8px;
                     border-radius: 6px;
                     font-size: 11px;
                     font-weight: 600;
@@ -289,11 +383,6 @@
                     &.badge-ingreso {
                         background-color: #dcfce7;
                         color: #15803d;
-                    }
-
-                    &.badge-tarjeta {
-                        background-color: #f1f5f9;
-                        color: #475569;
                     }
 
                     &.badge-gasto {
@@ -304,11 +393,12 @@
 
                 .medio-badge {
                     font-size: 11px;
-                    padding: 2px 8px;
-                    border-radius: 4px;
+                    padding: 3px 8px;
+                    border-radius: 6px;
                     background-color: #f1f5f9;
                     color: #475569;
                     font-weight: 500;
+                    border: 1px solid #e2e8f0;
                 }
 
                 .responsable-hint {
@@ -320,44 +410,6 @@
                 }
             }
         }
-    }
-
-    .header-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 4px 10px;
-        background: rgba(37, 99, 235, 0.1);
-        color: #2563eb;
-        border-radius: 9999px;
-        font-size: 12px;
-        font-weight: 600;
-        margin-bottom: 6px;
-
-        mat-icon {
-            font-size: 14px;
-            width: 14px;
-            height: 14px;
-        }
-    }
-
-    .title-with-chip {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .no-gastos-hint {
-        color: #94a3b8;
-        font-size: 13px;
-        margin: 8px 0 0;
-        font-style: italic;
-    }
-
-    .expected-hint {
-        color: rgba(255, 255, 255, 0.85);
-        font-size: 12px;
-        margin: 4px 0 0;
     }
 
     .empty-movements {
