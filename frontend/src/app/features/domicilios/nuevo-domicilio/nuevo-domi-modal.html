@@ -1,0 +1,242 @@
+<div class="new-delivery-container">
+
+    <!-- Header del Modal -->
+    <div class="dialog-header">
+        <div class="header-title-group">
+            <div class="icon-wrapper">
+                <mat-icon>local_shipping</mat-icon>
+            </div>
+            <div>
+                <h2>Registrar Nuevo Domicilio</h2>
+                <span class="subtitle">Complete los datos del cliente y agregue los productos de la carta</span>
+            </div>
+        </div>
+        <button mat-icon-button class="btn-close" (click)="onCancel()" [disabled]="guardando()">
+            <mat-icon>close</mat-icon>
+        </button>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <!-- Alerta de Error si ocurre -->
+    @if (errorEnvio()) {
+    <div class="error-banner">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ errorEnvio() }}</span>
+    </div>
+    }
+
+    <!-- Cuerpo del Modal -->
+    <div class="dialog-body">
+
+        <!-- Sección 1: Datos del Cliente -->
+        <div class="client-section" [formGroup]="deliveryForm">
+            <h3 class="section-title">
+                <mat-icon>person_pin</mat-icon>
+                <span>Información del Cliente</span>
+            </h3>
+
+            <div class="form-grid">
+                <!-- Teléfono con Autocompletado -->
+                <div class="field-group">
+                    <label>Teléfono de Contacto *</label>
+                    <mat-form-field appearance="outline" class="modern-field">
+                        <input matInput formControlName="telefono" placeholder="Ej. 3101234567"
+                            [matAutocomplete]="autoCliente">
+                        <mat-icon matSuffix>phone</mat-icon>
+                        <mat-autocomplete #autoCliente="matAutocomplete">
+                            @for (c of clientesSugeridos(); track c.id_cliente) {
+                            <mat-option [value]="c.telefono" (onSelectionChange)="seleccionarCliente(c)">
+                                <div class="client-option">
+                                    <span class="opt-name">{{ c.nombre }}</span>
+                                    <span class="opt-address">{{ c.direccion }} ({{ c.telefono }})</span>
+                                </div>
+                            </mat-option>
+                            }
+                        </mat-autocomplete>
+                        @if (deliveryForm.get('telefono')?.hasError('required') && deliveryForm.get('telefono')?.touched) {
+                        <mat-error>El teléfono es obligatorio</mat-error>
+                        } @else if (deliveryForm.get('telefono')?.hasError('pattern') && deliveryForm.get('telefono')?.touched) {
+                        <mat-error>Ingrese un número válido (mínimo 7 dígitos)</mat-error>
+                        }
+                    </mat-form-field>
+                </div>
+
+                <!-- Nombre Completo -->
+                <div class="field-group">
+                    <label>Nombre Completo *</label>
+                    <mat-form-field appearance="outline" class="modern-field">
+                        <input matInput formControlName="nombreCompleto" placeholder="Ej. Andrea Pérez">
+                        <mat-icon matSuffix>person</mat-icon>
+                        @if (deliveryForm.get('nombreCompleto')?.hasError('required') && deliveryForm.get('nombreCompleto')?.touched) {
+                        <mat-error>El nombre es obligatorio</mat-error>
+                        }
+                    </mat-form-field>
+                </div>
+
+                <!-- Dirección de Residencia -->
+                <div class="field-group full-width">
+                    <label>Dirección de Entrega *</label>
+                    <mat-form-field appearance="outline" class="modern-field">
+                        <input matInput formControlName="direccion" placeholder="Ej. Calle 10 # 5-23, Barrio Centro">
+                        <mat-icon matSuffix>location_on</mat-icon>
+                        @if (deliveryForm.get('direccion')?.hasError('required') && deliveryForm.get('direccion')?.touched) {
+                        <mat-error>La dirección de entrega es obligatoria (mínimo 5 caracteres)</mat-error>
+                        }
+                    </mat-form-field>
+                </div>
+
+                <!-- Notas adicionales -->
+                <div class="field-group full-width">
+                    <label>Notas de Entrega / Referencias (Opcional)</label>
+                    <mat-form-field appearance="outline" class="modern-field">
+                        <textarea matInput formControlName="notas" rows="1"
+                            placeholder="Ej. Timbre dañado, dejar con el portero..."></textarea>
+                    </mat-form-field>
+                </div>
+            </div>
+        </div>
+
+        <mat-divider></mat-divider>
+
+        <!-- Sección 2: Selector del Menú y Productos Agregados -->
+        <div class="order-section">
+            
+            <!-- Columna Izquierda: Menú / Catálogo -->
+            <div class="catalog-column">
+                <div class="column-header">
+                    <h4>Carta de Productos</h4>
+                    <!-- Buscador de productos -->
+                    <div class="search-box">
+                        <mat-icon>search</mat-icon>
+                        <input type="text" placeholder="Buscar producto..." 
+                            [ngModel]="busquedaProducto()" 
+                            (ngModelChange)="busquedaProducto.set($event)">
+                    </div>
+                </div>
+
+                <!-- Chips de Categorías -->
+                <div class="categories-scroll">
+                    @for (cat of categorias(); track cat) {
+                    <button type="button" class="category-chip" 
+                        [class.active]="filtroCategoria() === cat"
+                        (click)="filtroCategoria.set(cat)">
+                        {{ cat }}
+                    </button>
+                    }
+                </div>
+
+                <!-- Grid de Productos -->
+                <div class="products-grid">
+                    @if (cargandoCatalogo()) {
+                    <div class="loading-state">
+                        <mat-spinner diameter="32"></mat-spinner>
+                        <span>Cargando carta...</span>
+                    </div>
+                    } @else {
+                        @for (prod of productosFiltrados(); track prod.id_producto) {
+                        <div class="product-item" (click)="agregarProducto(prod)">
+                            <div class="prod-info">
+                                <span class="prod-name">{{ prod.nombre }}</span>
+                                <span class="prod-category">{{ prod.categoria }}</span>
+                            </div>
+                            <div class="prod-price-add">
+                                <span class="prod-price">$ {{ prod.precio_venta | number:'1.0-0' }}</span>
+                                <button type="button" class="btn-add-mini" matTooltip="Agregar producto">
+                                    <mat-icon>add</mat-icon>
+                                </button>
+                            </div>
+                        </div>
+                        } @empty {
+                        <div class="empty-products">
+                            <mat-icon>restaurant_menu</mat-icon>
+                            <span>No se encontraron productos disponibles.</span>
+                        </div>
+                        }
+                    }
+                </div>
+            </div>
+
+            <!-- Columna Derecha: Ítems Seleccionados -->
+            <div class="cart-column">
+                <div class="column-header">
+                    <h4>Ítems del Pedido ({{ itemsSeleccionados().length }})</h4>
+                </div>
+
+                <div class="selected-items-list">
+                    @for (item of itemsSeleccionados(); track item.id_producto) {
+                    <div class="cart-item">
+                        <div class="item-header">
+                            <span class="item-title">{{ item.nombre }}</span>
+                            <span class="item-total">$ {{ (item.cantidad * item.precio_unitario) | number:'1.0-0' }}</span>
+                        </div>
+
+                        <!-- Selector de cantidad -->
+                        <div class="item-controls">
+                            <div class="qty-stepper">
+                                <button type="button" class="btn-step" (click)="decrementarItem(item.id_producto)">
+                                    <mat-icon>{{ item.cantidad === 1 ? 'delete' : 'remove' }}</mat-icon>
+                                </button>
+                                <span class="qty-num">{{ item.cantidad }}</span>
+                                <button type="button" class="btn-step" (click)="incrementarItem(item.id_producto)">
+                                    <mat-icon>add</mat-icon>
+                                </button>
+                            </div>
+
+                            <span class="unit-price">$ {{ item.precio_unitario | number:'1.0-0' }} c/u</span>
+
+                            <button type="button" class="btn-remove" (click)="eliminarItem(item.id_producto)" matTooltip="Eliminar del pedido">
+                                <mat-icon>close</mat-icon>
+                            </button>
+                        </div>
+
+                        <!-- Observación del ítem -->
+                        <div class="item-note">
+                            <input type="text" placeholder="Nota: Ej. Sin cebolla, extra salsa..."
+                                [(ngModel)]="item.observacion">
+                        </div>
+                    </div>
+                    } @empty {
+                    <div class="empty-cart">
+                        <mat-icon>shopping_cart_checkout</mat-icon>
+                        <p>No has agregado ningún producto aún.</p>
+                        <span>Haz clic sobre los productos de la carta para añadirlos.</span>
+                    </div>
+                    }
+                </div>
+
+                <!-- Footer del Carrito con Total -->
+                <div class="cart-total-bar">
+                    <div class="total-info">
+                        <span class="total-label">Total a cobrar:</span>
+                        <span class="total-amount">$ {{ totalPedido() | number:'1.0-0' }}</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <!-- Acciones del Modal -->
+    <div class="dialog-actions">
+        <button mat-stroked-button class="btn-cancel" (click)="onCancel()" [disabled]="guardando()">
+            Cancelar
+        </button>
+        <button mat-flat-button color="primary" class="btn-save" (click)="onSave()" 
+            [disabled]="guardando() || itemsSeleccionados().length === 0">
+            @if (guardando()) {
+            <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+            <span>Guardando...</span>
+            } @else {
+            <ng-container>
+                <mat-icon>check_circle</mat-icon>
+                <span>Crear y Enviar a Cocina</span>
+            </ng-container>
+            }
+        </button>
+    </div>
+
+</div>

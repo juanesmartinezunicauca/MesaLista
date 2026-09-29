@@ -5,6 +5,7 @@ import { environment } from '../../../../environments/environment';
 
 export interface CreateFacturaPayload {
   id_mesa?: number;
+  id_pedido?: number;
   id_cliente?: number;
   propina?: number;
   observacion?: string;

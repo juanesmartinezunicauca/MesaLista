@@ -98,8 +98,8 @@ export const routes: Routes = [
         data: { roles: ['administrador', 'cajero', 'mesero'] },
         loadComponent: () =>
           import(
-            './shared/components/en-construccion/en-construccion'
-          ).then((m) => m.EnConstruccionComponent),
+            './features/domicilios/lista-domicilios/dashboard-domis'
+          ).then((m) => m.DashboardDomisComponent),
       },
       {
         path: 'reportes',

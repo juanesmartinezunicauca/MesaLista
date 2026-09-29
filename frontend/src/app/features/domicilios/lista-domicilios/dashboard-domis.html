@@ -1,0 +1,244 @@
+<div class="delivery-dashboard-layout">
+
+    <!-- Header del Dashboard -->
+    <header class="dashboard-header">
+        <div class="title-group">
+            <div class="title-with-badge">
+                <h1>Panel de Entregas a Domicilio</h1>
+                <span class="live-pulse" matTooltip="Actualizaciones operativas en tiempo real">
+                    <span class="pulse-dot"></span> EN VIVO
+                </span>
+            </div>
+            <p class="subtitle">Control y despacho de comandas para llevar y entregas a domicilio</p>
+        </div>
+        <button mat-flat-button color="primary" class="btn-create" (click)="crearNuevoPedido()">
+            <mat-icon>add_shopping_cart</mat-icon>
+            <span>Crear Nuevo Pedido</span>
+        </button>
+    </header>
+
+    <!-- Barra de Métricas Rápidas (KPIs) -->
+    <div class="kpi-grid">
+        <div class="kpi-card" (click)="cambiarFiltro('Todos')" [class.active]="filtroEstado() === 'Todos'">
+            <div class="kpi-icon-wrapper total">
+                <mat-icon>receipt_long</mat-icon>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-value">{{ kpis().total }}</span>
+                <span class="kpi-label">Total Pedidos</span>
+            </div>
+        </div>
+
+        <div class="kpi-card" (click)="cambiarFiltro('En Preparación')" [class.active]="filtroEstado() === 'En Preparación'">
+            <div class="kpi-icon-wrapper prep">
+                <mat-icon>soup_kitchen</mat-icon>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-value">{{ kpis().enPreparacion }}</span>
+                <span class="kpi-label">En Cocina</span>
+            </div>
+        </div>
+
+        <div class="kpi-card" (click)="cambiarFiltro('En Reparto')" [class.active]="filtroEstado() === 'En Reparto'">
+            <div class="kpi-icon-wrapper delivery">
+                <mat-icon>delivery_dining</mat-icon>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-value">{{ kpis().enReparto }}</span>
+                <span class="kpi-label">En Reparto</span>
+            </div>
+        </div>
+
+        <div class="kpi-card" (click)="cambiarFiltro('Entregado')" [class.active]="filtroEstado() === 'Entregado'">
+            <div class="kpi-icon-wrapper delivered">
+                <mat-icon>task_alt</mat-icon>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-value">{{ kpis().entregados }}</span>
+                <span class="kpi-label">Entregados / Pagados</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de Filtros y Búsqueda -->
+    <div class="filters-bar">
+        <mat-button-toggle-group [value]="filtroEstado()" (change)="cambiarFiltro($event.value)"
+            class="modern-toggle-group" aria-label="Filtrar pedidos por estado">
+            <mat-button-toggle value="Todos">Todos ({{ kpis().total }})</mat-button-toggle>
+            <mat-button-toggle value="En Preparación">En Cocina ({{ kpis().enPreparacion }})</mat-button-toggle>
+            <mat-button-toggle value="En Reparto">En Reparto ({{ kpis().enReparto }})</mat-button-toggle>
+            <mat-button-toggle value="Entregado">Entregados ({{ kpis().entregados }})</mat-button-toggle>
+        </mat-button-toggle-group>
+
+        <div class="search-input-wrapper">
+            <mat-icon>search</mat-icon>
+            <input type="text" placeholder="Buscar por cliente, teléfono, dirección o #..." 
+                [ngModel]="busqueda()" (ngModelChange)="busqueda.set($event)">
+            @if (busqueda()) {
+            <button type="button" class="btn-clear" (click)="busqueda.set('')">
+                <mat-icon>close</mat-icon>
+            </button>
+            }
+        </div>
+    </div>
+
+    <!-- Contenido Principal: Spinner o Tarjetas -->
+    @if (cargando()) {
+    <div class="loading-container">
+        <mat-spinner diameter="44"></mat-spinner>
+        <span>Cargando comandas a domicilio...</span>
+    </div>
+    } @else {
+    <div class="cards-grid">
+        @for (pedido of pedidosFiltrados(); track pedido.id_pedido) {
+        <mat-card class="delivery-card" [class.processing]="procesandoId() === pedido.id_pedido">
+            
+            <!-- Cabecera de la Tarjeta -->
+            <mat-card-header class="card-top-row">
+                <div class="order-id-time">
+                    <span class="order-id">#{{ pedido.numero_pedido }}</span>
+                    <span class="order-time">
+                        <mat-icon>schedule</mat-icon> {{ formatearHora(pedido.fecha_hora) }}
+                    </span>
+                </div>
+
+                <div class="header-right">
+                    <mat-chip class="status-chip" [ngClass]="{
+                        'chip-preparation': pedido.etapaOperativa === 'En Preparación',
+                        'chip-delivery': pedido.etapaOperativa === 'En Reparto',
+                        'chip-delivered': pedido.etapaOperativa === 'Entregado',
+                        'chip-cancelled': pedido.etapaOperativa === 'Cancelado'
+                    }">
+                        {{ pedido.etapaOperativa }}
+                    </mat-chip>
+
+                    <!-- Menú de opciones adicionales -->
+                    @if (pedido.etapaOperativa !== 'Entregado' && pedido.etapaOperativa !== 'Cancelado') {
+                    <button mat-icon-button [matMenuTriggerFor]="menuAcciones" class="btn-more">
+                        <mat-icon>more_vert</mat-icon>
+                    </button>
+                    <mat-menu #menuAcciones="matMenu">
+                        @if (pedido.etapaOperativa === 'En Reparto') {
+                        <button mat-menu-item (click)="regresarAPreparacion(pedido)">
+                            <mat-icon>arrow_back</mat-icon>
+                            <span>Regresar a Cocina</span>
+                        </button>
+                        }
+                        <button mat-menu-item class="menu-danger" (click)="cancelar(pedido)">
+                            <mat-icon color="warn">cancel</mat-icon>
+                            <span>Cancelar Pedido</span>
+                        </button>
+                    </mat-menu>
+                    }
+                </div>
+            </mat-card-header>
+
+            <!-- Cuerpo de la Tarjeta -->
+            <mat-card-content class="card-body">
+                <!-- Cliente y Contacto -->
+                <div class="client-info">
+                    <span class="label">CLIENTE</span>
+                    <div class="name-phone-row">
+                        <span class="value name">{{ pedido.cliente.nombre }}</span>
+                        <a class="phone-link" [href]="'tel:' + pedido.cliente.telefono" matTooltip="Llamar al cliente">
+                            <mat-icon>call</mat-icon>
+                            <span>{{ pedido.cliente.telefono }}</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Dirección de entrega -->
+                <div class="address-info">
+                    <span class="label">DIRECCIÓN DE ENTREGA</span>
+                    <span class="value address">
+                        <mat-icon>location_on</mat-icon> 
+                        <span>{{ pedido.cliente.direccion }}</span>
+                    </span>
+                </div>
+
+                <!-- Nota o referencia -->
+                @if (pedido.observacion) {
+                <div class="notes-info">
+                    <mat-icon>sticky_note_2</mat-icon>
+                    <span>{{ pedido.observacion }}</span>
+                </div>
+                }
+
+                <!-- Resumen de Productos -->
+                <div class="items-summary-container">
+                    <span class="label">PRODUCTOS ({{ pedido.items.length }})</span>
+                    <div class="items-pills">
+                        @for (it of pedido.items; track it.id_producto) {
+                        <div class="item-pill">
+                            <span class="item-qty">{{ it.cantidad }}x</span>
+                            <span class="item-text">{{ it.producto?.nombre || 'Producto' }}</span>
+                            @if (it.observacion) {
+                            <span class="item-obs">({{ it.observacion }})</span>
+                            }
+                        </div>
+                        }
+                    </div>
+                </div>
+            </mat-card-content>
+
+            <!-- Footer con Total y Acciones -->
+            <mat-card-footer class="card-footer-row">
+                <div class="total-block">
+                    <span class="total-label">Total a cobrar</span>
+                    <span class="total-amount">$ {{ pedido.totalCalculado | number:'1.0-0' }}</span>
+                </div>
+
+                <div class="actions-block">
+                    @if (pedido.etapaOperativa === 'En Preparación') {
+                    <button mat-flat-button color="accent" class="btn-action-dispatch" (click)="despachar(pedido)">
+                        <mat-icon>delivery_dining</mat-icon>
+                        <span>Despachar</span>
+                    </button>
+                    } @else if (pedido.etapaOperativa === 'En Reparto') {
+                    <button mat-flat-button color="primary" class="btn-action-pay" [matMenuTriggerFor]="menuPago">
+                        <mat-icon>paid</mat-icon>
+                        <span>Cobrar en Caja</span>
+                    </button>
+                    <mat-menu #menuPago="matMenu">
+                        <button mat-menu-item (click)="cobrarYEntregar(pedido, 'Efectivo')">
+                            <mat-icon>payments</mat-icon>
+                            <span>Efectivo</span>
+                        </button>
+                        <button mat-menu-item (click)="cobrarYEntregar(pedido, 'Transferencia')">
+                            <mat-icon>account_balance</mat-icon>
+                            <span>Transferencia / Nequi</span>
+                        </button>
+                        <button mat-menu-item (click)="cobrarYEntregar(pedido, 'Tarjeta')">
+                            <mat-icon>credit_card</mat-icon>
+                            <span>Datáfono / Tarjeta</span>
+                        </button>
+                    </mat-menu>
+                    } @else if (pedido.etapaOperativa === 'Entregado') {
+                    <div class="badge-finished success">
+                        <mat-icon>check_circle</mat-icon>
+                        <span>Pagado</span>
+                    </div>
+                    } @else if (pedido.etapaOperativa === 'Cancelado') {
+                    <div class="badge-finished cancelled">
+                        <mat-icon>cancel</mat-icon>
+                        <span>Anulado</span>
+                    </div>
+                    }
+                </div>
+            </mat-card-footer>
+        </mat-card>
+        } @empty {
+        <div class="empty-state">
+            <mat-icon>inbox</mat-icon>
+            <h3>No se encontraron pedidos</h3>
+            <p>No hay entregas a domicilio registradas para el filtro seleccionado.</p>
+            <button mat-stroked-button color="primary" (click)="crearNuevoPedido()">
+                <mat-icon>add</mat-icon>
+                <span>Registrar Primer Domicilio</span>
+            </button>
+        </div>
+        }
+    </div>
+    }
+
+</div>
