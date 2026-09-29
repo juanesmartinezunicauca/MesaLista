@@ -105,6 +105,11 @@ export class UsuarioDialogComponent {
     return !!(control?.hasError(error) && control?.touched);
   }
 
+  getRolSeleccionado(): { valor: RolUsuario; label: string; icon: string; desc: string } | undefined {
+    const rolActual = this.usuarioForm?.get('rol')?.value;
+    return this.rolesDisponibles.find((r) => r.valor === rolActual);
+  }
+
   guardar(): void {
     this.errorMensaje.set(null);
 

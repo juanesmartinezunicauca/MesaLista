@@ -1,33 +1,13 @@
 @use 'tokens' as *;
 @use 'mixins' as *;
 
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
-
 .inventory-layout {
   display: flex;
   width: 100%;
 }
 
-.header-breadcrumbs {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: $text-muted;
-  margin-bottom: 6px;
-
-  mat-icon {
-    font-size: 16px;
-    width: 16px;
-    height: 16px;
-    color: $brand-blue;
-  }
-}
-
-// --- CONTENIDO PRINCIPAL ---
 .main-content {
-  font-family: 'Poppins', sans-serif;
+  font-family: $font-family-base;
   /* Mejora el renderizado de la fuente */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -41,14 +21,11 @@
 
 // --- HEADER DE LA VISTA ---
 .content-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
+  @include unified-view-header;
 
   .header-title-wrapper {
     .back-link {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       gap: 6px;
       color: $text-muted;
@@ -65,44 +42,21 @@
       }
 
       &:hover {
-        color: $text-primary;
+        color: $brand-blue;
       }
-    }
-
-    h1 {
-      font-size: 1.75rem;
-      font-weight: 700;
-      color: $text-primary;
-      margin: 0;
     }
   }
 
   .header-actions {
-    display: flex;
-    gap: 12px;
-
     .btn-cancel {
       border-color: $border-color !important;
       color: $text-primary !important;
-      border-radius: $radius-md !important;
-      padding: 0 20px;
-      font-weight: 500;
     }
 
     .btn-save {
       background-color: $brand-blue !important;
       color: white !important;
-      border-radius: $radius-md !important;
-      padding: 0 20px;
-      font-weight: 500;
       box-shadow: $shadow-blue;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-
-      mat-icon {
-        margin-right: 0;
-      }
 
       .inline-spinner {
         display: inline-block;

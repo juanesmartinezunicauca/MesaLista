@@ -12,3 +12,4 @@ export * from './factura.model';
 export * from './pago.model';
 export * from './caja.model';
 export * from './gasto.model';
+export * from './domicilio.model';

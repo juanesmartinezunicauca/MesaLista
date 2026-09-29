@@ -54,3 +54,107 @@ $breakpoint-xl: 1280px;
     background: $thumb-hover;
   }
 }
+
+// --- Encabezado Unificado de Módulos (Header Estándar) ---
+@mixin unified-view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+  font-family: $font-family-base;
+
+  .header-left,
+  .header-info,
+  .header-titles,
+  .header-title-container,
+  .header-title-wrapper,
+  .title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-family: $font-family-base;
+
+    .title-row,
+    .title-with-badge,
+    .title-with-chip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-family: $font-family-base;
+
+      .header-icon,
+      .view-icon {
+        font-size: 28px;
+        width: 28px;
+        height: 28px;
+        color: $brand-blue;
+      }
+
+      h1,
+      .page-title,
+      .header-title {
+        margin: 0;
+        font-family: $font-family-base !important;
+        font-size: 1.625rem;
+        font-weight: 800;
+        color: $text-primary;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+      }
+    }
+
+    .page-subtitle,
+    .header-subtitle,
+    .subtitle {
+      margin: 0;
+      font-family: $font-family-base !important;
+      font-size: 0.875rem;
+      color: $text-muted;
+      line-height: 1.4;
+      max-width: 680px;
+    }
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-family: $font-family-base;
+
+    button {
+      font-family: $font-family-base !important;
+      height: 40px;
+      border-radius: $radius-md;
+      font-weight: 600;
+      font-size: 0.8125rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+
+  @include respond-to('sm') {
+    flex-direction: column;
+    align-items: stretch;
+
+    .header-actions {
+      width: 100%;
+      justify-content: flex-start;
+
+      button {
+        flex: 1;
+        justify-content: center;
+      }
+    }
+  }
+}

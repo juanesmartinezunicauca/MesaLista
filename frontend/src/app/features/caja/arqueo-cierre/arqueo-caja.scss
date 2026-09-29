@@ -1,9 +1,11 @@
+@use 'tokens' as *;
+
 .cash-closing-container {
     padding: 0;
     max-width: 650px;
     background: #ffffff;
     border-radius: 16px;
-    font-family: Roboto, "Helvetica Neue", sans-serif;
+    font-family: $font-family-base;
 
     .dialog-header {
         display: flex;

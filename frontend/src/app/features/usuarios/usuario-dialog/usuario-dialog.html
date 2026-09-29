@@ -60,6 +60,14 @@
         <mat-form-field appearance="outline" class="w-full">
           <mat-label>Rol / Perfil Operativo</mat-label>
           <mat-select formControlName="rol">
+            <mat-select-trigger>
+              @if (getRolSeleccionado(); as rol) {
+                <span class="selected-role-trigger">
+                  <mat-icon class="trigger-role-icon">{{ rol.icon }}</mat-icon>
+                  <span class="trigger-role-name">{{ rol.label }}</span>
+                </span>
+              }
+            </mat-select-trigger>
             @for (r of rolesDisponibles; track r.valor) {
               <mat-option [value]="r.valor">
                 <div class="role-option-item">
@@ -137,10 +145,7 @@
         @if (guardando()) {
           <span>Guardando...</span>
         } @else {
-          <ng-container>
-            <mat-icon>{{ esEdicion() ? 'check' : 'person_add' }}</mat-icon>
-            <span>{{ esEdicion() ? 'Guardar Cambios' : 'Crear Usuario' }}</span>
-          </ng-container>
+          <span>{{ esEdicion() ? 'Guardar Cambios' : 'Crear Usuario' }}</span>
         }
       </button>
     </mat-dialog-actions>

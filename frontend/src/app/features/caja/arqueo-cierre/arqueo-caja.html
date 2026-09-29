@@ -119,8 +119,10 @@
                 <mat-progress-spinner diameter="18" mode="indeterminate" class="spinner-btn"></mat-progress-spinner>
                 <span>Cerrando...</span>
             } @else {
-                <mat-icon>lock</mat-icon>
-                <span>Confirmar Cierre</span>
+                <ng-container>
+                    <mat-icon>lock</mat-icon>
+                    <span>Confirmar Cierre</span>
+                </ng-container>
             }
         </button>
     </div>

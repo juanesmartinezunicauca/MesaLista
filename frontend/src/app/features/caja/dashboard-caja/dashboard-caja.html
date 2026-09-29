@@ -8,19 +8,14 @@
     <!-- Header Principal -->
     <header class="cash-header">
       <div class="header-title-container">
-        <div class="header-badge">
-          <mat-icon>point_of_sale</mat-icon>
-          <span>Operación de Caja</span>
-        </div>
         <div class="title-with-chip">
+          <mat-icon class="header-icon">point_of_sale</mat-icon>
           <h1>Gestión de Caja</h1>
-          <mat-chip-set>
-            <mat-chip class="status-chip open">
-              <mat-icon>lock_open</mat-icon> TURNO ACTIVO
-            </mat-chip>
-          </mat-chip-set>
+          <span class="status-chip open">
+            <span class="status-dot"></span> TURNO ACTIVO
+          </span>
         </div>
-        <p class="subtitle">Turno actual en progreso. Registra salidas de dinero o realiza el arqueo al finalizar.</p>
+        <p class="subtitle">Turno actual en progreso. Registra salidas de dinero o realiza el cierre al finalizar.</p>
       </div>
 
       <div class="header-actions">
@@ -32,7 +27,7 @@
           matTooltip="Actualizar datos"
         >
           <mat-icon>refresh</mat-icon>
-          Refrescar
+          <span>Refrescar</span>
         </button>
         <button
           type="button"
@@ -41,17 +36,16 @@
           (click)="registrarGasto()"
         >
           <mat-icon>receipt_long</mat-icon>
-          Registrar Gasto
+          <span>Registrar Gasto</span>
         </button>
         <button
           type="button"
           mat-flat-button
-          color="warn"
-          class="btn-action btn-danger"
+          class="btn-action btn-close-cash"
           (click)="cerrarCaja()"
         >
-          <mat-icon>point_of_sale</mat-icon>
-          Cerrar Caja (Arqueo)
+          <mat-icon>lock</mat-icon>
+          <span>Cerrar Caja</span>
         </button>
       </div>
     </header>
@@ -66,29 +60,28 @@
 
     <!-- Panel Superior de Tarjetas Resumen -->
     <section class="summary-grid">
-      <!-- 1. Apertura -->
+      <!-- 1. Apertura / Base Inicial -->
       <mat-card class="summary-card aperture-card">
         <mat-card-content>
-          <div class="card-icon-title">
-            <mat-icon>schedule</mat-icon>
-            <span>APERTURA</span>
+          <div class="card-header-row">
+            <div class="card-icon-title">
+              <mat-icon>schedule</mat-icon>
+              <span>BASE DE APERTURA</span>
+            </div>
           </div>
 
-          <div class="info-block">
-            <span class="label">FECHA / HORA</span>
-            <span class="value-main">{{ fechaApertura }}</span>
-          </div>
+          <div class="amount-display">$ {{ valorBase | number:'1.0-0' }}</div>
+          <span class="subtext-neutral">Fondo inicial asignado</span>
 
-          <div class="info-block">
-            <span class="label">CAJERO RESPONSABLE</span>
-            <span class="value-main">{{ usuarioApertura }}</span>
-          </div>
-
-          <mat-divider></mat-divider>
-
-          <div class="info-block">
-            <span class="label">VALOR BASE INICIAL</span>
-            <span class="value-highlight">$ {{ valorBase | number:'1.0-0' }}</span>
+          <div class="details-bottom">
+            <div class="info-row">
+              <span class="info-label">Cajero:</span>
+              <span class="info-val">{{ usuarioApertura }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Hora:</span>
+              <span class="info-val">{{ fechaApertura }}</span>
+            </div>
           </div>
         </mat-card-content>
       </mat-card>
@@ -98,7 +91,7 @@
         <mat-card-content>
           <div class="card-header-row">
             <div class="card-icon-title">
-              <mat-icon class="icon-title">payments</mat-icon>
+              <mat-icon class="icon-title text-success">payments</mat-icon>
               <span>VENTAS DEL DÍA</span>
             </div>
             <div class="trend-badge positive">
@@ -109,26 +102,28 @@
           <div class="amount-display text-success">$ {{ ventasDia | number:'1.0-0' }}</div>
           <span class="subtext-green">{{ totalTransacciones }} Factura{{ totalTransacciones === 1 ? '' : 's' }} Cobrada{{ totalTransacciones === 1 ? '' : 's' }}</span>
 
-          <div class="sub-metrics">
-            <div class="metric-pill">
-              <span>Efe:</span> <strong>$ {{ efectivoVentas | number:'1.0-0' }}</strong>
-            </div>
-            <div class="metric-pill">
-              <span>Tarj:</span> <strong>$ {{ tarjetaVentas | number:'1.0-0' }}</strong>
-            </div>
-            <div class="metric-pill">
-              <span>Transf:</span> <strong>$ {{ transferenciaVentas | number:'1.0-0' }}</strong>
+          <div class="details-bottom">
+            <div class="sub-metrics">
+              <div class="metric-pill">
+                <span>Efe:</span> <strong>$ {{ efectivoVentas | number:'1.0-0' }}</strong>
+              </div>
+              <div class="metric-pill">
+                <span>Tarj:</span> <strong>$ {{ tarjetaVentas | number:'1.0-0' }}</strong>
+              </div>
+              <div class="metric-pill">
+                <span>Transf:</span> <strong>$ {{ transferenciaVentas | number:'1.0-0' }}</strong>
+              </div>
             </div>
           </div>
         </mat-card-content>
       </mat-card>
 
-      <!-- 3. Gastos / Retiros -->
+      <!-- 3. Gastos / Egresos -->
       <mat-card class="summary-card">
         <mat-card-content>
           <div class="card-header-row">
             <div class="card-icon-title">
-              <mat-icon class="icon-title">shopping_bag</mat-icon>
+              <mat-icon class="icon-title text-danger">shopping_bag</mat-icon>
               <span>GASTOS / EGRESOS</span>
             </div>
             <div class="trend-badge negative">
@@ -139,17 +134,19 @@
           <div class="amount-display text-danger">- $ {{ gastosRetiros | number:'1.0-0' }}</div>
           <span class="subtext-red">{{ movimientosGastos }} Egreso{{ movimientosGastos === 1 ? '' : 's' }} Registrado{{ movimientosGastos === 1 ? '' : 's' }}</span>
 
-          <div class="details-list">
-            @if (desgloseGastosArray.length === 0) {
-              <p class="no-gastos-hint">Sin egresos registrados en el turno.</p>
-            } @else {
-              @for (g of desgloseGastosArray; track g.tipo) {
-                <div class="detail-row">
-                  <span>{{ g.tipo }}</span>
-                  <strong>$ {{ g.monto | number:'1.0-0' }}</strong>
-                </div>
+          <div class="details-bottom">
+            <div class="details-list">
+              @if (desgloseGastosArray.length === 0) {
+                <p class="no-gastos-hint">Sin egresos en el turno</p>
+              } @else {
+                @for (g of desgloseGastosArray; track g.tipo) {
+                  <div class="detail-row">
+                    <span>{{ g.tipo }}</span>
+                    <strong>$ {{ g.monto | number:'1.0-0' }}</strong>
+                  </div>
+                }
               }
-            }
+            </div>
           </div>
         </mat-card-content>
       </mat-card>
@@ -164,10 +161,12 @@
             </div>
           </div>
 
-          <span class="formula-text">Base + Ventas Efectivo - Gastos Efectivo</span>
-
           <div class="amount-display white-text">$ {{ efectivoEsperado | number:'1.0-0' }}</div>
-          <p class="expected-hint">Dinero que debe haber físicamente en el cajón.</p>
+          <span class="formula-text">Base + Ventas Efectivo - Egresos</span>
+
+          <div class="details-bottom">
+            <p class="expected-hint">Dinero físico que debe haber en el cajón.</p>
+          </div>
         </mat-card-content>
       </mat-card>
     </section>

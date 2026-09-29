@@ -27,6 +27,11 @@ export class CreateFacturaDto {
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
+  id_pedido?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
   @Min(0)
   propina?: number;
 
