@@ -1,4 +1,5 @@
 @use '../../../../styles/tokens' as *;
+@use '../../../../styles/mixins' as *;
 
 .delivery-dashboard-layout {
     padding: 24px 32px;
@@ -11,64 +12,9 @@
     }
 
     .dashboard-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 16px;
-        margin-bottom: 24px;
-
-        .title-group {
-            .title-with-badge {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-
-                h1 {
-                    margin: 0;
-                    font-size: 24px;
-                    font-weight: 800;
-                    color: #0f172a;
-                    letter-spacing: -0.5px;
-                }
-
-                .live-pulse {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                    background: rgba(16, 185, 129, 0.12);
-                    color: #059669;
-                    font-size: 11px;
-                    font-weight: 700;
-                    padding: 3px 8px;
-                    border-radius: $radius-full;
-                    border: 1px solid rgba(16, 185, 129, 0.25);
-
-                    .pulse-dot {
-                        width: 7px;
-                        height: 7px;
-                        border-radius: 50%;
-                        background-color: #10b981;
-                        animation: pulse 1.8s infinite;
-                    }
-                }
-            }
-
-            .subtitle {
-                margin: 4px 0 0 0;
-                font-size: 13px;
-                color: #64748b;
-            }
-        }
+        @include unified-view-header;
 
         .btn-create {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 700;
-            padding: 0 20px;
-            height: 44px;
-            border-radius: $radius-lg;
             background: $brand-blue;
             color: #ffffff;
             box-shadow: $shadow-blue;

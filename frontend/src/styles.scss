@@ -24,6 +24,7 @@
 
 html {
   height: 100%;
+  font-family: $font-family-base;
   @include mat.theme((
     color: (
       primary: mat.$azure-palette,
@@ -38,7 +39,42 @@ body {
   color-scheme: light;
   background-color: var(--mat-sys-surface);
   color: var(--mat-sys-on-surface);
-  font: var(--mat-sys-body-medium);
+  font-family: $font-family-base;
   margin: 0;
   height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button, input, optgroup, select, textarea {
+  font-family: inherit;
+}
+
+// Badge de estado en vivo para encabezados de módulos
+.live-pulse {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  letter-spacing: 0.5px;
+
+  .pulse-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: #10b981;
+    animation: pulse-dot-anim 1.8s infinite;
+  }
+}
+
+@keyframes pulse-dot-anim {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  50% { transform: scale(1.25); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.7; }
 }

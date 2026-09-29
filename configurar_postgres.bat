@@ -19,6 +19,11 @@ cd /d "%~dp0"
 set "PSQL_BIN="
 set "PG_VER="
 
+if exist "%LOCALAPPDATA%\postgres\bin\psql.exe" (
+    set "PSQL_BIN=%LOCALAPPDATA%\postgres\bin\psql.exe"
+    set "PG_VER=18"
+)
+
 for %%V in (18 17 16 15 14) do (
     if exist "C:\Program Files\PostgreSQL\%%V\bin\psql.exe" (
         if not defined PSQL_BIN (

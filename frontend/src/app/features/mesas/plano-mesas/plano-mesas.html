@@ -16,17 +16,22 @@
     <div class="plano-main-view">
       <!-- 1. HEADER DE LA VISTA -->
       <header class="plano-header">
-        <div>
-          <h1 class="page-title">Mapa de Mesas</h1>
-          <p class="page-subtitle">Control de disponibilidad, toma de pedidos y facturación del salón</p>
+        <div class="header-left">
+          <div class="title-row">
+            <mat-icon class="header-icon">table_restaurant</mat-icon>
+            <h1 class="page-title">Mapa de Mesas</h1>
+          </div>
+          <p class="page-subtitle">Control de disponibilidad, comandas activas y facturación del salón</p>
         </div>
 
-        @if (esAdmin()) {
-          <button mat-flat-button class="btn-nueva-mesa" (click)="abrirNuevaMesaDialog()">
-            <mat-icon>add</mat-icon>
-            <span>Nueva Mesa</span>
-          </button>
-        }
+        <div class="header-actions">
+          @if (esAdmin()) {
+            <button mat-flat-button class="btn-nueva-mesa" (click)="abrirNuevaMesaDialog()">
+              <mat-icon>add</mat-icon>
+              <span>Nueva Mesa</span>
+            </button>
+          }
+        </div>
       </header>
 
       <!-- 2. BARRA DE MÉTRICAS EN VIVO -->

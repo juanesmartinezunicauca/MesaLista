@@ -4,17 +4,21 @@
     <header class="dashboard-header">
         <div class="title-group">
             <div class="title-with-badge">
-                <h1>Panel de Entregas a Domicilio</h1>
+                <mat-icon class="header-icon">delivery_dining</mat-icon>
+                <h1>Panel de Domicilios</h1>
                 <span class="live-pulse" matTooltip="Actualizaciones operativas en tiempo real">
                     <span class="pulse-dot"></span> EN VIVO
                 </span>
             </div>
             <p class="subtitle">Control y despacho de comandas para llevar y entregas a domicilio</p>
         </div>
-        <button mat-flat-button color="primary" class="btn-create" (click)="crearNuevoPedido()">
-            <mat-icon>add_shopping_cart</mat-icon>
-            <span>Crear Nuevo Pedido</span>
-        </button>
+
+        <div class="header-actions">
+            <button mat-flat-button color="primary" class="btn-create" (click)="crearNuevoPedido()">
+                <mat-icon>add_shopping_cart</mat-icon>
+                <span>Crear Nuevo Domicilio</span>
+            </button>
+        </div>
     </header>
 
     <!-- Barra de Métricas Rápidas (KPIs) -->
@@ -29,7 +33,8 @@
             </div>
         </div>
 
-        <div class="kpi-card" (click)="cambiarFiltro('En Preparación')" [class.active]="filtroEstado() === 'En Preparación'">
+        <div class="kpi-card" (click)="cambiarFiltro('En Preparación')"
+            [class.active]="filtroEstado() === 'En Preparación'">
             <div class="kpi-icon-wrapper prep">
                 <mat-icon>soup_kitchen</mat-icon>
             </div>
@@ -72,8 +77,8 @@
 
         <div class="search-input-wrapper">
             <mat-icon>search</mat-icon>
-            <input type="text" placeholder="Buscar por cliente, teléfono, dirección o #..." 
-                [ngModel]="busqueda()" (ngModelChange)="busqueda.set($event)">
+            <input type="text" placeholder="Buscar por cliente, teléfono, dirección o #..." [ngModel]="busqueda()"
+                (ngModelChange)="busqueda.set($event)">
             @if (busqueda()) {
             <button type="button" class="btn-clear" (click)="busqueda.set('')">
                 <mat-icon>close</mat-icon>
@@ -92,7 +97,7 @@
     <div class="cards-grid">
         @for (pedido of pedidosFiltrados(); track pedido.id_pedido) {
         <mat-card class="delivery-card" [class.processing]="procesandoId() === pedido.id_pedido">
-            
+
             <!-- Cabecera de la Tarjeta -->
             <mat-card-header class="card-top-row">
                 <div class="order-id-time">
@@ -151,7 +156,7 @@
                 <div class="address-info">
                     <span class="label">DIRECCIÓN DE ENTREGA</span>
                     <span class="value address">
-                        <mat-icon>location_on</mat-icon> 
+                        <mat-icon>location_on</mat-icon>
                         <span>{{ pedido.cliente.direccion }}</span>
                     </span>
                 </div>
@@ -234,7 +239,7 @@
             <p>No hay entregas a domicilio registradas para el filtro seleccionado.</p>
             <button mat-stroked-button color="primary" (click)="crearNuevoPedido()">
                 <mat-icon>add</mat-icon>
-                <span>Registrar Primer Domicilio</span>
+                <span>Crear Nuevo Domicilio</span>
             </button>
         </div>
         }

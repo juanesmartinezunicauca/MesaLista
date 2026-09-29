@@ -1,4 +1,5 @@
 @use 'tokens' as *;
+@use 'mixins' as *;
 
 .usuarios-container {
   padding: 24px 32px;
@@ -12,72 +13,16 @@
 
 // 1. Encabezado
 .page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
-
-  .header-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    background-color: $brand-blue-subtle;
-    color: $brand-blue;
-    border-radius: $radius-full;
-    font-size: 0.8rem;
-    font-weight: 600;
-    margin-bottom: 8px;
-
-    mat-icon {
-      font-size: 16px;
-      width: 16px;
-      height: 16px;
-    }
-  }
-
-  .page-title {
-    margin: 0;
-    font-size: 1.85rem;
-    font-weight: 800;
-    color: $text-primary;
-    letter-spacing: -0.02em;
-  }
-
-  .page-subtitle {
-    margin: 4px 0 0;
-    color: $text-muted;
-    font-size: 0.925rem;
-    max-width: 620px;
-  }
+  @include unified-view-header;
 
   .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-
-    .btn-reload {
-      border-radius: $radius-md;
-      color: $text-secondary;
-      border-color: $border-color;
-    }
-
     .btn-create {
-      background-color: $brand-orange !important;
+      background-color: $brand-blue !important;
       color: #ffffff !important;
-      border-radius: $radius-md;
-      font-weight: 600;
-      padding: 0 20px;
-      height: 42px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      box-shadow: $shadow-orange;
-      transition: background-color $transition-fast, transform $transition-fast;
+      box-shadow: $shadow-blue;
 
       &:hover {
-        background-color: $brand-orange-hover !important;
+        background-color: $brand-blue-dark !important;
         transform: translateY(-1px);
       }
     }
