@@ -13,4 +13,3 @@ export * from './pago.model';
 export * from './caja.model';
 export * from './gasto.model';
 export * from './domicilio.model';
-export * from './reporte.model';
