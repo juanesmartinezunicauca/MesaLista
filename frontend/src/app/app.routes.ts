@@ -107,8 +107,8 @@ export const routes: Routes = [
         data: { roles: ['administrador'] },
         loadComponent: () =>
           import(
-            './features/reportes/dashboard-reportes/dashboard-reportes'
-          ).then((m) => m.DashboardReportesComponent),
+            './shared/components/en-construccion/en-construccion'
+          ).then((m) => m.EnConstruccionComponent),
       },
       // Compatibilidad con enlace previo
       { path: 'inventory', redirectTo: 'catalogo', pathMatch: 'full' },
