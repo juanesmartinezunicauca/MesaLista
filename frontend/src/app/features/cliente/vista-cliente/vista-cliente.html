@@ -7,7 +7,7 @@
           <mat-icon>restaurant</mat-icon>
         </div>
         <div class="brand-text">
-          <span class="brand-title">MesaLista</span>
+          <span class="brand-title">Luigie's</span>
           <span class="brand-sub">Restaurante & Domicilios</span>
         </div>
       </div>
@@ -34,28 +34,12 @@
     </div>
   </header>
 
-  <!-- 2. Banner de Registro y Pedidos -->
-  @if (!isAuthenticated()) {
-    <section class="banner-cta-container">
-      <div class="hero-action-box">
-        <div class="box-text">
-          <strong>¿Listo para disfrutar de nuestra carta en casa?</strong>
-          <span>Regístrate con Google en un clic para ordenar y recibir tus pedidos.</span>
-        </div>
-        <button mat-flat-button class="btn-hero-cta" (click)="irALogin()">
-          <mat-icon>login</mat-icon>
-          <span>Ingresar para Pedir</span>
-        </button>
-      </div>
-    </section>
-  }
-
   <!-- 3. Catálogo y Menú del Restaurante -->
   <main class="menu-container">
     <div class="menu-header">
       <div class="menu-titles">
-        <h2>Nuestra Carta</h2>
-        <p>Platos y bebidas disponibles preparados al momento</p>
+        <h2>Carta Luigie's</h2>
+        <p>Especialidades y platos recién preparados para disfrutar en mesa o en casa</p>
       </div>
 
       <!-- Buscador en tiempo real -->

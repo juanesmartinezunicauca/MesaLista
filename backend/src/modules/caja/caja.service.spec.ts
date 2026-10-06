@@ -29,6 +29,9 @@ describe('CajaService', () => {
         create: jest.fn(),
         upsert: jest.fn(),
       },
+      pedido: {
+        count: jest.fn().mockResolvedValue(0),
+      },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -215,6 +218,49 @@ describe('CajaService', () => {
       expect(cierre.valor_final_fisico).toBe(98000);
       expect(cierre.diferencia).toBe(-2000);
       expect(cierre.tipo_cuadre).toBe('faltante');
+    });
+
+    it('debe rechazar el cierre si hay pedidos abiertos o sin facturar', async () => {
+      prisma.caja.findFirst.mockResolvedValue({
+        id_caja: 5,
+        fecha_apertura: new Date(),
+        valor_inicial: 100000,
+        usuarioApertura: { nombre: 'Admin' },
+        facturas: [],
+        gastos: [],
+      });
+      // Simular que hay 2 pedidos activos
+      prisma.pedido.count.mockResolvedValue(2);
+
+      await expect(service.cerrarCaja({ valor_final_fisico: 100000 }, 1)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+  });
+
+  describe('actualizarBaseCaja', () => {
+    it('debe actualizar el valor base de la caja abierta', async () => {
+      prisma.caja.findFirst.mockResolvedValue({
+        id_caja: 1,
+        estado: EstadoCaja.abierta,
+      });
+      prisma.caja.update.mockResolvedValue({
+        id_caja: 1,
+        valor_inicial: 150000,
+      });
+
+      const res = await service.actualizarBaseCaja(150000);
+      expect(res.exito).toBe(true);
+      expect(res.nuevo_valor_base).toBe(150000);
+    });
+
+    it('debe rechazar actualizar base si no hay caja abierta', async () => {
+      prisma.caja.findFirst.mockResolvedValue(null);
+      await expect(service.actualizarBaseCaja(100000)).rejects.toThrow(BadRequestException);
+    });
+
+    it('debe rechazar actualizar base con valor negativo', async () => {
+      await expect(service.actualizarBaseCaja(-5000)).rejects.toThrow(BadRequestException);
     });
   });
 });

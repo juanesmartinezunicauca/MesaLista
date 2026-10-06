@@ -165,73 +165,12 @@
 }
 
 // ==========================================
-// 2. BANNER DE REGISTRO / ACCESO
-// ==========================================
-.banner-cta-container {
-  padding: 24px 24px 8px;
-  max-width: 1240px;
-  margin: 0 auto;
-  width: 100%;
-
-  .hero-action-box {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    border-left: 4px solid $brand-orange;
-    border-radius: 12px;
-    padding: 16px 22px;
-    gap: 16px;
-    flex-wrap: wrap;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-
-    .box-text {
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-
-      strong {
-        color: #0F172A;
-        font-size: 1rem;
-        font-weight: 700;
-      }
-
-      span {
-        color: #64748B;
-        font-size: 0.875rem;
-      }
-    }
-
-    .btn-hero-cta {
-      background: $brand-orange !important;
-      color: #FFFFFF !important;
-      font-weight: 600;
-      border-radius: 8px !important;
-      height: 42px;
-      padding: 0 20px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 2px 8px rgba(255, 107, 53, 0.25) !important;
-      transition: all 0.2s ease;
-
-      &:hover {
-        background: #EA580C !important;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(255, 107, 53, 0.35) !important;
-      }
-    }
-  }
-}
-
-// ==========================================
-// 3. CATÁLOGO / MENÚ
+// 2. CATÁLOGO / MENÚ LUIGIE'S
 // ==========================================
 .menu-container {
   max-width: 1240px;
   margin: 0 auto;
-  padding: 10px 24px 60px;
+  padding: 28px 24px 60px;
   width: 100%;
   display: flex;
   flex-direction: column;
