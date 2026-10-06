@@ -56,6 +56,17 @@
           }
         </mat-form-field>
 
+        <!-- Correo Electrónico (Google OAuth) -->
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Correo Electrónico (Google / Gmail)</mat-label>
+          <input matInput type="email" formControlName="email" placeholder="Ej. empleado@gmail.com">
+          <mat-icon matPrefix>mail</mat-icon>
+          <mat-hint>Vincula su cuenta para que pueda ingresar con Google OAuth directamente.</mat-hint>
+          @if (tieneError('email', 'email')) {
+            <mat-error>Ingresa un formato de correo electrónico válido.</mat-error>
+          }
+        </mat-form-field>
+
         <!-- Rol / Perfil -->
         <mat-form-field appearance="outline" class="w-full">
           <mat-label>Rol / Perfil Operativo</mat-label>
