@@ -4,9 +4,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EstadoCaja, Prisma } from '@prisma/client';
+import { EstadoCaja, EstadoPedido, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { AbrirCajaDto, CerrarCajaDto, CreateGastoDto } from './dto';
+import { AbrirCajaDto, CerrarCajaDto, CreateGastoDto, ActualizarBaseDto } from './dto';
 
 @Injectable()
 export class CajaService {
@@ -265,6 +265,19 @@ export class CajaService {
       throw new BadRequestException('No hay ninguna caja abierta en el sistema para realizar arqueo.');
     }
 
+    // Validar que no existan pedidos pendientes de pago o sin facturar
+    const pedidosPendientes = await this.prisma.pedido.count({
+      where: {
+        estado: EstadoPedido.enviada,
+      },
+    });
+
+    if (pedidosPendientes > 0) {
+      throw new BadRequestException(
+        `No es posible cerrar la caja: existen ${pedidosPendientes} pedido(s) activos o sin facturar. Debes cobrar o cancelar todos los pedidos antes de realizar el arqueo.`,
+      );
+    }
+
     const valorTeorico = estadoActual.resumen.efectivo_esperado;
     const valorFisico = dto.valor_final_fisico;
     const diferencia = valorFisico - valorTeorico;
@@ -298,6 +311,37 @@ export class CajaService {
       diferencia,
       tipo_cuadre: diferencia === 0 ? 'exacto' : diferencia > 0 ? 'sobrante' : 'faltante',
       cajero_cierre: cajaCerrada.usuarioCierre?.nombre || 'Cajero',
+    };
+  }
+
+  /**
+   * Actualiza el valor base inicial de la caja activa.
+   */
+  async actualizarBaseCaja(valor_inicial: number) {
+    if (valor_inicial < 0) {
+      throw new BadRequestException('El valor base inicial no puede ser negativo.');
+    }
+
+    const caja = await this.prisma.caja.findFirst({
+      where: { estado: EstadoCaja.abierta },
+    });
+
+    if (!caja) {
+      throw new BadRequestException('No hay ninguna caja abierta actualmente para modificar el valor base.');
+    }
+
+    const cajaActualizada = await this.prisma.caja.update({
+      where: { id_caja: caja.id_caja },
+      data: {
+        valor_inicial: new Prisma.Decimal(valor_inicial),
+      },
+    });
+
+    return {
+      exito: true,
+      mensaje: 'Valor base de caja actualizado exitosamente.',
+      id_caja: cajaActualizada.id_caja,
+      nuevo_valor_base: Number(cajaActualizada.valor_inicial),
     };
   }
 

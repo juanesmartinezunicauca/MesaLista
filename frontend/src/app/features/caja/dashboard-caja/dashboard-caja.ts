@@ -12,6 +12,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 import {
   CajaApiService,
@@ -37,6 +38,7 @@ import { CierreDeCaja } from '../arqueo-cierre/arqueo-caja';
     MatDialogModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
+    MatSnackBarModule,
   ],
   templateUrl: './dashboard-caja.html',
   styleUrls: ['./dashboard-caja.scss'],
@@ -45,6 +47,7 @@ export class DashboardCajaComponent implements OnInit {
   private cajaApi = inject(CajaApiService);
   private dialog = inject(MatDialog);
   private router = inject(Router);
+  private snackBar = inject(MatSnackBar);
 
   isLoading = signal<boolean>(true);
   errorMensaje = signal<string | null>(null);
@@ -164,6 +167,32 @@ export class DashboardCajaComponent implements OnInit {
       if (cerrada) {
         this.router.navigate(['/caja']);
       }
+    });
+  }
+
+  abrirEditarBase(): void {
+    const baseActual = this.valorBase;
+    const inputStr = prompt('Ingresa el nuevo valor base inicial en efectivo para la caja:', String(baseActual));
+    if (inputStr === null) return;
+
+    const nuevoValor = Number(inputStr.trim());
+    if (isNaN(nuevoValor) || nuevoValor < 0) {
+      this.snackBar.open('Por favor ingresa un monto válido (0 o superior).', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    this.cajaApi.actualizarBase(nuevoValor).subscribe({
+      next: () => {
+        this.snackBar.open(`¡Base inicial de caja actualizada a $${nuevoValor.toLocaleString()}!`, 'Cerrar', {
+          duration: 3500,
+        });
+        this.cargarDatos(false);
+      },
+      error: (err) => {
+        this.snackBar.open(err.error?.message || 'Error al actualizar el valor base de la caja.', 'Cerrar', {
+          duration: 4000,
+        });
+      },
     });
   }
 

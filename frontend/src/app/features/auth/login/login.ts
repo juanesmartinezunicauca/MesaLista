@@ -58,10 +58,17 @@ export class LoginComponent implements AfterViewInit {
 
     const checkGoogle = () => {
       const google = (window as any).google;
+      const clientId = environment.googleClientId;
+
+      if (!clientId || clientId.includes('TU_GOOGLE_CLIENT_ID')) {
+        console.warn('Google Client ID aún no ha sido configurado con un ID real de Google Cloud Console.');
+        return;
+      }
+
       if (google?.accounts?.id) {
         try {
           google.accounts.id.initialize({
-            client_id: environment.googleClientId,
+            client_id: clientId,
             callback: (res: any) => {
               this.ngZone.run(() => this.handleGoogleResponse(res));
             },

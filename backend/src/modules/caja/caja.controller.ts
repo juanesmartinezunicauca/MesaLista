@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -12,7 +13,7 @@ import { RolUsuario } from '@prisma/client';
 import { CurrentUser, Roles } from '../../common/decorators';
 import { JwtAuthGuard, RolesGuard } from '../../common/guards';
 import { CajaService } from './caja.service';
-import { AbrirCajaDto, CerrarCajaDto, CreateGastoDto } from './dto';
+import { AbrirCajaDto, ActualizarBaseDto, CerrarCajaDto, CreateGastoDto } from './dto';
 
 @Controller('caja')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -31,6 +32,16 @@ export class CajaController {
     @CurrentUser('id_usuario') id_usuario: number,
   ) {
     return this.cajaService.abrirCaja(abrirCajaDto, id_usuario);
+  }
+
+  /**
+   * PATCH /api/v1/caja/base
+   * Actualiza el valor base inicial de la caja activa.
+   */
+  @Patch('base')
+  @Roles(RolUsuario.administrador, RolUsuario.cajero)
+  actualizarBase(@Body() dto: ActualizarBaseDto) {
+    return this.cajaService.actualizarBaseCaja(dto.valor_inicial);
   }
 
   /**

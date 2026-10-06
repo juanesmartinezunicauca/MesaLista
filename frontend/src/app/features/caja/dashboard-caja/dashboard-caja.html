@@ -68,6 +68,16 @@
               <mat-icon>schedule</mat-icon>
               <span>BASE DE APERTURA</span>
             </div>
+            <button
+              mat-icon-button
+              type="button"
+              class="btn-edit-base"
+              (click)="abrirEditarBase()"
+              matTooltip="Editar base inicial de caja"
+              aria-label="Editar base inicial de caja"
+            >
+              <mat-icon>edit</mat-icon>
+            </button>
           </div>
 
           <div class="amount-display">$ {{ valorBase | number:'1.0-0' }}</div>

@@ -70,6 +70,13 @@ export class CajaApiService {
   }
 
   /**
+   * Actualiza el valor base de apertura de la caja activa
+   */
+  actualizarBase(valor_inicial: number): Observable<any> {
+    return this.http.patch<any>(`${this.apiUrl}/base`, { valor_inicial });
+  }
+
+  /**
    * Obtiene el estado actual de la caja, métricas del turno y movimientos
    */
   obtenerEstado(): Observable<EstadoCajaResponse> {
