@@ -2,11 +2,13 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { EstadoUsuario } from '@prisma/client';
 import * as argon2 from 'argon2';
+import { OAuth2Client } from 'google-auth-library';
 import { UsuariosService } from '../usuarios/usuarios.service';
-import { LoginDto, UpdatePerfilDto } from './dto';
+import { GoogleLoginDto, LoginDto, UpdatePerfilDto } from './dto';
 import {
   AuthResponse,
   AuthUserResponse,
@@ -15,10 +17,16 @@ import {
 
 @Injectable()
 export class AuthService {
+  private googleClient: OAuth2Client;
+
   constructor(
     private readonly usuariosService: UsuariosService,
     private readonly jwtService: JwtService,
-  ) { }
+    private readonly configService: ConfigService,
+  ) {
+    const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
+    this.googleClient = new OAuth2Client(clientId);
+  }
 
   /**
    * Valida credenciales contra la base de datos verificando el hash Argon2id (OWASP).
@@ -41,6 +49,12 @@ export class AuthService {
       );
     }
 
+    if (!usuario.passwordHash) {
+      throw new UnauthorizedException(
+        'Esta cuenta está vinculada con Google OAuth 2.0. Por favor inicia sesión usando el botón de Google.',
+      );
+    }
+
     const esPasswordValido = await argon2.verify(
       usuario.passwordHash,
       passwordPlano,
@@ -54,6 +68,7 @@ export class AuthService {
       id_usuario: usuario.id_usuario,
       nombre: usuario.nombre,
       usuario: usuario.usuario,
+      email: usuario.email,
       rol: usuario.rol,
       estado: usuario.estado,
     };
@@ -84,6 +99,72 @@ export class AuthService {
   }
 
   /**
+   * Autentica o registra un usuario mediante Google OAuth 2.0.
+   * Valida criptográficamente el ID Token con los servidores de Google.
+   */
+  async loginConGoogle(googleDto: GoogleLoginDto): Promise<AuthResponse> {
+    const googleClientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
+
+    let ticket;
+    try {
+      ticket = await this.googleClient.verifyIdToken({
+        idToken: googleDto.idToken,
+        audience: googleClientId || undefined,
+      });
+    } catch (error) {
+      throw new UnauthorizedException(
+        'Token de Google inválido o expirado. Por favor intenta iniciar sesión de nuevo.',
+      );
+    }
+
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      throw new UnauthorizedException(
+        'No se pudo obtener la información de perfil o el correo desde Google.',
+      );
+    }
+
+    if (payload.email_verified === false) {
+      throw new UnauthorizedException(
+        'El correo electrónico de tu cuenta Google no se encuentra verificado por Google.',
+      );
+    }
+
+    const usuario = await this.usuariosService.vincularOGuardarGoogleUsuario({
+      googleId: payload.sub,
+      email: payload.email,
+      nombre: payload.name || payload.email.split('@')[0],
+    });
+
+    if (usuario.estado !== EstadoUsuario.activo) {
+      throw new UnauthorizedException(
+        'El usuario se encuentra inactivo en el sistema. Contacte a la administración.',
+      );
+    }
+
+    const jwtPayload: JwtPayload = {
+      sub: usuario.id_usuario,
+      usuario: usuario.usuario,
+      rol: usuario.rol,
+      nombre: usuario.nombre,
+    };
+
+    const accessToken = this.jwtService.sign(jwtPayload);
+
+    return {
+      accessToken,
+      usuario: {
+        id_usuario: usuario.id_usuario,
+        nombre: usuario.nombre,
+        usuario: usuario.usuario,
+        email: usuario.email,
+        rol: usuario.rol,
+        estado: usuario.estado,
+      },
+    };
+  }
+
+  /**
    * Retorna los datos actualizados del perfil de usuario autenticado.
    */
   async obtenerPerfil(id_usuario: number) {
@@ -100,3 +181,4 @@ export class AuthService {
     });
   }
 }
+

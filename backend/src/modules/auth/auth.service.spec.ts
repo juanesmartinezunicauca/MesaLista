@@ -1,4 +1,5 @@
 import { UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import { EstadoUsuario, RolUsuario } from '@prisma/client';
@@ -12,9 +13,13 @@ describe('AuthService', () => {
     obtenerPorUsernameParaAuth: jest.Mock;
     obtenerPorId: jest.Mock;
     actualizar: jest.Mock;
+    vincularOGuardarGoogleUsuario?: jest.Mock;
   };
   let jwtService: {
     sign: jest.Mock;
+  };
+  let configService: {
+    get: jest.Mock;
   };
 
   const passwordPlano = 'passwordSegura123';
@@ -34,10 +39,15 @@ describe('AuthService', () => {
       obtenerPorUsernameParaAuth: jest.fn(),
       obtenerPorId: jest.fn(),
       actualizar: jest.fn(),
+      vincularOGuardarGoogleUsuario: jest.fn(),
     };
 
     jwtService = {
       sign: jest.fn(),
+    };
+
+    configService = {
+      get: jest.fn().mockReturnValue('test-client-id'),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -50,6 +60,10 @@ describe('AuthService', () => {
         {
           provide: JwtService,
           useValue: jwtService,
+        },
+        {
+          provide: ConfigService,
+          useValue: configService,
         },
       ],
     }).compile();

@@ -13,7 +13,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { RolUsuario } from '@prisma/client';
-import { CurrentUser, Roles } from '../../common/decorators';
+import { CurrentUser, Public, Roles } from '../../common/decorators';
 import { JwtAuthGuard, RolesGuard } from '../../common/guards';
 import { CatalogoService } from './catalogo.service';
 import {
@@ -43,15 +43,10 @@ export class CatalogoController {
   /**
    * GET /api/v1/catalogo/productos
    * Consulta el catálogo con filtros opcionales (categoría, disponible, búsqueda).
-   * Disponible para todos los roles operativos.
+   * Disponible públicamente para clientes y usuarios anónimos.
    */
+  @Public()
   @Get('productos')
-  @Roles(
-    RolUsuario.administrador,
-    RolUsuario.cajero,
-    RolUsuario.mesero,
-    RolUsuario.cocina,
-  )
   obtenerProductos(@Query() query: QueryProductoDto) {
     return this.catalogoService.obtenerTodos(query);
   }
@@ -59,18 +54,15 @@ export class CatalogoController {
   /**
    * GET /api/v1/catalogo/categorias
    * Lista las categorías existentes en el catálogo.
+   * Disponible públicamente para clientes y usuarios anónimos.
    * NOTA: Definido antes de :id para evitar colisiones de ruta.
    */
+  @Public()
   @Get('categorias')
-  @Roles(
-    RolUsuario.administrador,
-    RolUsuario.cajero,
-    RolUsuario.mesero,
-    RolUsuario.cocina,
-  )
   obtenerCategorias() {
     return this.catalogoService.obtenerCategorias();
   }
+
 
   /**
    * GET /api/v1/catalogo/productos/:id

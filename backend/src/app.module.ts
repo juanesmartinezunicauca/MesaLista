@@ -30,6 +30,7 @@ import { ImpresionModule } from './modules/impresion/impresion.module';
         NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
         CORS_ORIGIN: Joi.string().default('http://localhost'),
         PRINTER_INTERFACE: Joi.string().optional(),
+        GOOGLE_CLIENT_ID: Joi.string().optional().allow(''),
       }),
     }),
 

@@ -1,16 +1,8 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString, Length, Matches } from 'class-validator';
+import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, Length, Matches } from 'class-validator';
+import { EstadoUsuario, RolUsuario } from '@prisma/client';
 
-export enum RolUsuario {
-  administrador = 'administrador',
-  cajero = 'cajero',
-  mesero = 'mesero',
-  cocina = 'cocina',
-}
+export { EstadoUsuario, RolUsuario };
 
-export enum EstadoUsuario {
-  activo = 'activo',
-  inactivo = 'inactivo',
-}
 
 export class CreateUsuarioDto {
   @IsString({ message: 'El nombre debe ser una cadena de texto' })
@@ -26,16 +18,22 @@ export class CreateUsuarioDto {
   })
   usuario!: string;
 
+  @IsOptional()
+  @IsEmail({}, { message: 'El correo electrónico no tiene un formato válido' })
+  @Length(5, 100, { message: 'El correo electrónico debe tener entre 5 y 100 caracteres' })
+  email?: string;
+
   @IsString({ message: 'La contraseña debe ser una cadena de texto' })
   @IsNotEmpty({ message: 'La contraseña es obligatoria' })
   @Length(6, 100, { message: 'La contraseña debe tener entre 6 y 100 caracteres' })
   password!: string;
 
   @IsEnum(RolUsuario, {
-    message: 'El rol debe ser: administrador, cajero, mesero o cocina',
+    message: 'El rol debe ser: administrador, cajero, mesero, cocina o cliente',
   })
   @IsNotEmpty({ message: 'El rol es obligatorio' })
   rol!: RolUsuario;
+
 
   @IsOptional()
   @IsEnum(EstadoUsuario, {
