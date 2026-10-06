@@ -2,9 +2,21 @@ import { Routes } from '@angular/router';
 import { Layout } from './shared/components/layout/layout';
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
+import { clienteViewGuard } from './core/guards/cliente-view.guard';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'login', pathMatch: 'full' },
+  // Ruta inicial por defecto: Menú público del cliente
+  { path: '', redirectTo: 'cliente', pathMatch: 'full' },
+
+  // Vista pública de clientes / estudiantes (explorar catálogo y pedir domicilios)
+  {
+    path: 'cliente',
+    canActivate: [clienteViewGuard],
+    loadComponent: () =>
+      import('./features/cliente/vista-cliente/vista-cliente').then(
+        (m) => m.VistaClienteComponent
+      ),
+  },
 
   // Ruta pública de autenticación
   {
@@ -13,7 +25,7 @@ export const routes: Routes = [
       import('./features/auth/login/login').then((m) => m.LoginComponent),
   },
 
-  // Grupo de rutas que comparten el Layout Maestro (Sidebar + Header) protegidas por AuthGuard
+  // Grupo de rutas operativas del personal (Layout Maestro con Sidebar + Header)
   {
     path: '',
     component: Layout,
@@ -115,5 +127,5 @@ export const routes: Routes = [
     ],
   },
 
-  { path: '**', redirectTo: 'login' },
+  { path: '**', redirectTo: 'cliente' },
 ];

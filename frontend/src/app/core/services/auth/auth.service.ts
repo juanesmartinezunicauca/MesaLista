@@ -44,6 +44,28 @@ export class AuthService {
           id_usuario: res.usuario.id_usuario,
           nombre: res.usuario.nombre,
           usuario: res.usuario.usuario,
+          email: res.usuario.email,
+          rol: res.usuario.rol,
+          token: res.accessToken,
+          iniciales: this.generarIniciales(res.usuario.nombre),
+        };
+
+        this.guardarSesion(res.accessToken, sesionUsuario);
+      })
+    );
+  }
+
+  /**
+   * Envía el ID Token de Google OAuth 2.0 al backend para autenticar al usuario
+   */
+  loginGoogle(idToken: string): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${this.apiUrl}/google`, { idToken }).pipe(
+      tap((res) => {
+        const sesionUsuario: UsuarioSesion = {
+          id_usuario: res.usuario.id_usuario,
+          nombre: res.usuario.nombre,
+          usuario: res.usuario.usuario,
+          email: res.usuario.email,
           rol: res.usuario.rol,
           token: res.accessToken,
           iniciales: this.generarIniciales(res.usuario.nombre),
@@ -83,14 +105,14 @@ export class AuthService {
   }
 
   /**
-   * Cierra sesión eliminando credenciales y redirigiendo al login
+   * Cierra sesión eliminando credenciales y redirigiendo al login o ruta especificada
    */
-  logout(): void {
+  logout(redirectUrl: string = '/login'): void {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);
     this.token.set(null);
     this.currentUser.set(null);
-    this.router.navigate(['/login']);
+    this.router.navigate([redirectUrl]);
   }
 
   private guardarSesion(token: string, usuario: UsuarioSesion): void {

@@ -25,6 +25,12 @@ export const roleGuard: CanActivateFn = (
     return true;
   }
 
-  // Redirigir a la vista operativa principal (Mesas) si intenta entrar a una vista no autorizada
+  // Si el usuario es de rol cliente (estudiante), redirigir a su vista de cliente
+  if (currentUser.rol === 'cliente') {
+    return router.createUrlTree(['/cliente']);
+  }
+
+  // Redirigir al personal operativo a la vista principal (Mesas)
   return router.createUrlTree(['/mesas']);
+
 };

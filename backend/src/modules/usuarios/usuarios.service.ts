@@ -9,6 +9,7 @@ import {
   CreateUsuarioDto,
   EstadoUsuario,
   QueryUsuarioDto,
+  RolUsuario,
   UpdateUsuarioDto,
 } from './dto';
 
@@ -21,6 +22,7 @@ export class UsuariosService {
     id_usuario: true,
     nombre: true,
     usuario: true,
+    email: true,
     rol: true,
     estado: true,
   } as const;
@@ -39,6 +41,18 @@ export class UsuariosService {
       );
     }
 
+    if (createUsuarioDto.email) {
+      const emailExistente = await this.prisma.usuario.findUnique({
+        where: { email: createUsuarioDto.email },
+      });
+
+      if (emailExistente) {
+        throw new ConflictException(
+          `El correo electrónico '${createUsuarioDto.email}' ya está registrado.`,
+        );
+      }
+    }
+
     // Configuración recomendada por OWASP para Argon2id
     const passwordHash = await argon2.hash(createUsuarioDto.password, {
       type: argon2.argon2id,
@@ -51,6 +65,7 @@ export class UsuariosService {
       data: {
         nombre: createUsuarioDto.nombre,
         usuario: createUsuarioDto.usuario,
+        email: createUsuarioDto.email,
         passwordHash,
         rol: createUsuarioDto.rol,
         estado: createUsuarioDto.estado ?? EstadoUsuario.activo,
@@ -107,12 +122,75 @@ export class UsuariosService {
   /**
    * Método interno para autenticación (AuthModule).
    * Incluye passwordHash para verificación con argon2.verify.
+   * Permite autenticar tanto por nombre de usuario como por correo electrónico.
    */
-  async obtenerPorUsernameParaAuth(usuario: string) {
-    return this.prisma.usuario.findUnique({
-      where: { usuario },
+  async obtenerPorUsernameParaAuth(usuarioOEmail: string) {
+    return this.prisma.usuario.findFirst({
+      where: {
+        OR: [
+          { usuario: usuarioOEmail },
+          { email: usuarioOEmail },
+        ],
+      },
     });
   }
+
+  /**
+   * Vincula una cuenta de Google OAuth existente por googleId o email,
+   * o registra un nuevo usuario con rol 'mesero' activo si no existe previamente.
+   */
+  async vincularOGuardarGoogleUsuario(perfil: {
+    googleId: string;
+    email: string;
+    nombre: string;
+  }) {
+    // 1. Buscar si ya existe por googleId
+    let usuario = await this.prisma.usuario.findUnique({
+      where: { googleId: perfil.googleId },
+    });
+
+    if (usuario) {
+      return usuario;
+    }
+
+    // 2. Si no existe por googleId, buscar si ya existe un usuario con ese correo electrónico
+    usuario = await this.prisma.usuario.findUnique({
+      where: { email: perfil.email },
+    });
+
+    if (usuario) {
+      return this.prisma.usuario.update({
+        where: { id_usuario: usuario.id_usuario },
+        data: { googleId: perfil.googleId },
+      });
+    }
+
+    // 3. Crear usuario nuevo con rol 'cliente' y estado activo si no estaba registrado previamente
+    const baseUsername =
+      perfil.email.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 40) || 'cliente';
+    let uniqueUsername = baseUsername;
+    let counter = 1;
+
+    while (
+      await this.prisma.usuario.findUnique({
+        where: { usuario: uniqueUsername },
+      })
+    ) {
+      uniqueUsername = `${baseUsername.slice(0, 35)}_${counter++}`;
+    }
+
+    return this.prisma.usuario.create({
+      data: {
+        nombre: perfil.nombre.slice(0, 100),
+        usuario: uniqueUsername,
+        email: perfil.email,
+        googleId: perfil.googleId,
+        rol: RolUsuario.cliente,
+        estado: EstadoUsuario.activo,
+      },
+    });
+  }
+
 
   /**
    * Actualiza datos de un usuario. Si se incluye contraseña, se re-hashea con Argon2id.
@@ -132,6 +210,18 @@ export class UsuariosService {
       }
     }
 
+    if (updateDto.email) {
+      const colisionEmail = await this.prisma.usuario.findUnique({
+        where: { email: updateDto.email },
+      });
+
+      if (colisionEmail && colisionEmail.id_usuario !== id) {
+        throw new ConflictException(
+          `El correo '${updateDto.email}' ya está en uso.`,
+        );
+      }
+    }
+
     let passwordHash: string | undefined;
     if (updateDto.password) {
       passwordHash = await argon2.hash(updateDto.password, {
@@ -147,6 +237,7 @@ export class UsuariosService {
       data: {
         ...(updateDto.nombre && { nombre: updateDto.nombre }),
         ...(updateDto.usuario && { usuario: updateDto.usuario }),
+        ...(updateDto.email !== undefined && { email: updateDto.email }),
         ...(updateDto.rol && { rol: updateDto.rol }),
         ...(updateDto.estado && { estado: updateDto.estado }),
         ...(passwordHash && { passwordHash }),

@@ -4,6 +4,7 @@ export interface AuthUserResponse {
   id_usuario: number;
   nombre: string;
   usuario: string;
+  email?: string | null;
   rol: RolUsuario;
   estado: EstadoUsuario;
 }

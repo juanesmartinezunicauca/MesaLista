@@ -1,0 +1,350 @@
+<div class="cliente-portal">
+  <!-- 1. Barra de Navegación del Restaurante -->
+  <header class="restaurant-navbar">
+    <div class="nav-container">
+      <div class="brand-box">
+        <div class="brand-icon">
+          <mat-icon>restaurant</mat-icon>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">MesaLista</span>
+          <span class="brand-sub">Restaurante & Domicilios</span>
+        </div>
+      </div>
+
+      <div class="nav-auth-actions">
+        @if (!isAuthenticated()) {
+          <button mat-flat-button class="btn-login" (click)="irALogin()">
+            <mat-icon>account_circle</mat-icon>
+            <span>Iniciar Sesión / Registrarse</span>
+          </button>
+        } @else {
+          <div class="user-chip-box">
+            <div class="user-avatar">{{ currentUser()?.iniciales || 'CL' }}</div>
+            <div class="user-meta">
+              <span class="user-name">{{ currentUser()?.nombre }}</span>
+              <span class="user-role-badge">Cliente</span>
+            </div>
+            <button mat-icon-button class="btn-logout" (click)="cerrarSesion()" title="Cerrar sesión">
+              <mat-icon>logout</mat-icon>
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. Banner de Registro y Pedidos -->
+  @if (!isAuthenticated()) {
+    <section class="banner-cta-container">
+      <div class="hero-action-box">
+        <div class="box-text">
+          <strong>¿Listo para disfrutar de nuestra carta en casa?</strong>
+          <span>Regístrate con Google en un clic para ordenar y recibir tus pedidos.</span>
+        </div>
+        <button mat-flat-button class="btn-hero-cta" (click)="irALogin()">
+          <mat-icon>login</mat-icon>
+          <span>Ingresar para Pedir</span>
+        </button>
+      </div>
+    </section>
+  }
+
+  <!-- 3. Catálogo y Menú del Restaurante -->
+  <main class="menu-container">
+    <div class="menu-header">
+      <div class="menu-titles">
+        <h2>Nuestra Carta</h2>
+        <p>Platos y bebidas disponibles preparados al momento</p>
+      </div>
+
+      <!-- Buscador en tiempo real -->
+      <div class="search-wrapper">
+        <mat-icon class="search-icon">search</mat-icon>
+        <input
+          type="text"
+          placeholder="Buscar platos, entradas, bebidas..."
+          [value]="busqueda()"
+          (input)="actualizarBusqueda($event)"
+          class="search-input"
+        />
+        @if (busqueda()) {
+          <button mat-icon-button class="btn-clear" (click)="busqueda.set('')">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Barra de Categorías -->
+    <div class="categories-bar">
+      <button
+        type="button"
+        class="category-pill"
+        [class.active]="categoriaSeleccionada() === 'todas'"
+        (click)="filtrarPorCategoria('todas')"
+      >
+        <mat-icon>restaurant_menu</mat-icon>
+        <span>Todos ({{ productos().length }})</span>
+      </button>
+      @for (cat of categorias(); track cat) {
+        <button
+          type="button"
+          class="category-pill"
+          [class.active]="categoriaSeleccionada() === cat"
+          (click)="filtrarPorCategoria(cat)"
+        >
+          <span>{{ cat }}</span>
+        </button>
+      }
+    </div>
+
+    <!-- Estados de Carga y Resultados -->
+    @if (isLoading()) {
+      <div class="loading-panel">
+        <mat-spinner diameter="44"></mat-spinner>
+        <p>Cargando los platos de la carta...</p>
+      </div>
+    } @else if (productosFiltrados().length === 0) {
+      <div class="empty-panel">
+        <mat-icon class="empty-icon">search_off</mat-icon>
+        <h3>No se encontraron productos</h3>
+        <p>Prueba con otra palabra en el buscador o selecciona otra categoría.</p>
+      </div>
+    } @else {
+      <!-- Grilla de Platos y Productos -->
+      <div class="products-grid">
+        @for (prod of productosFiltrados(); track prod.id_producto) {
+          <div class="product-item-card">
+            <div class="product-media">
+              @if (prod.imagen) {
+                <img [src]="prod.imagen" [alt]="prod.nombre" class="product-img" />
+              } @else {
+                <div class="product-img-empty">
+                  <mat-icon>lunch_dining</mat-icon>
+                </div>
+              }
+              <span class="category-badge">{{ prod.categoria }}</span>
+            </div>
+
+            <div class="product-body">
+              <h3 class="product-title">{{ prod.nombre }}</h3>
+              @if (prod.ingredientes_removibles && prod.ingredientes_removibles.length > 0) {
+                <p class="product-desc">{{ prod.ingredientes_removibles.join(', ') }}</p>
+              }
+              <div class="product-pricing">
+                <span class="price-amount">${{ prod.precio_venta | number:'1.0-0' }}</span>
+                <span class="price-tag">COP</span>
+              </div>
+            </div>
+
+            <div class="product-footer">
+              <button
+                type="button"
+                class="btn-order-delivery"
+                (click)="solicitarDomicilio(prod)"
+              >
+                <mat-icon>two_wheeler</mat-icon>
+                <span>Pedir Domicilio</span>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </main>
+
+  <!-- 4. MODAL: Registro Requerido para Clientes no Autenticados -->
+  @if (mostrarModalAuth()) {
+    <div class="modal-overlay" (click)="cerrarModalAuth()">
+      <div class="modal-window auth-window" (click)="$event.stopPropagation()">
+        <button class="btn-window-close" (click)="cerrarModalAuth()">
+          <mat-icon>close</mat-icon>
+        </button>
+
+        <div class="window-icon-circle">
+          <mat-icon>delivery_dining</mat-icon>
+        </div>
+
+        <h2>¡Inicia sesión para pedir tu domicilio!</h2>
+        <p class="window-description">
+          Para tomar tu orden de <strong>{{ productoSeleccionado()?.nombre || 'nuestro restaurante' }}</strong> 
+          y enviarla a tu dirección, debes identificarte con tu cuenta de Google o correo registrado.
+        </p>
+
+        <div class="auth-buttons-group">
+          <button mat-flat-button class="btn-modal-primary" (click)="irALogin()">
+            <mat-icon>login</mat-icon>
+            <span>Iniciar Sesión / Registrarme en 1 Clic</span>
+          </button>
+          <button mat-stroked-button class="btn-modal-cancel" (click)="cerrarModalAuth()">
+            <span>Seguir viendo la carta</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- 5. MODAL: Formulario de Domicilio para Cliente Autenticado -->
+  @if (mostrarModalPedido() && productoSeleccionado()) {
+    <div class="modal-overlay" (click)="cerrarModalPedido()">
+      <div class="modal-window order-window" (click)="$event.stopPropagation()">
+        <button class="btn-window-close" (click)="cerrarModalPedido()">
+          <mat-icon>close</mat-icon>
+        </button>
+
+        <div class="order-window-header">
+          <div class="header-icon-box">
+            <mat-icon>moped</mat-icon>
+          </div>
+          <div>
+            <h2>Confirmar Pedido a Domicilio</h2>
+            <p>Ingresa tu dirección para despachar desde nuestro restaurante</p>
+          </div>
+        </div>
+
+        <!-- Resumen del Producto -->
+        <div class="order-item-banner">
+          <div class="item-text">
+            <span class="item-name">{{ productoSeleccionado()!.nombre }}</span>
+            <span class="item-price">${{ productoSeleccionado()!.precio_venta | number:'1.0-0' }} COP c/u</span>
+          </div>
+
+          <div class="quantity-selector">
+            <button type="button" class="qty-btn" (click)="decrementarCantidad()" [disabled]="cantidad() <= 1">
+              <mat-icon>remove</mat-icon>
+            </button>
+            <span class="qty-val">{{ cantidad() }}</span>
+            <button type="button" class="qty-btn" (click)="incrementarCantidad()">
+              <mat-icon>add</mat-icon>
+            </button>
+          </div>
+        </div>
+
+        <!-- Campos de Entrega del Restaurante -->
+        <div class="form-fields-container">
+          <div class="field-item">
+            <label class="field-label">Dirección de Entrega *</label>
+            <input
+              type="text"
+              class="field-input"
+              placeholder="Ej. Calle 15 # 8-42, Barrio Bolívar"
+              [value]="direccionEntrega()"
+              (input)="direccionEntrega.set($any($event.target).value)"
+            />
+          </div>
+
+          <div class="field-item">
+            <label class="field-label">Apartamento / Casa / Punto de Referencia</label>
+            <input
+              type="text"
+              class="field-input"
+              placeholder="Ej. Apto 302, timbre blanco, casa frente al parque"
+              [value]="referenciaUbicacion()"
+              (input)="referenciaUbicacion.set($any($event.target).value)"
+            />
+          </div>
+
+          <div class="field-item">
+            <label class="field-label">Teléfono o Celular de Contacto *</label>
+            <input
+              type="tel"
+              class="field-input"
+              placeholder="Ej. 310 123 4567 (para que el repartidor se comunique)"
+              [value]="telefonoContacto()"
+              (input)="telefonoContacto.set($any($event.target).value)"
+            />
+          </div>
+
+          <div class="field-item">
+            <label class="field-label">Indicaciones o Notas para la Cocina</label>
+            <input
+              type="text"
+              class="field-input"
+              placeholder="Ej. Sin cebolla, salsas aparte, pagaré con billete de $50.000"
+              [value]="observaciones()"
+              (input)="observaciones.set($any($event.target).value)"
+            />
+          </div>
+
+          <div class="field-item">
+            <label class="field-label">Método de Pago al Recibir</label>
+            <select
+              class="field-select"
+              [value]="metodoPago()"
+              (change)="metodoPago.set($any($event.target).value)"
+            >
+              <option value="Efectivo al recibir">Efectivo al recibir</option>
+              <option value="Transferencia electrónica (Nequi / Daviplata)">Transferencia electrónica (Nequi / Daviplata)</option>
+              <option value="Datáfono / Tarjeta">Datáfono / Tarjeta al recibir</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Liquidación de la Orden -->
+        <div class="bill-summary-card">
+          <div class="bill-line">
+            <span>Subtotal platos:</span>
+            <span>${{ totalPedido() | number:'1.0-0' }} COP</span>
+          </div>
+          <div class="bill-line">
+            <span>Costo de domicilio:</span>
+            <span class="free-badge">Envío Incluido</span>
+          </div>
+          <div class="bill-line total-line">
+            <span>Total a Pagar:</span>
+            <span class="total-price">${{ totalPedido() | number:'1.0-0' }} COP</span>
+          </div>
+        </div>
+
+        <div class="order-window-actions">
+          <button mat-flat-button class="btn-modal-primary" (click)="confirmarPedido()">
+            <mat-icon>check_circle</mat-icon>
+            <span>Confirmar Pedido a Domicilio</span>
+          </button>
+          <button mat-stroked-button class="btn-modal-cancel" (click)="cerrarModalPedido()">
+            <span>Cancelar</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- 6. MODAL: Confirmación Exitosa de Pedido -->
+  @if (pedidoConfirmado()) {
+    <div class="modal-overlay" (click)="cerrarModalConfirmacion()">
+      <div class="modal-window success-window" (click)="$event.stopPropagation()">
+        <div class="success-icon-box">
+          <mat-icon>check</mat-icon>
+        </div>
+
+        <h2>¡Tu Pedido ha sido Confirmado!</h2>
+        <div class="order-code-badge">
+          <span>Radicado:</span>
+          <strong>#{{ pedidoConfirmado()!.codigo }}</strong>
+        </div>
+
+        <p class="success-message">
+          Hemos recibido tu orden de <strong>{{ pedidoConfirmado()!.producto }}</strong> por 
+          <strong>${{ pedidoConfirmado()!.total | number:'1.0-0' }} COP</strong>.
+        </p>
+
+        <div class="delivery-address-card">
+          <mat-icon>location_on</mat-icon>
+          <div>
+            <span class="card-caption">Dirección de entrega:</span>
+            <span class="card-address">{{ pedidoConfirmado()!.direccion }}</span>
+          </div>
+        </div>
+
+        <p class="delivery-hint">
+          El equipo de cocina ya está preparando tu comida. El repartidor te llamará a tu teléfono al llegar.
+        </p>
+
+        <button mat-flat-button class="btn-modal-primary" (click)="cerrarModalConfirmacion()">
+          <span>Aceptar y Continuar en la Carta</span>
+        </button>
+      </div>
+    </div>
+  }
+</div>

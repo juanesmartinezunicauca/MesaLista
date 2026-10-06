@@ -12,7 +12,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { CurrentUser } from '../../common/decorators';
 import { JwtAuthGuard } from '../../common/guards';
 import { AuthService } from './auth.service';
-import { LoginDto, UpdatePerfilDto } from './dto';
+import { GoogleLoginDto, LoginDto, UpdatePerfilDto } from './dto';
 
 @Controller('auth')
 export class AuthController {
@@ -27,6 +27,17 @@ export class AuthController {
   @UseGuards(ThrottlerGuard)
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
+  }
+
+  /**
+   * POST /api/v1/auth/google
+   * Autenticación federada mediante Google OAuth 2.0 (ID Token).
+   */
+  @Post('google')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  googleLogin(@Body() googleLoginDto: GoogleLoginDto) {
+    return this.authService.loginConGoogle(googleLoginDto);
   }
 
   /**
