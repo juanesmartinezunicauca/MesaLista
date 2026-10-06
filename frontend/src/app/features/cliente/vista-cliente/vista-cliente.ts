@@ -14,7 +14,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { AuthService } from '../../../core/services/auth/auth.service';
 import { CatalogoApiService } from '../../../core/services/api/catalogo-api.service';
+import { DomiciliosApiService } from '../../../core/services/api/domicilios-api.service';
 import { Producto } from '../../../core/models/producto.model';
+import { CreateDomicilioPayload } from '../../../core/models';
 
 @Component({
   selector: 'app-vista-cliente',
@@ -41,6 +43,7 @@ import { Producto } from '../../../core/models/producto.model';
 export class VistaClienteComponent implements OnInit {
   authService = inject(AuthService);
   private catalogoService = inject(CatalogoApiService);
+  private domiciliosApi = inject(DomiciliosApiService);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
 
@@ -62,6 +65,8 @@ export class VistaClienteComponent implements OnInit {
     producto: string;
     direccion: string;
   } | null>(null);
+
+  enviandoPedido = signal<boolean>(false);
 
   // Formulario de Pedido de Domicilio para Restaurante Real
   productoSeleccionado = signal<Producto | null>(null);
@@ -170,7 +175,7 @@ export class VistaClienteComponent implements OnInit {
 
   confirmarPedido(): void {
     const prod = this.productoSeleccionado();
-    if (!prod) return;
+    if (!prod || this.enviandoPedido()) return;
 
     if (!this.direccionEntrega().trim() || this.direccionEntrega().trim().length < 5) {
       this.snackBar.open(
@@ -190,24 +195,59 @@ export class VistaClienteComponent implements OnInit {
       return;
     }
 
-    const codigo = 'DOM-' + Math.floor(1000 + Math.random() * 9000);
-    const total = this.totalPedido();
+    const clienteNombre = this.currentUser()?.nombre || 'Cliente';
     const direccion = this.direccionEntrega().trim();
+    const notasArray = [
+      this.metodoPago() ? `Pago: ${this.metodoPago()}` : '',
+      this.referenciaUbicacion().trim() ? `Ref: ${this.referenciaUbicacion().trim()}` : '',
+      this.observaciones().trim() ? `Obs: ${this.observaciones().trim()}` : '',
+    ].filter(Boolean);
 
-    this.pedidoConfirmado.set({
-      codigo,
-      total,
-      producto: `${this.cantidad()}x ${prod.nombre}`,
-      direccion,
+    const payload: CreateDomicilioPayload = {
+      cliente: {
+        nombre: clienteNombre,
+        telefono: this.telefonoContacto().trim(),
+        direccion: direccion,
+      },
+      items: [
+        {
+          id_producto: prod.id_producto,
+          cantidad: this.cantidad(),
+          observacion: this.observaciones().trim() || undefined,
+        },
+      ],
+      observacion: notasArray.length > 0 ? notasArray.join(' | ') : undefined,
+    };
+
+    this.enviandoPedido.set(true);
+
+    this.domiciliosApi.crear(payload).subscribe({
+      next: (domicilioCreado) => {
+        this.enviandoPedido.set(false);
+        const codigo = `DOM-${domicilioCreado.numero_pedido}`;
+        const total = Number(domicilioCreado.totalCalculado || this.totalPedido());
+
+        this.pedidoConfirmado.set({
+          codigo,
+          total,
+          producto: `${this.cantidad()}x ${prod.nombre}`,
+          direccion,
+        });
+
+        this.mostrarModalPedido.set(false);
+
+        this.snackBar.open(
+          `¡Pedido #${codigo} recibido! La comanda ya llegó a cocina y a domicilios para preparar.`,
+          '¡Genial!',
+          { duration: 6000 }
+        );
+      },
+      error: (err) => {
+        this.enviandoPedido.set(false);
+        const msg = err.error?.message || 'No fue posible registrar tu pedido. Por favor intenta de nuevo.';
+        this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+      },
     });
-
-    this.mostrarModalPedido.set(false);
-
-    this.snackBar.open(
-      `¡Pedido #${codigo} recibido! La cocina ya comenzó la preparación para enviar a ${direccion}.`,
-      '¡Genial!',
-      { duration: 6000 }
-    );
   }
 
   cerrarModalConfirmacion(): void {

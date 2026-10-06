@@ -282,9 +282,14 @@
         </div>
 
         <div class="order-window-actions">
-          <button mat-flat-button class="btn-modal-primary" (click)="confirmarPedido()">
-            <mat-icon>check_circle</mat-icon>
-            <span>Confirmar Pedido a Domicilio</span>
+          <button
+            mat-flat-button
+            class="btn-modal-primary"
+            (click)="confirmarPedido()"
+            [disabled]="enviandoPedido()"
+          >
+            <mat-icon>{{ enviandoPedido() ? 'hourglass_top' : 'check_circle' }}</mat-icon>
+            <span>{{ enviandoPedido() ? 'Enviando a Cocina...' : 'Confirmar Pedido a Domicilio' }}</span>
           </button>
           <button mat-stroked-button class="btn-modal-cancel" (click)="cerrarModalPedido()">
             <span>Cancelar</span>

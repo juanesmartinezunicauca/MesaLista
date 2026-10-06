@@ -87,6 +87,7 @@ export class UsuarioDialogComponent {
           Validators.pattern(/^[a-zA-Z0-9._-]+$/),
         ],
       ],
+      email: [u?.email || '', [Validators.email]],
       password: [
         '',
         isEdit ? [Validators.minLength(6), Validators.maxLength(100)] : [Validators.required, Validators.minLength(6), Validators.maxLength(100)],
@@ -125,12 +126,14 @@ export class UsuarioDialogComponent {
       const payload: {
         nombre?: string;
         usuario?: string;
+        email?: string;
         password?: string;
         rol?: RolUsuario;
         estado?: EstadoUsuario;
       } = {
         nombre: val.nombre.trim(),
         usuario: val.usuario.trim(),
+        email: val.email?.trim() ? val.email.trim().toLowerCase() : undefined,
         rol: val.rol,
         estado: val.estado ? 'activo' : 'inactivo',
       };
@@ -153,9 +156,17 @@ export class UsuarioDialogComponent {
         },
       });
     } else {
-      const payload = {
+      const payload: {
+        nombre: string;
+        usuario: string;
+        email?: string;
+        password: string;
+        rol: RolUsuario;
+        estado?: EstadoUsuario;
+      } = {
         nombre: val.nombre.trim(),
         usuario: val.usuario.trim(),
+        email: val.email?.trim() ? val.email.trim().toLowerCase() : undefined,
         password: val.password.trim(),
         rol: val.rol,
         estado: val.estado ? ('activo' as EstadoUsuario) : ('inactivo' as EstadoUsuario),

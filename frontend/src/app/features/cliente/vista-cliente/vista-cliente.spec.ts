@@ -5,6 +5,7 @@ import { of } from 'rxjs';
 import { VistaClienteComponent } from './vista-cliente';
 import { AuthService } from '../../../core/services/auth/auth.service';
 import { CatalogoApiService } from '../../../core/services/api/catalogo-api.service';
+import { DomiciliosApiService } from '../../../core/services/api/domicilios-api.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Producto } from '../../../core/models/producto.model';
 import { UsuarioSesion } from '../../../core/models/usuario.model';
@@ -52,6 +53,10 @@ describe('VistaClienteComponent', () => {
     obtenerProductos: vi.fn().mockReturnValue(of(mockProductos)),
   };
 
+  const mockDomiciliosService = {
+    crear: vi.fn().mockReturnValue(of({ numero_pedido: 101, totalCalculado: 28000 })),
+  };
+
   const mockAuthService = {
     currentUser: mockCurrentUserSignal,
     isAuthenticated: mockIsAuthenticatedSignal,
@@ -73,6 +78,7 @@ describe('VistaClienteComponent', () => {
         provideRouter([]),
         { provide: Router, useValue: mockRouter },
         { provide: CatalogoApiService, useValue: mockCatalogoService },
+        { provide: DomiciliosApiService, useValue: mockDomiciliosService },
         { provide: AuthService, useValue: mockAuthService },
       ],
     }).compileComponents();
@@ -146,7 +152,7 @@ describe('VistaClienteComponent', () => {
     component.confirmarPedido();
 
     expect(component.pedidoConfirmado()).not.toBeNull();
-    expect(component.pedidoConfirmado()?.codigo).toMatch(/^DOM-\d{4}$/);
+    expect(component.pedidoConfirmado()?.codigo).toBe('DOM-101');
     expect(component.pedidoConfirmado()?.direccion).toBe('Calle 10 # 5-23');
     expect(snackBar.open).toHaveBeenCalled();
   });
