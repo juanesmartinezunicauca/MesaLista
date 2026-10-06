@@ -31,7 +31,12 @@ export class DomiciliosController {
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @Roles(RolUsuario.administrador, RolUsuario.cajero, RolUsuario.mesero)
+  @Roles(
+    RolUsuario.administrador,
+    RolUsuario.cajero,
+    RolUsuario.mesero,
+    RolUsuario.cliente,
+  )
   crear(
     @Body() createDto: CreateDomicilioDto,
     @CurrentUser('id_usuario') id_usuario: number,
