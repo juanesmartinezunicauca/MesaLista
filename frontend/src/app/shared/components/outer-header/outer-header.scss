@@ -13,14 +13,35 @@
   box-sizing: border-box;
 
   .header-left {
-    .view-tag {
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: $text-secondary;
+    display: flex;
+    align-items: center;
+
+    .brand-venue-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
       background-color: $bg-app;
-      padding: 4px 12px;
+      padding: 5px 14px;
       border-radius: $radius-full;
       border: 1px solid $border-color;
+
+      .brand-main {
+        font-size: 0.925rem;
+        font-weight: 800;
+        letter-spacing: 0.6px;
+        color: $text-primary;
+      }
+
+      .brand-sub {
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.8px;
+        background: linear-gradient(135deg, $brand-orange 0%, #ea580c 100%);
+        color: #ffffff;
+        padding: 2px 8px;
+        border-radius: 999px;
+        text-transform: uppercase;
+      }
     }
   }
 
