@@ -104,16 +104,18 @@
     .brand-info {
       h2 {
         font-size: 1.05rem;
-        font-weight: 700;
+        font-weight: 800;
         color: #ffffff;
         margin: 0;
-        letter-spacing: -0.3px;
+        letter-spacing: 0.5px;
       }
 
-      span {
-        font-size: 0.75rem;
-        color: #94a3b8;
-        font-weight: 500;
+      .venue-sub, span {
+        font-size: 0.725rem;
+        color: $brand-orange;
+        font-weight: 700;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
       }
     }
   }
