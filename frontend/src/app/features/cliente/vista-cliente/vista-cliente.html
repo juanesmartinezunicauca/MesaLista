@@ -2,7 +2,7 @@
   <!-- 1. Barra de Navegación del Restaurante -->
   <header class="restaurant-navbar">
     <div class="nav-container">
-      <div class="brand-box">
+      <div class="brand-box" (click)="irAInicio()" role="button" tabindex="0" title="Ir al inicio / Menú principal">
         <div class="brand-icon">
           <mat-icon>restaurant</mat-icon>
         </div>
@@ -11,6 +11,39 @@
           <span class="brand-sub">LUIGIE'S RESTAURANTE</span>
         </div>
       </div>
+
+      <!-- Indicador de Disponibilidad de Domicilios -->
+      @if (estadoServicio(); as serv) {
+        <div class="service-status-pill" [class.open]="serv.activo" [class.closed]="!serv.activo" [title]="serv.motivo || (serv.activo ? 'Restaurante abierto para domicilios' : 'Servicio en pausa')">
+          <span class="pulse-dot" [class.paused]="!serv.activo"></span>
+          <span class="status-label">{{ serv.activo ? 'Abierto' : 'En Pausa' }}</span>
+        </div>
+      }
+
+      <!-- Navegación de Secciones: Carta vs Mis Pedidos -->
+      <nav class="client-nav-tabs">
+        <button
+          type="button"
+          class="nav-tab-btn"
+          [class.active]="vistaActiva() === 'carta'"
+          (click)="vistaActiva.set('carta')"
+        >
+          <mat-icon>restaurant_menu</mat-icon>
+          <span>Carta</span>
+        </button>
+        <button
+          type="button"
+          class="nav-tab-btn"
+          [class.active]="vistaActiva() === 'mis-pedidos'"
+          (click)="abrirMisPedidos()"
+        >
+          <mat-icon>delivery_dining</mat-icon>
+          <span>Mis Pedidos</span>
+          @if (pedidosActivosCount() > 0) {
+            <span class="active-orders-counter">{{ pedidosActivosCount() }}</span>
+          }
+        </button>
+      </nav>
 
       <div class="nav-auth-actions">
         <!-- Botón de Carrito en Navbar -->
@@ -48,149 +81,39 @@
     </div>
   </header>
 
-  <!-- 2. Banner de Seguimiento en Vivo de Pedido Activo (Live Order Tracker) -->
-  @if (pedidoActivoTracking(); as pedido) {
-    <section class="order-tracker-banner">
-      <div class="tracker-container">
-        <div class="tracker-header">
-          <div class="tracker-title-group">
-            <span class="live-dot-pulse"></span>
-            <h3>Seguimiento de tu Pedido #DOM-{{ pedido.numero_pedido }}</h3>
-            <span class="tracker-time">Hora: {{ pedido.fecha_hora | date:'shortTime' }}</span>
-          </div>
-
-          <button class="btn-tracker-close" (click)="cerrarTracking()" title="Ocultar seguimiento">
-            <mat-icon>close</mat-icon>
-          </button>
-        </div>
-
-        <!-- Indicador de Estados / Stepper -->
-        <div class="tracker-stepper">
-          <!-- Paso 1: Pendiente de Aceptación -->
-          <div class="step-node" [class.active]="pedido.etapaOperativa === 'Pendiente'" [class.completed]="pedido.etapaOperativa !== 'Pendiente' && pedido.etapaOperativa !== 'Cancelado'">
-            <div class="step-circle">
-              <mat-icon>{{ pedido.etapaOperativa === 'Pendiente' ? 'hourglass_top' : 'check' }}</mat-icon>
-            </div>
-            <div class="step-info">
-              <span class="step-title">1. Recibido</span>
-              <span class="step-sub">En espera de caja</span>
-            </div>
-          </div>
-
-          <div class="step-line" [class.filled]="pedido.etapaOperativa !== 'Pendiente' && pedido.etapaOperativa !== 'Cancelado'"></div>
-
-          <!-- Paso 2: Aceptado / En Cocina -->
-          <div class="step-node" [class.active]="pedido.etapaOperativa === 'En Preparación'" [class.completed]="pedido.etapaOperativa === 'En Reparto' || pedido.etapaOperativa === 'Entregado'">
-            <div class="step-circle">
-              <mat-icon>{{ pedido.etapaOperativa === 'En Preparación' ? 'soup_kitchen' : (pedido.etapaOperativa === 'En Reparto' || pedido.etapaOperativa === 'Entregado' ? 'check' : 'schedule') }}</mat-icon>
-            </div>
-            <div class="step-info">
-              <span class="step-title">2. Aceptado</span>
-              <span class="step-sub">En cocina</span>
-            </div>
-          </div>
-
-          <div class="step-line" [class.filled]="pedido.etapaOperativa === 'En Reparto' || pedido.etapaOperativa === 'Entregado'"></div>
-
-          <!-- Paso 3: En Reparto / Domiciliario en Camino -->
-          <div class="step-node" [class.active]="pedido.etapaOperativa === 'En Reparto'" [class.completed]="pedido.etapaOperativa === 'Entregado'">
-            <div class="step-circle">
-              <mat-icon>{{ pedido.etapaOperativa === 'En Reparto' ? 'two_wheeler' : (pedido.etapaOperativa === 'Entregado' ? 'check' : 'moped') }}</mat-icon>
-            </div>
-            <div class="step-info">
-              <span class="step-title">3. En Camino</span>
-              <span class="step-sub">Domiciliario</span>
-            </div>
-          </div>
-
-          <div class="step-line" [class.filled]="pedido.etapaOperativa === 'Entregado'"></div>
-
-          <!-- Paso 4: Entregado -->
-          <div class="step-node" [class.completed]="pedido.etapaOperativa === 'Entregado'">
-            <div class="step-circle">
-              <mat-icon>task_alt</mat-icon>
-            </div>
-            <div class="step-info">
-              <span class="step-title">4. Entregado</span>
-              <span class="step-sub">¡Buen provecho!</span>
-            </div>
+  <!-- Aviso de Servicio Cerrado / Pausado -->
+  @if (estadoServicio(); as serv) {
+    @if (!serv.activo) {
+      <section class="service-paused-banner">
+        <div class="banner-inner">
+          <mat-icon class="paused-icon">storefront</mat-icon>
+          <div class="paused-text">
+            <h4>Servicio de Domicilios Temporalmente en Pausa</h4>
+            <p>{{ serv.motivo || (!serv.cajaAbierta ? 'La caja del restaurante no ha sido abierta para la jornada.' : 'El cajero ha pausado temporalmente la recepción de pedidos a domicilio. Puedes explorar la carta mientras se reactiva.') }}</p>
           </div>
         </div>
-
-        <!-- Mensaje y Datos de Entrega Según Estado -->
-        <div class="tracker-status-box">
-          @if (pedido.etapaOperativa === 'Pendiente') {
-            <div class="status-alert pending">
-              <mat-icon>pending_actions</mat-icon>
-              <div class="status-info-col">
-                <strong>Tu orden ha sido recibida en la central.</strong>
-                <p>El cajero está revisando la disponibilidad para enviar la comanda a cocina.</p>
-                @if (pedido.metodo_pago === 'Transferencia') {
-                  <div class="pending-whatsapp-alert">
-                    <span>¿Pagaste por transferencia? Envía el comprobante para agilizar la aprobación:</span>
-                    <a [href]="generarUrlWhatsApp(pedido.numero_pedido.toString())" target="_blank" rel="noopener noreferrer" class="btn-whatsapp-pill">
-                      <mat-icon>chat</mat-icon>
-                      <span>Enviar Comprobante por WhatsApp</span>
-                    </a>
-                  </div>
-                }
-              </div>
-            </div>
-          } @else if (pedido.etapaOperativa === 'En Preparación') {
-            <div class="status-alert kitchen">
-              <mat-icon>restaurant_menu</mat-icon>
-              <div>
-                <strong>¡Pedido Aceptado! La cocina ya está preparando tu comanda.</strong>
-                <p>Se está cocinando con ingredientes frescos. Te avisaremos cuando salga a reparto.</p>
-              </div>
-            </div>
-          } @else if (pedido.etapaOperativa === 'En Reparto') {
-            <div class="status-alert delivery">
-              <mat-icon>electric_moped</mat-icon>
-              <div class="delivery-details">
-                <strong>¡El repartidor va en camino a tu dirección!</strong>
-                @if (pedido.repartidor; as rep) {
-                  @if (rep.nombre) {
-                    <div class="driver-card">
-                      <span class="driver-name">
-                        <mat-icon>person</mat-icon> Domiciliario: <strong>{{ rep.nombre }}</strong>
-                      </span>
-                      @if (rep.telefono && rep.telefono !== 'N/A') {
-                        <a [href]="'tel:' + rep.telefono" class="driver-phone-link">
-                          <mat-icon>call</mat-icon> {{ rep.telefono }}
-                        </a>
-                      }
-                    </div>
-                  }
-                }
-              </div>
-            </div>
-          } @else if (pedido.etapaOperativa === 'Entregado') {
-            <div class="status-alert delivered">
-              <mat-icon>verified</mat-icon>
-              <div>
-                <strong>¡Pedido Entregado con éxito!</strong>
-                <p>Gracias por preferir Luigie's Restaurante. Esperamos que disfrutes tu comida.</p>
-              </div>
-            </div>
-          } @else if (pedido.etapaOperativa === 'Cancelado') {
-            <div class="status-alert cancelled">
-              <mat-icon>cancel</mat-icon>
-              <div>
-                <strong>Pedido Cancelado / Rechazado.</strong>
-                <p>{{ pedido.observacion || 'El pedido no pudo ser procesado por el restaurante.' }}</p>
-              </div>
-            </div>
-          }
-
-          <div class="tracker-meta-row">
-            <span>Dirección: <strong>{{ pedido.cliente.direccion }}</strong></span>
-            <span>Total a pagar: <strong>${{ pedido.totalCalculado | number:'1.0-0' }} COP</strong></span>
-          </div>
-        </div>
-      </div>
-    </section>
+      </section>
+    }
   }
+
+  <!-- VISTA 1: CARTA / MENÚ -->
+  @if (vistaActiva() === 'carta') {
+    <!-- Barra flotante sutil si hay pedido en curso (NO satura la carta) -->
+    @if (pedidoActivoTracking(); as activo) {
+      @if (activo.etapaOperativa !== 'Entregado' && activo.etapaOperativa !== 'Cancelado') {
+        <div class="active-order-floating-bar" (click)="abrirMisPedidos()">
+          <div class="bar-left">
+            <span class="pulse-live"></span>
+            <span>Tienes un pedido en progreso: <strong>#DOM-{{ activo.numero_pedido }}</strong></span>
+            <span class="badge-stage" [class]="getChipClass(activo.etapaOperativa)">{{ activo.etapaOperativa }}</span>
+          </div>
+          <div class="bar-right">
+            <span>Ver seguimiento en Mis Pedidos</span>
+            <mat-icon>arrow_forward</mat-icon>
+          </div>
+        </div>
+      }
+    }
 
   <!-- 3. Catálogo y Menú del Restaurante -->
   <main class="menu-container">
@@ -305,21 +228,284 @@
     }
   </main>
 
-  <!-- 4. BOTÓN FLOTANTE DEL CARRITO (Sticky Bar / Badge) -->
-  @if (totalCartItems() > 0) {
-    <div class="floating-cart-wrapper">
-      <button class="floating-cart-btn" (click)="abrirCarrito()">
-        <div class="cart-pill-icon">
-          <mat-icon>shopping_bag</mat-icon>
-          <span class="cart-pill-count">{{ totalCartItems() }}</span>
+    <!-- 4. BOTÓN FLOTANTE DEL CARRITO (Sticky Bar / Badge) -->
+    @if (totalCartItems() > 0) {
+      <div class="floating-cart-wrapper">
+        <button class="floating-cart-btn" (click)="abrirCarrito()">
+          <div class="cart-pill-icon">
+            <mat-icon>shopping_bag</mat-icon>
+            <span class="cart-pill-count">{{ totalCartItems() }}</span>
+          </div>
+          <div class="cart-pill-content">
+            <span class="cart-pill-text">Ver Carrito</span>
+            <span class="cart-pill-total">${{ totalCartPrecio() | number:'1.0-0' }} COP</span>
+          </div>
+          <mat-icon class="cart-pill-arrow">arrow_forward</mat-icon>
+        </button>
+      </div>
+    }
+  }
+
+  <!-- VISTA 2: MIS PEDIDOS (Historial y Seguimiento en Vivo con Progreso) -->
+  @if (vistaActiva() === 'mis-pedidos') {
+    <section class="mis-pedidos-container">
+      <div class="mis-pedidos-header">
+        <div class="header-titles">
+          <div class="title-with-icon">
+            <mat-icon class="section-icon">delivery_dining</mat-icon>
+            <h2>Mis Pedidos a Domicilio</h2>
+          </div>
+          <p>Sigue el progreso en tiempo real de tus comandas desde la cocina hasta la puerta de tu casa</p>
         </div>
-        <div class="cart-pill-content">
-          <span class="cart-pill-text">Ver Carrito</span>
-          <span class="cart-pill-total">${{ totalCartPrecio() | number:'1.0-0' }} COP</span>
+
+        <div class="header-actions">
+          <button type="button" mat-stroked-button class="btn-refresh" (click)="abrirMisPedidos()">
+            <mat-icon>refresh</mat-icon>
+            <span>Actualizar</span>
+          </button>
+          <button type="button" mat-flat-button color="primary" class="btn-back-menu" (click)="vistaActiva.set('carta')">
+            <mat-icon>restaurant_menu</mat-icon>
+            <span>Ver Carta</span>
+          </button>
         </div>
-        <mat-icon class="cart-pill-arrow">arrow_forward</mat-icon>
-      </button>
-    </div>
+      </div>
+
+      <!-- Estado de No Autenticado y Sin Pedido Activo -->
+      @if (!isAuthenticated() && !pedidoActivoTracking()) {
+        <div class="guest-orders-box">
+          <div class="guest-icon-circle">
+            <mat-icon>account_circle</mat-icon>
+          </div>
+          <h3>Inicia sesión para ver tu historial de pedidos</h3>
+          <p>Identifícate con tu cuenta para consultar tus pedidos anteriores y el seguimiento de tus entregas.</p>
+          <button mat-flat-button class="btn-login-prompt" (click)="irALogin()">
+            <mat-icon>login</mat-icon>
+            <span>Iniciar Sesión / Registrarme</span>
+          </button>
+        </div>
+      }
+
+      <!-- Spinner Cargando -->
+      @else if (cargandoMisPedidos()) {
+        <div class="loading-orders">
+          <mat-spinner diameter="44"></mat-spinner>
+          <span>Consultando tus pedidos...</span>
+        </div>
+      }
+
+      <!-- Lista de Pedidos con Progreso Individual -->
+      @else {
+        <!-- Combinación: Pedidos de la API o el pedido activo guardado localmente -->
+        @if (misPedidos().length > 0 || pedidoActivoTracking()) {
+          <div class="orders-cards-list">
+            @for (pedido of (misPedidos().length > 0 ? misPedidos() : [pedidoActivoTracking()!]); track pedido.id_pedido) {
+              <div class="client-order-card" [class.is-active-order]="pedido.etapaOperativa !== 'Entregado' && pedido.etapaOperativa !== 'Cancelado'">
+                
+                <!-- Encabezado de la Tarjeta del Pedido -->
+                <div class="order-card-top">
+                  <div class="order-id-group">
+                    <span class="order-radicado">#DOM-{{ pedido.numero_pedido }}</span>
+                    <span class="order-date">
+                      <mat-icon>schedule</mat-icon> {{ formatearFechaHora(pedido.fecha_hora) }}
+                    </span>
+                    <span class="order-payment-badge" [ngClass]="{
+                      'pay-transfer': (pedido.metodo_pago || '').toLowerCase().includes('transf'),
+                      'pay-card': (pedido.metodo_pago || '').toLowerCase().includes('tarj'),
+                      'pay-cash': !(pedido.metodo_pago || '').toLowerCase().includes('transf') && !(pedido.metodo_pago || '').toLowerCase().includes('tarj')
+                    }">
+                      <mat-icon>{{ (pedido.metodo_pago || '').toLowerCase().includes('transf') ? 'account_balance_wallet' : ((pedido.metodo_pago || '').toLowerCase().includes('tarj') ? 'credit_card' : 'payments') }}</mat-icon>
+                      <span>{{ pedido.metodo_pago || 'Efectivo' }}</span>
+                    </span>
+                  </div>
+
+                  <div class="order-status-badge" [ngClass]="getChipClass(pedido.etapaOperativa)">
+                    <span class="dot-indicator"></span>
+                    <span>{{ pedido.etapaOperativa }}</span>
+                  </div>
+                </div>
+
+                <!-- Stepper de Progreso en Vivo del Pedido -->
+                <div class="tracker-stepper">
+                  <!-- Paso 1: Recibido -->
+                  <div class="step-node" [class.active]="pedido.etapaOperativa === 'Pendiente'" [class.completed]="pedido.etapaOperativa !== 'Pendiente' && pedido.etapaOperativa !== 'Cancelado'">
+                    <div class="step-circle">
+                      <mat-icon>{{ pedido.etapaOperativa === 'Pendiente' ? 'hourglass_top' : 'check' }}</mat-icon>
+                    </div>
+                    <div class="step-info">
+                      <span class="step-title">1. Recibido</span>
+                      <span class="step-sub">En espera de caja</span>
+                    </div>
+                  </div>
+
+                  <div class="step-line" [class.filled]="pedido.etapaOperativa !== 'Pendiente' && pedido.etapaOperativa !== 'Cancelado'"></div>
+
+                  <!-- Paso 2: Aceptado / En Cocina -->
+                  <div class="step-node" [class.active]="pedido.etapaOperativa === 'En Preparación'" [class.completed]="pedido.etapaOperativa === 'En Reparto' || pedido.etapaOperativa === 'Entregado'">
+                    <div class="step-circle">
+                      <mat-icon>{{ pedido.etapaOperativa === 'En Preparación' ? 'soup_kitchen' : (pedido.etapaOperativa === 'En Reparto' || pedido.etapaOperativa === 'Entregado' ? 'check' : 'schedule') }}</mat-icon>
+                    </div>
+                    <div class="step-info">
+                      <span class="step-title">2. Aceptado</span>
+                      <span class="step-sub">En cocina</span>
+                    </div>
+                  </div>
+
+                  <div class="step-line" [class.filled]="pedido.etapaOperativa === 'En Reparto' || pedido.etapaOperativa === 'Entregado'"></div>
+
+                  <!-- Paso 3: En Reparto -->
+                  <div class="step-node" [class.active]="pedido.etapaOperativa === 'En Reparto'" [class.completed]="pedido.etapaOperativa === 'Entregado'">
+                    <div class="step-circle">
+                      <mat-icon>{{ pedido.etapaOperativa === 'En Reparto' ? 'two_wheeler' : (pedido.etapaOperativa === 'Entregado' ? 'check' : 'moped') }}</mat-icon>
+                    </div>
+                    <div class="step-info">
+                      <span class="step-title">3. En Camino</span>
+                      <span class="step-sub">Domiciliario</span>
+                    </div>
+                  </div>
+
+                  <div class="step-line" [class.filled]="pedido.etapaOperativa === 'Entregado'"></div>
+
+                  <!-- Paso 4: Entregado -->
+                  <div class="step-node" [class.completed]="pedido.etapaOperativa === 'Entregado'">
+                    <div class="step-circle">
+                      <mat-icon>task_alt</mat-icon>
+                    </div>
+                    <div class="step-info">
+                      <span class="step-title">4. Entregado</span>
+                      <span class="step-sub">¡Completado!</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Detalle y Alerta Operativa Según Estado -->
+                <div class="status-context-box">
+                  @if (pedido.etapaOperativa === 'Pendiente') {
+                    <div class="status-banner pending">
+                      <mat-icon>pending_actions</mat-icon>
+                      <div class="banner-body">
+                        <strong>Tu pedido ha sido recibido en caja.</strong>
+                        <p>El personal está confirmando los productos y enviará la comanda a la cocina enseguida.</p>
+                        @if ((pedido.metodo_pago || '').toLowerCase().includes('transf')) {
+                          <div class="whatsapp-prompt">
+                            <span>¿Pagaste por transferencia? Envíanos tu comprobante para agilizar la aprobación:</span>
+                            <a [href]="generarUrlWhatsApp(pedido.numero_pedido.toString())" target="_blank" rel="noopener noreferrer" class="btn-whatsapp-comprobante">
+                              <mat-icon>chat</mat-icon>
+                              <span>Enviar Comprobante al WhatsApp</span>
+                            </a>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  } @else if (pedido.etapaOperativa === 'En Preparación') {
+                    <div class="status-banner kitchen">
+                      <mat-icon>soup_kitchen</mat-icon>
+                      <div class="banner-body">
+                        <strong>¡Pedido Aceptado! La cocina está preparando tus platos.</strong>
+                        <p>Tus alimentos se están cocinando al momento. Te notificaremos cuando salgan con el repartidor.</p>
+                      </div>
+                    </div>
+                  } @else if (pedido.etapaOperativa === 'En Reparto') {
+                    <div class="status-banner delivery">
+                      <mat-icon>electric_moped</mat-icon>
+                      <div class="banner-body">
+                        <strong>¡Tu pedido va en camino a tu dirección!</strong>
+                        @if (pedido.repartidor; as rep) {
+                          @if (rep.nombre) {
+                            <div class="assigned-driver-card">
+                              <div class="driver-profile">
+                                <mat-icon>sports_motorsports</mat-icon>
+                                <span>Domiciliario: <strong>{{ rep.nombre }}</strong></span>
+                              </div>
+                              @if (rep.telefono && rep.telefono !== 'N/A') {
+                                <a [href]="'tel:' + rep.telefono" class="btn-call-driver">
+                                  <mat-icon>call</mat-icon>
+                                  <span>Llamar: {{ rep.telefono }}</span>
+                                </a>
+                              }
+                            </div>
+                          }
+                        }
+                      </div>
+                    </div>
+                  } @else if (pedido.etapaOperativa === 'Entregado') {
+                    <div class="status-banner delivered">
+                      <mat-icon>verified</mat-icon>
+                      <div class="banner-body">
+                        <strong>¡Pedido Entregado con éxito!</strong>
+                        <p>Esperamos que disfrutes tu comida. ¡Gracias por confiar en Luigie's Restaurante!</p>
+                      </div>
+                    </div>
+                  } @else if (pedido.etapaOperativa === 'Cancelado') {
+                    <div class="status-banner cancelled">
+                      <mat-icon>cancel</mat-icon>
+                      <div class="banner-body">
+                        <strong>Pedido Cancelado / Rechazado.</strong>
+                        <p>{{ pedido.observacion || 'El pedido no pudo ser completado por el restaurante.' }}</p>
+                      </div>
+                    </div>
+                  }
+                </div>
+
+                <!-- Detalle de Productos y Resumen del Pedido -->
+                <div class="order-card-details">
+                  <div class="details-items-col">
+                    <span class="details-label">PRODUCTOS ({{ pedido.items.length }})</span>
+                    <div class="items-list">
+                      @for (it of pedido.items; track it.id_producto) {
+                        <div class="item-row">
+                          <span class="item-quantity">{{ it.cantidad }}x</span>
+                          <span class="item-name">{{ it.producto?.nombre || 'Producto' }}</span>
+                          @if (it.observacion) {
+                            <span class="item-note">({{ it.observacion }})</span>
+                          }
+                          <span class="item-price">${{ (it.cantidad * it.precio_unitario) | number:'1.0-0' }}</span>
+                        </div>
+                      }
+                    </div>
+                  </div>
+
+                  <div class="details-delivery-col">
+                    <span class="details-label">DIRECCIÓN DE ENTREGA</span>
+                    <div class="delivery-address-row">
+                      <mat-icon>location_on</mat-icon>
+                      <span>{{ pedido.cliente.direccion }}</span>
+                    </div>
+
+                    @if (pedido.observacion) {
+                      <div class="delivery-note-row">
+                        <mat-icon>notes</mat-icon>
+                        <span>{{ pedido.observacion }}</span>
+                      </div>
+                    }
+
+                    <div class="order-total-summary">
+                      <span class="summary-total-label">Total Pedido:</span>
+                      <span class="summary-total-amount">${{ pedido.totalCalculado | number:'1.0-0' }} COP</span>
+                    </div>
+
+                    <a [href]="generarUrlWhatsApp(pedido.numero_pedido.toString())" target="_blank" rel="noopener noreferrer" class="btn-whatsapp-order">
+                      <mat-icon>chat</mat-icon>
+                      <span>Consultar por WhatsApp</span>
+                    </a>
+                  </div>
+                </div>
+
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="empty-orders-box">
+            <mat-icon>takeout_dining</mat-icon>
+            <h3>Aún no tienes pedidos a domicilio</h3>
+            <p>Descubre nuestras deliciosas opciones en la carta y haz tu pedido en pocos clics.</p>
+            <button mat-flat-button color="primary" class="btn-explore-menu" (click)="vistaActiva.set('carta')">
+              <mat-icon>restaurant_menu</mat-icon>
+              <span>Explorar la Carta</span>
+            </button>
+          </div>
+        }
+      }
+    </section>
   }
 
   <!-- 5. MODAL: Carrito de Compras del Cliente -->
@@ -632,8 +818,15 @@
 
         <h2>¡Inicia sesión para pedir tu domicilio!</h2>
         <p class="window-description">
-          Para tomar tu orden y enviarla a tu dirección, debes identificarte con tu cuenta de Google o correo registrado.
+          Para tomar tu orden y despacharla a tu dirección, debes identificarte con tu cuenta de Google o correo registrado.
         </p>
+
+        @if (totalCartItems() > 0) {
+          <div class="cart-saved-guarantee">
+            <mat-icon>task_alt</mat-icon>
+            <span>Tus <strong>{{ totalCartItems() }} platos seleccionados</strong> están guardados de forma segura en tu carrito y listos para ordenar al ingresar.</span>
+          </div>
+        }
 
         <div class="auth-buttons-group">
           <button mat-flat-button class="btn-modal-primary" (click)="irALogin()">

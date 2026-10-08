@@ -105,11 +105,23 @@ export class AuthService {
   }
 
   /**
-   * Cierra sesión eliminando credenciales y redirigiendo al login o ruta especificada
+   * Cierra sesión eliminando credenciales, limpiando datos residuales de pedidos/carritos y redirigiendo al login
    */
   logout(redirectUrl: string = '/login'): void {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);
+
+    // Limpieza exhaustiva de datos residuales de pedidos, domicilios, carritos y borradores
+    try {
+      localStorage.removeItem('mesalista_cliente_carrito');
+      localStorage.removeItem('ultimo_pedido_domicilio_id');
+      localStorage.removeItem('borrador_pedido_mesa');
+      localStorage.removeItem('borrador_domicilio');
+      localStorage.removeItem('pedido_domicilio_en_progreso');
+      localStorage.removeItem('mesalista_draft_items');
+      sessionStorage.clear();
+    } catch {}
+
     this.token.set(null);
     this.currentUser.set(null);
     this.router.navigate([redirectUrl]);

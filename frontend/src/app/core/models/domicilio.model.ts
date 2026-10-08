@@ -61,3 +61,11 @@ export interface CreateDomicilioPayload {
   observacion?: string;
   metodo_pago?: string;
 }
+
+export interface EstadoServicioDomicilio {
+  activo: boolean;
+  cajaAbierta: boolean;
+  recibiendoDomicilios: boolean;
+  motivo?: string;
+}
+

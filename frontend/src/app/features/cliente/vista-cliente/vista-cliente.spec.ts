@@ -55,6 +55,13 @@ describe('VistaClienteComponent', () => {
 
   const mockDomiciliosService = {
     crear: vi.fn().mockReturnValue(of({ numero_pedido: 101, totalCalculado: 28000 })),
+    obtenerEstadoServicio: vi.fn().mockReturnValue(
+      of({ activo: true, cajaAbierta: true, recibiendoDomicilios: true }),
+    ),
+    obtenerMisPedidos: vi.fn().mockReturnValue(of([])),
+    obtenerPorId: vi.fn().mockReturnValue(
+      of({ numero_pedido: 101, etapaOperativa: 'Pendiente' }),
+    ),
   };
 
   const mockAuthService = {
@@ -86,7 +93,7 @@ describe('VistaClienteComponent', () => {
     fixture = TestBed.createComponent(VistaClienteComponent);
     component = fixture.componentInstance;
     snackBar = fixture.debugElement.injector.get(MatSnackBar);
-    vi.spyOn(snackBar, 'open').mockImplementation(() => ({} as any));
+    vi.spyOn(snackBar, 'open').mockImplementation(() => ({ onAction: () => of(null) } as any));
     fixture.detectChanges();
   });
 
@@ -167,5 +174,38 @@ describe('VistaClienteComponent', () => {
   it('debe cerrar sesión al invocar cerrarSesion', () => {
     component.cerrarSesion();
     expect(mockAuthService.logout).toHaveBeenCalledWith('/cliente');
+  });
+
+  it('debe persistir los productos añadidos al carrito en localStorage', () => {
+    component.agregarAlCarrito(mockProductos[0]);
+    expect(component.carrito().length).toBe(1);
+    expect(component.totalCartItems()).toBe(1);
+
+    const guardado = localStorage.getItem('mesalista_cliente_carrito');
+    expect(guardado).toBeTruthy();
+    expect(JSON.parse(guardado!).length).toBe(1);
+  });
+
+  it('debe permitir cambiar a la vista de mis pedidos', () => {
+    expect(component.vistaActiva()).toBe('carta');
+    component.abrirMisPedidos();
+    expect(component.vistaActiva()).toBe('mis-pedidos');
+  });
+
+  it('debe bloquear checkout si el servicio de domicilios está pausado', () => {
+    component.estadoServicio.set({
+      activo: false,
+      cajaAbierta: false,
+      recibiendoDomicilios: false,
+      motivo: 'Caja cerrada',
+    });
+    component.agregarAlCarrito(mockProductos[0]);
+    component.iniciarCheckout();
+    expect(component.mostrarModalPedido()).toBe(false);
+    expect(snackBar.open).toHaveBeenCalledWith(
+      expect.stringContaining('En este momento no hay servicio de domicilios'),
+      'Entendido',
+      expect.any(Object),
+    );
   });
 });

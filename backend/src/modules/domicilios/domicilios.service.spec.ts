@@ -24,6 +24,9 @@ describe('DomiciliosService', () => {
       create: jest.Mock;
       update: jest.Mock;
     };
+    caja: {
+      findFirst: jest.Mock;
+    };
     $transaction: jest.Mock;
   };
 
@@ -45,6 +48,9 @@ describe('DomiciliosService', () => {
         findUnique: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+      },
+      caja: {
+        findFirst: jest.fn().mockResolvedValue({ id_caja: 1, estado: 'abierta' }),
       },
       $transaction: jest.fn((callback) => callback(prisma)),
     };
@@ -353,6 +359,40 @@ describe('DomiciliosService', () => {
 
       const updateCall = prisma.pedido.update.mock.calls[0][0];
       expect(updateCall.data.observacion.length).toBeLessThanOrEqual(255);
+    });
+  });
+
+  describe('estadoServicio', () => {
+    it('debe reportar activo cuando hay caja abierta y recepción activa', async () => {
+      prisma.caja.findFirst.mockResolvedValue({ id_caja: 1, estado: 'abierta' });
+
+      const res = await service.obtenerEstadoServicio();
+      expect(res.activo).toBe(true);
+      expect(res.cajaAbierta).toBe(true);
+      expect(res.recibiendoDomicilios).toBe(true);
+    });
+
+    it('debe reportar inactivo cuando no hay caja abierta', async () => {
+      prisma.caja.findFirst.mockResolvedValue(null);
+
+      const res = await service.obtenerEstadoServicio();
+      expect(res.activo).toBe(false);
+      expect(res.cajaAbierta).toBe(false);
+      expect(res.motivo).toContain('sin turno de caja');
+    });
+
+    it('debe permitir al personal pausar la recepción de domicilios', async () => {
+      prisma.caja.findFirst.mockResolvedValue({ id_caja: 1, estado: 'abierta' });
+
+      await service.cambiarRecepcionDomicilios(false, 'Cocina saturada temporalmente');
+      const res = await service.obtenerEstadoServicio();
+
+      expect(res.activo).toBe(false);
+      expect(res.recibiendoDomicilios).toBe(false);
+      expect(res.motivo).toBe('Cocina saturada temporalmente');
+
+      // Restaurar para otros tests
+      await service.cambiarRecepcionDomicilios(true);
     });
   });
 });

@@ -88,6 +88,14 @@
     gap: 12px;
     padding: 0 20px 20px 20px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    text-decoration: none;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+
+    &:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
 
     .logo-badge {
       background: linear-gradient(135deg, $brand-orange 0%, $brand-orange-hover 100%);

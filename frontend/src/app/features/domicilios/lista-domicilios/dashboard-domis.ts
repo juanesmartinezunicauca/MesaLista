@@ -12,11 +12,12 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { NewDeliveryDialogComponent } from '../nuevo-domicilio/nuevo-domi-modal';
+import { DetalleDomiDialogComponent } from '../detalle-domicilio/detalle-domi-dialog';
 import { FacturaDialogComponent } from '../../mesas/dialogs/factura-dialog';
 import { HistorialFacturasDialogComponent } from '../../../shared/components/historial-facturas/historial-facturas-dialog';
 import { DomiciliosApiService } from '../../../core/services/api/domicilios-api.service';
 import { FacturacionApiService } from '../../../core/services/api/facturacion-api.service';
-import { Domicilio } from '../../../core/models';
+import { Domicilio, EstadoServicioDomicilio } from '../../../core/models';
 
 @Component({
   selector: 'app-delivery-dashboard',
@@ -49,6 +50,7 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
   filtroEstado = signal<string>('Todos');
   busqueda = signal<string>('');
   procesandoId = signal<number | null>(null);
+  estadoServicio = signal<EstadoServicioDomicilio | null>(null);
 
   private pollingTimer: any = null;
 
@@ -105,9 +107,11 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.cargarPedidos();
+    this.cargarEstadoServicio();
     // Polling reactivo cada 12 segundos para recibir pedidos del cliente en tiempo real
     this.pollingTimer = setInterval(() => {
       this.cargarPedidos(false);
+      this.cargarEstadoServicio();
     }, 12000);
   }
 
@@ -132,6 +136,76 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
           });
         }
       },
+    });
+  }
+
+  cargarEstadoServicio(): void {
+    this.domiciliosApi.obtenerEstadoServicio().subscribe({
+      next: (estado) => this.estadoServicio.set(estado),
+      error: () => {},
+    });
+  }
+
+  toggleRecepcionDomicilios(): void {
+    const actual = this.estadoServicio()?.recibiendoDomicilios ?? true;
+    const nuevo = !actual;
+    let motivo: string | undefined = undefined;
+
+    if (!nuevo) {
+      const inputMotivo = prompt(
+        '¿Deseas pausar la recepción de domicilios? Opcionalmente escribe un mensaje para los clientes (ej. Alta demanda o Cocina ocupada):',
+        'Pausa temporal por alta demanda'
+      );
+      if (inputMotivo === null) return;
+      motivo = inputMotivo.trim();
+    }
+
+    this.domiciliosApi.cambiarRecepcionDomicilios(nuevo, motivo).subscribe({
+      next: (resp) => {
+        this.estadoServicio.set(resp);
+        this.snackBar.open(
+          nuevo
+            ? '¡Recepción de domicilios activada!'
+            : 'Recepción de domicilios pausada temporalmente.',
+          'OK',
+          { duration: 3500 }
+        );
+      },
+      error: (err) => {
+        const msg = err.error?.message || 'Error al actualizar estado del servicio.';
+        this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
+      },
+    });
+  }
+
+  abrirDetalle(pedido: Domicilio): void {
+    const dialogRef = this.dialog.open(DetalleDomiDialogComponent, {
+      data: { pedido },
+      width: '680px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+    });
+
+    dialogRef.afterClosed().subscribe((res) => {
+      if (!res || !res.accion) return;
+      switch (res.accion) {
+        case 'aceptar':
+          this.aceptarPedido(pedido);
+          break;
+        case 'rechazar':
+          this.rechazarPedido(pedido);
+          break;
+        case 'despachar':
+        case 'reasignar_repartidor':
+          this.solicitarDespachoConRepartidor(pedido);
+          break;
+        case 'facturar':
+          this.facturarDomicilio(pedido);
+          break;
+        case 'cerrar_pedido':
+          this.cerrarDomicilio(pedido);
+          break;
+      }
     });
   }
 

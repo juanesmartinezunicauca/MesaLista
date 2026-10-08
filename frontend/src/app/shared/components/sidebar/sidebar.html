@@ -1,5 +1,5 @@
 <aside class="sidebar" [class.collapsed]="isCollapsed()">
-  <div class="sidebar-brand">
+  <a class="sidebar-brand" routerLink="/mesas" matTooltip="Ir a vista principal">
     <div class="logo-badge">
       <mat-icon>restaurant_menu</mat-icon>
     </div>
@@ -7,7 +7,7 @@
       <h2>MESALISTA</h2>
       <span class="venue-sub">LUIGIE'S</span>
     </div>
-  </div>
+  </a>
 
   <nav class="sidebar-nav">
     @for (item of navItemsFiltrados(); track item.route) {

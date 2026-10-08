@@ -17,7 +17,7 @@ import { AuthService } from '../../../core/services/auth/auth.service';
 import { CatalogoApiService } from '../../../core/services/api/catalogo-api.service';
 import { DomiciliosApiService } from '../../../core/services/api/domicilios-api.service';
 import { Producto } from '../../../core/models/producto.model';
-import { CreateDomicilioPayload, Domicilio } from '../../../core/models';
+import { CreateDomicilioPayload, Domicilio, EstadoServicioDomicilio } from '../../../core/models';
 
 export interface CartItem {
   producto: Producto;
@@ -58,13 +58,21 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
   currentUser = this.authService.currentUser;
   isAuthenticated = this.authService.isAuthenticated;
 
+  // Navegación de secciones del cliente: Carta vs Mis Pedidos
+  vistaActiva = signal<'carta' | 'mis-pedidos'>('carta');
+
+  // Catálogo de productos
   productos = signal<Producto[]>([]);
   categorias = signal<string[]>([]);
   categoriaSeleccionada = signal<string>('todas');
   busqueda = signal<string>('');
   isLoading = signal<boolean>(true);
 
-  // Carrito de compras
+  // Estado del servicio de domicilios (Caja abierta y toggle del cajero)
+  estadoServicio = signal<EstadoServicioDomicilio | null>(null);
+
+  // Carrito de compras persistente en localStorage
+  private readonly CART_STORAGE_KEY = 'mesalista_cliente_carrito';
   carrito = signal<CartItem[]>([]);
   mostrarModalCarrito = signal<boolean>(false);
 
@@ -79,9 +87,12 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
     metodoPago: string;
   } | null>(null);
 
-  // Seguimiento activo del pedido para el cliente
+  // Mis Pedidos y Seguimiento de pedidos del cliente
+  misPedidos = signal<Domicilio[]>([]);
+  cargandoMisPedidos = signal<boolean>(false);
   pedidoActivoTracking = signal<Domicilio | null>(null);
   private intervaloTracking: any = null;
+  private intervaloServicio: any = null;
 
   enviandoPedido = signal<boolean>(false);
 
@@ -98,6 +109,25 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
   // WhatsApp de soporte y recepción de comprobantes
   readonly WHATSAPP_SOPORTE_NUMERO = '573001234567';
   readonly WHATSAPP_SOPORTE_DISPLAY = '+57 300 123 4567';
+
+  // Conteo de pedidos activos en curso
+  pedidosActivosCount = computed(() => {
+    const list = this.misPedidos();
+    const activosEnLista = list.filter(
+      (p) => p.etapaOperativa !== 'Entregado' && p.etapaOperativa !== 'Cancelado'
+    ).length;
+
+    const tracking = this.pedidoActivoTracking();
+    if (
+      tracking &&
+      tracking.etapaOperativa !== 'Entregado' &&
+      tracking.etapaOperativa !== 'Cancelado' &&
+      !list.some((p) => p.id_pedido === tracking.id_pedido)
+    ) {
+      return activosEnLista + 1;
+    }
+    return activosEnLista;
+  });
 
   // Cálculos reactivos de Carrito
   totalCartItems = computed(() =>
@@ -137,14 +167,32 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
+    this.recuperarCarrito();
     this.cargarCatalogo();
+    this.cargarEstadoServicio();
     this.recuperarUltimoPedido();
+
+    if (this.isAuthenticated()) {
+      this.cargarMisPedidos();
+    }
+
+    // Polling de verificación de estado del servicio cada 15 segundos
+    this.intervaloServicio = setInterval(() => {
+      this.cargarEstadoServicio();
+      if (this.isAuthenticated() && this.vistaActiva() === 'mis-pedidos') {
+        this.cargarMisPedidos(false);
+      }
+    }, 15000);
   }
 
   ngOnDestroy(): void {
     if (this.intervaloTracking) {
       clearInterval(this.intervaloTracking);
       this.intervaloTracking = null;
+    }
+    if (this.intervaloServicio) {
+      clearInterval(this.intervaloServicio);
+      this.intervaloServicio = null;
     }
   }
 
@@ -186,6 +234,71 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
     this.busqueda.set(input.value);
   }
 
+  cargarEstadoServicio(): void {
+    this.domiciliosApi.obtenerEstadoServicio().subscribe({
+      next: (estado) => this.estadoServicio.set(estado),
+      error: () => {},
+    });
+  }
+
+  cargarMisPedidos(mostrarSpinner: boolean = true): void {
+    if (mostrarSpinner) this.cargandoMisPedidos.set(true);
+    this.domiciliosApi.obtenerMisPedidos().subscribe({
+      next: (pedidos) => {
+        this.misPedidos.set(pedidos);
+        this.cargandoMisPedidos.set(false);
+        const activos = pedidos.filter(
+          (p) => p.etapaOperativa !== 'Entregado' && p.etapaOperativa !== 'Cancelado'
+        );
+        if (activos.length > 0) {
+          this.pedidoActivoTracking.set(activos[0]);
+        }
+      },
+      error: () => {
+        this.cargandoMisPedidos.set(false);
+      },
+    });
+  }
+
+  abrirMisPedidos(): void {
+    this.vistaActiva.set('mis-pedidos');
+    if (this.isAuthenticated()) {
+      this.cargarMisPedidos();
+    } else {
+      this.recuperarUltimoPedido();
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  irAInicio(): void {
+    const rol = this.currentUser()?.rol;
+    if (rol && rol !== 'cliente') {
+      this.router.navigate(['/mesas']);
+    } else {
+      this.vistaActiva.set('carta');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  // Métodos de Persistencia de Carrito en localStorage
+  private guardarCarrito(): void {
+    try {
+      localStorage.setItem(this.CART_STORAGE_KEY, JSON.stringify(this.carrito()));
+    } catch {}
+  }
+
+  private recuperarCarrito(): void {
+    try {
+      const guardado = localStorage.getItem(this.CART_STORAGE_KEY);
+      if (guardado) {
+        const items = JSON.parse(guardado);
+        if (Array.isArray(items) && items.length > 0) {
+          this.carrito.set(items);
+        }
+      }
+    } catch {}
+  }
+
   // Métodos de Carrito
   agregarAlCarrito(producto: Producto, event?: MouseEvent): void {
     if (event) {
@@ -208,14 +321,18 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
     }
 
     this.carrito.set(items);
-    this.snackBar
-      .open(`¡${producto.nombre} añadido al carrito!`, 'Ver Carrito', {
-        duration: 3000,
-      })
-      .onAction()
-      .subscribe(() => {
+    this.guardarCarrito();
+
+    const snackRef = this.snackBar.open(
+      `¡${producto.nombre} añadido al carrito!`,
+      'Ver Carrito',
+      { duration: 3000 }
+    );
+    if (snackRef?.onAction) {
+      snackRef.onAction().subscribe(() => {
         this.abrirCarrito();
       });
+    }
   }
 
   incrementarItemCart(index: number): void {
@@ -226,6 +343,7 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
         cantidad: items[index].cantidad + 1,
       };
       this.carrito.set(items);
+      this.guardarCarrito();
     }
   }
 
@@ -239,6 +357,7 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
         cantidad: items[index].cantidad - 1,
       };
       this.carrito.set(items);
+      this.guardarCarrito();
     } else {
       this.eliminarItemCart(index);
     }
@@ -248,10 +367,14 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
     const items = [...this.carrito()];
     items.splice(index, 1);
     this.carrito.set(items);
+    this.guardarCarrito();
   }
 
   vaciarCarrito(): void {
     this.carrito.set([]);
+    try {
+      localStorage.removeItem(this.CART_STORAGE_KEY);
+    } catch {}
   }
 
   abrirCarrito(): void {
@@ -270,7 +393,27 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.estadoServicio() && !this.estadoServicio()?.activo) {
+      this.snackBar.open(
+        `En este momento no hay servicio de domicilios: ${this.estadoServicio()?.motivo || 'Servicio cerrado'}`,
+        'Entendido',
+        { duration: 5000 }
+      );
+      return;
+    }
+
     if (!this.isAuthenticated()) {
+      this.guardarCarrito();
+      const snackRef = this.snackBar.open(
+        'Tus platos están guardados en tu carrito. Inicia sesión o regístrate para ingresar tus datos y enviar el pedido.',
+        'Iniciar Sesión',
+        { duration: 6000 }
+      );
+      if (snackRef?.onAction) {
+        snackRef.onAction().subscribe(() => {
+          this.irALogin();
+        });
+      }
       this.mostrarModalCarrito.set(false);
       this.mostrarModalAuth.set(true);
       return;
@@ -285,9 +428,19 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
   }
 
   solicitarDomicilio(producto?: Producto): void {
+    if (this.estadoServicio() && !this.estadoServicio()?.activo) {
+      this.snackBar.open(
+        `En este momento no hay servicio de domicilios: ${this.estadoServicio()?.motivo || 'Servicio cerrado'}`,
+        'Entendido',
+        { duration: 5000 }
+      );
+      return;
+    }
+
     if (!this.isAuthenticated()) {
       if (producto) {
         this.productoSeleccionado.set(producto);
+        this.agregarAlCarrito(producto);
       }
       this.mostrarModalAuth.set(true);
       return;
@@ -300,10 +453,12 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
       );
       if (!existe) {
         this.carrito.set([{ producto, cantidad: 1 }]);
+        this.guardarCarrito();
       }
     } else if (this.carrito().length === 0 && this.productos().length > 0) {
       this.productoSeleccionado.set(this.productos()[0]);
       this.carrito.set([{ producto: this.productos()[0], cantidad: 1 }]);
+      this.guardarCarrito();
     }
 
     if (!this.nombreCliente() && this.currentUser()?.nombre) {
@@ -352,6 +507,15 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
 
   confirmarPedido(): void {
     if (this.enviandoPedido()) return;
+
+    if (this.estadoServicio() && !this.estadoServicio()?.activo) {
+      this.snackBar.open(
+        `No se puede procesar el pedido. ${this.estadoServicio()?.motivo || 'El restaurante no está recibiendo pedidos a domicilio en este momento.'}`,
+        'Entendido',
+        { duration: 5000 }
+      );
+      return;
+    }
 
     if (!this.telefonoContacto().trim() || this.telefonoContacto().trim().length < 7) {
       this.snackBar.open(
@@ -459,10 +623,16 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
           this.iniciarTrackingPedido(domicilioCreado.id_pedido);
         }
 
+        // Transición a la sección "Mis Pedidos" para no saturar la vista de la carta
+        this.vistaActiva.set('mis-pedidos');
+        if (this.isAuthenticated()) {
+          this.cargarMisPedidos(false);
+        }
+
         this.snackBar.open(
-          `¡Pedido #${codigo} recibido! Llegó a la central de domicilios para ser aceptado.`,
-          'Ver Estado',
-          { duration: 7000 }
+          `¡Pedido #${codigo} recibido! Puedes consultar su progreso en tiempo real en la pestaña Mis Pedidos.`,
+          'Ver Progreso',
+          { duration: 8000 }
         );
       },
       error: (err) => {
@@ -497,6 +667,11 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
       this.domiciliosApi.obtenerPorId(id_pedido).subscribe({
         next: (pedido) => {
           this.pedidoActivoTracking.set(pedido);
+          // Actualizar en la lista de mis pedidos si ya está presente
+          this.misPedidos.update((lista) =>
+            lista.map((p) => (p.id_pedido === pedido.id_pedido ? pedido : p))
+          );
+
           if (
             pedido.etapaOperativa === 'Entregado' ||
             pedido.etapaOperativa === 'Cancelado'
@@ -533,8 +708,40 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
 
   cerrarSesion(): void {
     this.authService.logout('/cliente');
+    this.misPedidos.set([]);
+    this.carrito.set([]);
+    this.pedidoActivoTracking.set(null);
+    this.vistaActiva.set('carta');
     this.snackBar.open('Has cerrado sesión correctamente.', 'Entendido', {
       duration: 3000,
+    });
+  }
+
+  getChipClass(etapa?: string): string {
+    switch (etapa) {
+      case 'Pendiente':
+        return 'chip-pending';
+      case 'En Preparación':
+        return 'chip-prep';
+      case 'En Reparto':
+        return 'chip-delivery';
+      case 'Entregado':
+        return 'chip-delivered';
+      case 'Cancelado':
+        return 'chip-cancelled';
+      default:
+        return 'chip-default';
+    }
+  }
+
+  formatearFechaHora(fecha?: string | Date): string {
+    if (!fecha) return '';
+    const d = new Date(fecha);
+    return d.toLocaleString('es-CO', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   }
 }
