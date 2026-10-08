@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { Cliente, CreateDomicilioPayload, Domicilio } from '../../models';
+import { Cliente, CreateDomicilioPayload, Domicilio, EstadoServicioDomicilio } from '../../models';
 
 @Injectable({
   providedIn: 'root',
@@ -81,5 +81,22 @@ export class DomiciliosApiService {
    */
   cancelar(id: number, motivo?: string): Observable<Domicilio> {
     return this.http.patch<Domicilio>(`${this.apiUrl}/${id}/cancelar`, { motivo });
+  }
+
+  /**
+   * Consulta pública del estado de atención del restaurante y recepción de domicilios.
+   */
+  obtenerEstadoServicio(): Observable<EstadoServicioDomicilio> {
+    return this.http.get<EstadoServicioDomicilio>(`${this.apiUrl}/estado-servicio`);
+  }
+
+  /**
+   * Permite al cajero o administrador activar o pausar la recepción de domicilios.
+   */
+  cambiarRecepcionDomicilios(recibiendo: boolean, motivo?: string): Observable<EstadoServicioDomicilio> {
+    return this.http.patch<EstadoServicioDomicilio>(`${this.apiUrl}/estado-servicio`, {
+      recibiendo,
+      motivo,
+    });
   }
 }

@@ -83,6 +83,8 @@ describe('DashboardDomisComponent', () => {
 
   let fakeDomiciliosApi: {
     obtenerTodos: () => any;
+    obtenerEstadoServicio: () => any;
+    cambiarRecepcionDomicilios: (recibiendo: boolean, motivo?: string) => any;
     cambiarEstado: (id: number, estado: string) => any;
     cancelar: (id: number, motivo?: string) => any;
   };
@@ -94,6 +96,12 @@ describe('DashboardDomisComponent', () => {
   beforeEach(async () => {
     fakeDomiciliosApi = {
       obtenerTodos: vi.fn().mockReturnValue(of(mockDomicilios)),
+      obtenerEstadoServicio: vi.fn().mockReturnValue(
+        of({ activo: true, cajaAbierta: true, recibiendoDomicilios: true }),
+      ),
+      cambiarRecepcionDomicilios: vi.fn().mockReturnValue(
+        of({ activo: true, cajaAbierta: true, recibiendoDomicilios: true }),
+      ),
       cambiarEstado: vi.fn().mockReturnValue(
         of({ ...mockDomicilios[0], etapaOperativa: 'En Reparto' }),
       ),

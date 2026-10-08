@@ -3,13 +3,54 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EstadoPedido, TipoPedido } from '@prisma/client';
+import { EstadoCaja, EstadoPedido, TipoPedido } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CambiarEstadoDomicilioDto, CreateDomicilioDto } from './dto';
 
 @Injectable()
 export class DomiciliosService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private recibiendoDomicilios: boolean = true;
+  private motivoPausa?: string;
+
+  /**
+   * Consulta el estado de servicio de domicilios y disponibilidad de atención.
+   * Valida si el restaurante tiene una caja activa abierta y si la recepción de domicilios está habilitada.
+   * Seguro: No expone saldos ni información sensible de caja.
+   */
+  async obtenerEstadoServicio() {
+    const cajaAbierta = await this.prisma.caja.findFirst({
+      where: { estado: EstadoCaja.abierta },
+      select: { id_caja: true, fecha_apertura: true },
+    });
+
+    const activo = Boolean(cajaAbierta) && this.recibiendoDomicilios;
+    let motivo: string | undefined;
+
+    if (!cajaAbierta) {
+      motivo = 'El restaurante se encuentra cerrado en este momento (sin turno de caja activo).';
+    } else if (!this.recibiendoDomicilios) {
+      motivo = this.motivoPausa || 'Recepción de domicilios pausada temporalmente por el personal.';
+    }
+
+    return {
+      activo,
+      cajaAbierta: Boolean(cajaAbierta),
+      recibiendoDomicilios: this.recibiendoDomicilios,
+      motivo,
+    };
+  }
+
+  /**
+   * Permite al personal (cajero/admin) activar o pausar la recepción de domicilios.
+   */
+  async cambiarRecepcionDomicilios(recibiendo: boolean, motivo?: string) {
+    this.recibiendoDomicilios = Boolean(recibiendo);
+    this.motivoPausa = motivo ? motivo.trim().slice(0, 255) : undefined;
+
+    return this.obtenerEstadoServicio();
+  }
 
   // Proyección optimizada de productos para comandas operativas (sin imágenes base64 pesadas)
   private readonly productoSelectOperativo = {
@@ -58,6 +99,14 @@ export class DomiciliosService {
    */
   async crear(createDto: CreateDomicilioDto, id_usuario: number) {
     const { cliente: clienteDto, items, observacion, metodo_pago } = createDto;
+
+    // 0. Validar disponibilidad del restaurante y recepción de domicilios
+    const estadoServicio = await this.obtenerEstadoServicio();
+    if (!estadoServicio.activo) {
+      throw new BadRequestException(
+        `No es posible crear el pedido a domicilio: ${estadoServicio.motivo}`,
+      );
+    }
 
     // 1. Validar productos en catálogo, disponibilidad y existencias
     const productIds = items.map((i) => i.id_producto);

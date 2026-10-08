@@ -12,10 +12,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { RolUsuario } from '@prisma/client';
-import { CurrentUser, Roles } from '../../common/decorators';
+import { CurrentUser, Public, Roles } from '../../common/decorators';
 import { JwtAuthGuard, RolesGuard } from '../../common/guards';
 import {
   CambiarEstadoDomicilioDto,
+  CambiarRecepcionDomiciliosDto,
   CancelarDomicilioDto,
   CreateDomicilioDto,
 } from './dto';
@@ -25,6 +26,26 @@ import { DomiciliosService } from './domicilios.service';
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class DomiciliosController {
   constructor(private readonly domiciliosService: DomiciliosService) {}
+
+  /**
+   * GET /api/v1/domicilios/estado-servicio
+   * Consulta pública del estado de atención y recepción de domicilios.
+   */
+  @Get('estado-servicio')
+  @Public()
+  obtenerEstadoServicio() {
+    return this.domiciliosService.obtenerEstadoServicio();
+  }
+
+  /**
+   * PATCH /api/v1/domicilios/estado-servicio
+   * Permite al cajero/administrador activar o pausar la recepción de domicilios.
+   */
+  @Patch('estado-servicio')
+  @Roles(RolUsuario.administrador, RolUsuario.cajero)
+  cambiarRecepcionDomicilios(@Body() dto: CambiarRecepcionDomiciliosDto) {
+    return this.domiciliosService.cambiarRecepcionDomicilios(dto.recibiendo, dto.motivo);
+  }
 
   /**
    * POST /api/v1/domicilios

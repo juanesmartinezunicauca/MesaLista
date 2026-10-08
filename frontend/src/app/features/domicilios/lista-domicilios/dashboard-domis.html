@@ -14,6 +14,19 @@
         </div>
 
         <div class="header-actions">
+            <!-- Botón de Control de Recepción de Domicilios -->
+            <button
+                type="button"
+                mat-stroked-button
+                class="btn-toggle-service"
+                [class.service-paused]="!estadoServicio()?.recibiendoDomicilios"
+                (click)="toggleRecepcionDomicilios()"
+                [matTooltip]="estadoServicio()?.recibiendoDomicilios ? 'Clic para pausar recepción de pedidos' : 'Clic para reanudar recepción de pedidos'"
+            >
+                <span class="status-indicator-dot" [class.paused]="!estadoServicio()?.recibiendoDomicilios"></span>
+                <span>{{ estadoServicio()?.recibiendoDomicilios ? 'Recibiendo Domicilios' : 'Domicilios Pausados' }}</span>
+            </button>
+
             <button mat-stroked-button class="btn-invoice-history" (click)="abrirHistorialFacturas()">
                 <mat-icon>receipt_long</mat-icon>
                 <span>Historial de Facturación</span>
@@ -115,7 +128,9 @@
     <div class="cards-grid">
         @for (pedido of pedidosFiltrados(); track pedido.id_pedido) {
         <mat-card class="delivery-card" [class.processing]="procesandoId() === pedido.id_pedido"
-            [class.card-pending]="pedido.etapaOperativa === 'Pendiente'">
+            [class.card-pending]="pedido.etapaOperativa === 'Pendiente'"
+            (click)="abrirDetalle(pedido)"
+            matTooltip="Clic para ver detalle ampliado y gestionar comanda">
 
             <!-- Cabecera de la Tarjeta -->
             <mat-card-header class="card-top-row">
@@ -152,7 +167,7 @@
 
                     <!-- Menú de opciones adicionales -->
                     @if (pedido.etapaOperativa !== 'Entregado' && pedido.etapaOperativa !== 'Cancelado') {
-                    <button mat-icon-button [matMenuTriggerFor]="menuAcciones" class="btn-more">
+                    <button mat-icon-button [matMenuTriggerFor]="menuAcciones" (click)="$event.stopPropagation()" class="btn-more">
                         <mat-icon>more_vert</mat-icon>
                     </button>
                     <mat-menu #menuAcciones="matMenu">
@@ -179,11 +194,11 @@
                     <div class="name-phone-row">
                         <span class="value name">{{ pedido.cliente.nombre }}</span>
                         <div class="contact-actions">
-                            <a class="phone-link" [href]="'tel:' + pedido.cliente.telefono" matTooltip="Llamar al cliente">
+                            <a class="phone-link" [href]="'tel:' + pedido.cliente.telefono" (click)="$event.stopPropagation()" matTooltip="Llamar al cliente">
                                 <mat-icon>call</mat-icon>
                                 <span>{{ pedido.cliente.telefono }}</span>
                             </a>
-                            <a class="whatsapp-link" [href]="'https://wa.me/57' + pedido.cliente.telefono" target="_blank" rel="noopener noreferrer" matTooltip="Abrir WhatsApp del cliente">
+                            <a class="whatsapp-link" [href]="'https://wa.me/57' + pedido.cliente.telefono" target="_blank" rel="noopener noreferrer" (click)="$event.stopPropagation()" matTooltip="Abrir WhatsApp del cliente">
                                 <mat-icon>chat</mat-icon>
                             </a>
                         </div>
@@ -210,7 +225,7 @@
                             <strong>{{ rep.nombre }}</strong>
                         </span>
                         @if (rep.telefono && rep.telefono !== 'N/A') {
-                        <a class="driver-phone" [href]="'tel:' + rep.telefono">
+                        <a class="driver-phone" [href]="'tel:' + rep.telefono" (click)="$event.stopPropagation()">
                             <mat-icon>call</mat-icon> {{ rep.telefono }}
                         </a>
                         }
@@ -254,12 +269,12 @@
                 <div class="actions-block">
                     <!-- 1. Pedido Pendiente: Cajero Acepta (Envia a Cocina) o Rechaza -->
                     @if (pedido.etapaOperativa === 'Pendiente') {
-                    <button mat-flat-button color="primary" class="btn-action-accept" (click)="aceptarPedido(pedido)"
+                    <button mat-flat-button color="primary" class="btn-action-accept" (click)="$event.stopPropagation(); aceptarPedido(pedido)"
                         matTooltip="Aprobar pedido y enviar la comanda directamente a la cocina">
                         <mat-icon>soup_kitchen</mat-icon>
                         <span>Aceptar a Cocina</span>
                     </button>
-                    <button mat-stroked-button color="warn" class="btn-action-reject" (click)="rechazarPedido(pedido)"
+                    <button mat-stroked-button color="warn" class="btn-action-reject" (click)="$event.stopPropagation(); rechazarPedido(pedido)"
                         matTooltip="Rechazar pedido del cliente">
                         <mat-icon>cancel</mat-icon>
                         <span>Rechazar</span>
@@ -269,12 +284,12 @@
                     <!-- 2. En Cocina: Despachar a Reparto o Facturar -->
                     @else if (pedido.etapaOperativa === 'En Preparación') {
                     <button mat-flat-button color="accent" class="btn-action-dispatch"
-                        (click)="solicitarDespachoConRepartidor(pedido)"
+                        (click)="$event.stopPropagation(); solicitarDespachoConRepartidor(pedido)"
                         matTooltip="Asignar repartidor y despachar">
                         <mat-icon>delivery_dining</mat-icon>
                         <span>Despachar</span>
                     </button>
-                    <button mat-stroked-button class="btn-action-invoice" (click)="facturarDomicilio(pedido)"
+                    <button mat-stroked-button class="btn-action-invoice" (click)="$event.stopPropagation(); facturarDomicilio(pedido)"
                         matTooltip="Registrar cobro y método de pago en caja sin cerrar el pedido">
                         <mat-icon>receipt</mat-icon>
                         <span>{{ pedido.id_factura ? 'Refacturar' : 'Facturar' }}</span>
@@ -283,12 +298,12 @@
 
                     <!-- 3. En Reparto: Facturar o Cerrar Domicilio (va a historial) -->
                     @else if (pedido.etapaOperativa === 'En Reparto') {
-                    <button mat-flat-button color="primary" class="btn-action-close" (click)="cerrarDomicilio(pedido)"
+                    <button mat-flat-button color="primary" class="btn-action-close" (click)="$event.stopPropagation(); cerrarDomicilio(pedido)"
                         matTooltip="Marcar como entregado y archivar en historial">
                         <mat-icon>task_alt</mat-icon>
                         <span>Cerrar Domicilio</span>
                     </button>
-                    <button mat-stroked-button class="btn-action-invoice" (click)="facturarDomicilio(pedido)"
+                    <button mat-stroked-button class="btn-action-invoice" (click)="$event.stopPropagation(); facturarDomicilio(pedido)"
                         matTooltip="Registrar cobro y forma de pago en caja">
                         <mat-icon>receipt</mat-icon>
                         <span>{{ pedido.id_factura ? 'Facturado' : 'Facturar' }}</span>
@@ -302,7 +317,7 @@
                         <span>Entregado / Cerrado</span>
                     </div>
                     @if (!pedido.id_factura) {
-                    <button mat-stroked-button class="btn-action-invoice" (click)="facturarDomicilio(pedido)">
+                    <button mat-stroked-button class="btn-action-invoice" (click)="$event.stopPropagation(); facturarDomicilio(pedido)">
                         <mat-icon>receipt</mat-icon>
                         <span>Facturar</span>
                     </button>
