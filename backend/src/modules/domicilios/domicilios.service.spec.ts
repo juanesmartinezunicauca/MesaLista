@@ -289,5 +289,70 @@ describe('DomiciliosService', () => {
       });
       expect(result.etapaOperativa).toBe('Cancelado');
     });
+
+    it('debe registrar el nombre y teléfono del repartidor al cambiar a En Reparto', async () => {
+      prisma.pedido.findUnique.mockResolvedValue({
+        id_pedido: 7,
+        tipo: TipoPedido.domicilio,
+        estado: EstadoPedido.enviada,
+        observacion: '[PENDIENTE] Hamburguesa sin cebolla',
+        items: [],
+      });
+      prisma.pedido.update.mockResolvedValue({
+        id_pedido: 7,
+        tipo: TipoPedido.domicilio,
+        estado: EstadoPedido.enviada,
+        observacion: '[EN REPARTO] [REPARTIDOR: Carlos Gómez | TEL: 3110001122] Hamburguesa sin cebolla',
+        items: [],
+      });
+
+      const result = await service.cambiarEstado(7, {
+        estado: 'En Reparto',
+        repartidor_nombre: 'Carlos Gómez',
+        repartidor_telefono: '3110001122',
+      });
+
+      expect(prisma.pedido.update).toHaveBeenCalledWith({
+        where: { id_pedido: 7 },
+        data: {
+          observacion: '[EN REPARTO] [REPARTIDOR: Carlos Gómez | TEL: 3110001122] Hamburguesa sin cebolla',
+        },
+        include: expect.any(Object),
+      });
+      expect(result.etapaOperativa).toBe('En Reparto');
+      expect(result.repartidor).toEqual({
+        nombre: 'Carlos Gómez',
+        telefono: '3110001122',
+      });
+    });
+
+    it('debe truncar la observación si la combinación excede 255 caracteres', async () => {
+      const longNote = 'A'.repeat(240);
+      prisma.pedido.findUnique.mockResolvedValue({
+        id_pedido: 8,
+        tipo: TipoPedido.domicilio,
+        estado: EstadoPedido.enviada,
+        observacion: longNote,
+        items: [],
+      });
+      prisma.pedido.update.mockImplementation(({ data }) =>
+        Promise.resolve({
+          id_pedido: 8,
+          tipo: TipoPedido.domicilio,
+          estado: EstadoPedido.enviada,
+          observacion: data.observacion,
+          items: [],
+        }),
+      );
+
+      await service.cambiarEstado(8, {
+        estado: 'En Reparto',
+        repartidor_nombre: 'Juancho Motociclista Profesional',
+        repartidor_telefono: '3001234567',
+      });
+
+      const updateCall = prisma.pedido.update.mock.calls[0][0];
+      expect(updateCall.data.observacion.length).toBeLessThanOrEqual(255);
+    });
   });
 });

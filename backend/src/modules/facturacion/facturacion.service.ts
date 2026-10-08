@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { EstadoCaja, EstadoMesa, EstadoPedido, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateFacturaDto } from './dto';
+import { CreateFacturaDto, UpdateFacturaDto } from './dto';
 
 @Injectable()
 export class FacturacionService {
@@ -115,7 +115,7 @@ export class FacturacionService {
           valor: new Prisma.Decimal(subtotal),
           propina: new Prisma.Decimal(propina),
           valor_total: new Prisma.Decimal(valorTotal),
-          observacion: dto.observacion,
+          observacion: dto.observacion ? dto.observacion.trim().slice(0, 255) : null,
         },
       });
 
@@ -140,17 +140,31 @@ export class FacturacionService {
         });
       }
 
-      // Marcar los pedidos de la mesa como cerrados y asociarlos a la factura
+      // Marcar los pedidos como asociados a la factura
       if (pedidosActivos.length > 0) {
-        await tx.pedido.updateMany({
-          where: {
-            id_pedido: { in: pedidosActivos.map((p) => p.id_pedido) },
-          },
-          data: {
-            id_factura: factura.id_venta,
-            estado: EstadoPedido.cerrada,
-          },
-        });
+        if (dto.id_mesa) {
+          // Si es salón, cerrar pedidos de la mesa
+          await tx.pedido.updateMany({
+            where: {
+              id_pedido: { in: pedidosActivos.map((p) => p.id_pedido) },
+            },
+            data: {
+              id_factura: factura.id_venta,
+              estado: EstadoPedido.cerrada,
+            },
+          });
+        } else {
+          // Si es domicilio (o pedido específico), asociar factura sin cerrar comanda obligatoriamente
+          await tx.pedido.updateMany({
+            where: {
+              id_pedido: { in: pedidosActivos.map((p) => p.id_pedido) },
+            },
+            data: {
+              id_factura: factura.id_venta,
+              ...(dto.cerrar_pedido ? { estado: EstadoPedido.cerrada } : {}),
+            },
+          });
+        }
       }
 
       // Liberar la mesa
@@ -174,6 +188,142 @@ export class FacturacionService {
   }
 
   /**
+   * Consulta el historial general de facturas con filtros opcionales (tipo, fecha, caja, búsqueda).
+   */
+  async obtenerTodas(filtros?: {
+    tipo?: string;
+    fecha?: string;
+    buscar?: string;
+    id_caja?: number;
+  }) {
+    const where: any = {};
+
+    if (filtros?.id_caja) {
+      where.id_caja = Number(filtros.id_caja);
+    }
+
+    if (filtros?.tipo === 'salon') {
+      where.id_mesa = { not: null };
+    } else if (filtros?.tipo === 'domicilio') {
+      where.id_mesa = null;
+    }
+
+    if (filtros?.fecha) {
+      const fechaInicio = new Date(`${filtros.fecha}T00:00:00-05:00`);
+      const fechaFin = new Date(`${filtros.fecha}T23:59:59.999-05:00`);
+      where.fecha_hora = {
+        gte: fechaInicio,
+        lte: fechaFin,
+      };
+    }
+
+    if (filtros?.buscar && filtros.buscar.trim()) {
+      const q = filtros.buscar.trim();
+      where.OR = [
+        { observacion: { contains: q, mode: 'insensitive' } },
+        { cliente: { nombre: { contains: q, mode: 'insensitive' } } },
+        { cliente: { telefono: { contains: q, mode: 'insensitive' } } },
+      ];
+    }
+
+    return this.prisma.factura.findMany({
+      where,
+      orderBy: { fecha_hora: 'desc' },
+      include: {
+        mesa: true,
+        cliente: true,
+        usuario: { select: { id_usuario: true, nombre: true, rol: true } },
+        pagos: { include: { medioPago: true } },
+        pedidos: {
+          include: {
+            items: { include: { producto: true } },
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Modifica una facturación existente (desglose de pagos, método de pago, propina u observación).
+   * Al actualizar los pagos, el arqueo de caja se actualiza automáticamente.
+   */
+  async actualizarFactura(id: number, dto: UpdateFacturaDto) {
+    const facturaExistente = await this.prisma.factura.findUnique({
+      where: { id_venta: id },
+      include: { pagos: true },
+    });
+
+    if (!facturaExistente) {
+      throw new NotFoundException(`La factura #${id} no existe.`);
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Si se actualizan los pagos, reasignar los medios de pago
+      if (dto.pagos && dto.pagos.length > 0) {
+        // Eliminar pagos antiguos
+        await tx.pago.deleteMany({
+          where: { id_venta: id },
+        });
+
+        // Crear los nuevos pagos
+        for (const p of dto.pagos) {
+          let medio = await tx.medioPago.findUnique({
+            where: { nombre: p.medio_pago },
+          });
+
+          if (!medio) {
+            medio = await tx.medioPago.create({
+              data: { nombre: p.medio_pago },
+            });
+          }
+
+          await tx.pago.create({
+            data: {
+              id_venta: id,
+              id_medio_pago: medio.id_medio_pago,
+              monto: new Prisma.Decimal(p.monto),
+            },
+          });
+        }
+      }
+
+      // 2. Si se actualiza propina u observación
+      const updateData: any = {};
+      if (dto.observacion !== undefined) {
+        updateData.observacion = dto.observacion ? dto.observacion.trim().slice(0, 255) : null;
+      }
+      if (dto.propina !== undefined) {
+        updateData.propina = new Prisma.Decimal(dto.propina);
+        updateData.valor_total = new Prisma.Decimal(
+          Number(facturaExistente.valor) + Number(dto.propina),
+        );
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        await tx.factura.update({
+          where: { id_venta: id },
+          data: updateData,
+        });
+      }
+
+      return tx.factura.findUnique({
+        where: { id_venta: id },
+        include: {
+          mesa: true,
+          cliente: true,
+          usuario: { select: { nombre: true, rol: true } },
+          pagos: { include: { medioPago: true } },
+          pedidos: {
+            include: {
+              items: { include: { producto: true } },
+            },
+          },
+        },
+      });
+    });
+  }
+
+  /**
    * Consulta una factura por ID.
    */
   async obtenerPorId(id: number) {
@@ -181,6 +331,7 @@ export class FacturacionService {
       where: { id_venta: id },
       include: {
         mesa: true,
+        cliente: true,
         usuario: { select: { nombre: true } },
         pagos: { include: { medioPago: true } },
         pedidos: {

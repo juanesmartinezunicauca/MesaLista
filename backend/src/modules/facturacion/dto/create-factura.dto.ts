@@ -1,4 +1,4 @@
-import { IsArray, IsNotEmpty, IsNumber, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
+import { IsArray, IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class PagoItemDto {
@@ -36,8 +36,12 @@ export class CreateFacturaDto {
   propina?: number;
 
   @IsOptional()
-  @IsString()
+  @IsString({ message: 'La observación debe ser una cadena de texto.' })
+  @MaxLength(255, { message: 'La observación no puede superar los 255 caracteres.' })
   observacion?: string;
+
+  @IsOptional()
+  cerrar_pedido?: boolean;
 
   @IsNotEmpty({ message: 'Debe especificar al menos un pago.' })
   @IsArray()

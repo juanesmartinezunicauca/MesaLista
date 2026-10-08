@@ -33,6 +33,15 @@
           type="button"
           mat-stroked-button
           class="btn-action"
+          (click)="abrirHistorialFacturas()"
+        >
+          <mat-icon>history</mat-icon>
+          <span>Historial Facturas</span>
+        </button>
+        <button
+          type="button"
+          mat-stroked-button
+          class="btn-action"
           (click)="registrarGasto()"
         >
           <mat-icon>receipt_long</mat-icon>

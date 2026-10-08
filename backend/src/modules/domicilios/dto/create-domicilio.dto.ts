@@ -5,6 +5,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  MaxLength,
   ValidateNested,
 } from 'class-validator';
 import { CreateClienteDomicilioDto } from './create-cliente-domicilio.dto';
@@ -24,5 +25,11 @@ export class CreateDomicilioDto {
 
   @IsOptional()
   @IsString({ message: 'La observación debe ser una cadena de texto.' })
+  @MaxLength(255, { message: 'La observación no puede superar los 255 caracteres.' })
   observacion?: string;
+
+  @IsOptional()
+  @IsString({ message: 'El método de pago debe ser una cadena de texto.' })
+  @MaxLength(50, { message: 'El método de pago no puede superar los 50 caracteres.' })
+  metodo_pago?: string;
 }

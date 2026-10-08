@@ -57,7 +57,7 @@ export class DomiciliosService {
    * desglosa y congela precios unitarios históricos y asigna consecutivo diario.
    */
   async crear(createDto: CreateDomicilioDto, id_usuario: number) {
-    const { cliente: clienteDto, items, observacion } = createDto;
+    const { cliente: clienteDto, items, observacion, metodo_pago } = createDto;
 
     // 1. Validar productos en catálogo, disponibilidad y existencias
     const productIds = items.map((i) => i.id_producto);
@@ -153,7 +153,16 @@ export class DomiciliosService {
 
       const numero_pedido = (ultimoPedido?.numero_pedido ?? 0) + 1;
 
-      // 2.4 Crear pedido de tipo domicilio
+      // 2.4 Crear pedido de tipo domicilio con marca [PENDIENTE] y forma de pago
+      const etiquetaPago = metodo_pago ? `[PAGO: ${metodo_pago.trim()}]` : '';
+      const obsLimpia = observacion ? observacion.trim() : '';
+      let observacionConPendiente = ['[PENDIENTE]', etiquetaPago, obsLimpia]
+        .filter(Boolean)
+        .join(' ');
+      if (observacionConPendiente.length > 255) {
+        observacionConPendiente = observacionConPendiente.slice(0, 255);
+      }
+
       const pedidoCreado = await tx.pedido.create({
         data: {
           numero_pedido,
@@ -161,7 +170,7 @@ export class DomiciliosService {
           estado: EstadoPedido.enviada,
           id_usuario,
           id_cliente: cliente.id_cliente,
-          observacion: observacion ? observacion.trim() : null,
+          observacion: observacionConPendiente,
           items: {
             create: items.map((it) => {
               const prod = productMap.get(it.id_producto)!;
@@ -183,12 +192,21 @@ export class DomiciliosService {
   }
 
   /**
-   * Consulta pedidos a domicilio con filtros opcionales de estado, fecha o búsqueda.
+   * Consulta pedidos a domicilio con filtros opcionales de estado, fecha, búsqueda o usuario.
    */
-  async obtenerTodos(filtros?: { estado?: string; fecha?: string; buscar?: string }) {
+  async obtenerTodos(filtros?: {
+    estado?: string;
+    fecha?: string;
+    buscar?: string;
+    id_usuario?: number;
+  }) {
     const where: any = {
       tipo: TipoPedido.domicilio,
     };
+
+    if (filtros?.id_usuario) {
+      where.id_usuario = Number(filtros.id_usuario);
+    }
 
     if (filtros?.fecha) {
       const fechaInicio = new Date(`${filtros.fecha}T00:00:00-05:00`);
@@ -212,11 +230,24 @@ export class DomiciliosService {
 
     // Filtrado por etapa operativa
     if (filtros?.estado && filtros.estado !== 'Todos') {
-      if (filtros.estado === 'En Preparación') {
+      if (filtros.estado === 'Pendiente') {
+        where.estado = EstadoPedido.enviada;
+        where.observacion = {
+          contains: '[PENDIENTE]',
+        };
+      } else if (filtros.estado === 'En Preparación') {
         where.estado = EstadoPedido.enviada;
         where.observacion = {
           not: { contains: '[EN REPARTO]' },
         };
+        where.AND = [
+          {
+            OR: [
+              { observacion: null },
+              { observacion: { not: { contains: '[PENDIENTE]' } } },
+            ],
+          },
+        ];
       } else if (filtros.estado === 'En Reparto') {
         where.estado = EstadoPedido.enviada;
         where.observacion = {
@@ -224,6 +255,8 @@ export class DomiciliosService {
         };
       } else if (filtros.estado === 'Entregado') {
         where.estado = EstadoPedido.cerrada;
+      } else if (filtros.estado === 'Historial') {
+        where.estado = { in: [EstadoPedido.cerrada, EstadoPedido.cancelada] };
       } else if (filtros.estado === 'Cancelado') {
         where.estado = EstadoPedido.cancelada;
       }
@@ -236,6 +269,13 @@ export class DomiciliosService {
     });
 
     return pedidos.map((p) => this.mapearEtapaOperativa(p));
+  }
+
+  /**
+   * Consulta los pedidos propios del cliente autenticado.
+   */
+  async obtenerMisPedidos(id_usuario: number) {
+    return this.obtenerTodos({ id_usuario });
   }
 
   /**
@@ -279,29 +319,57 @@ export class DomiciliosService {
   }
 
   /**
-   * Modifica la etapa operativa de un domicilio (despachar a reparto, devolver a preparación o cancelar).
+   * Modifica la etapa operativa de un domicilio (aceptar/enviar a cocina, despachar a reparto con repartidor, cerrar/entregar o cancelar).
    */
   async cambiarEstado(id: number, dto: CambiarEstadoDomicilioDto) {
     const pedido = await this.obtenerPorId(id);
 
-    if (pedido.estado !== EstadoPedido.enviada && dto.estado !== 'Cancelado') {
+    if (
+      pedido.estado !== EstadoPedido.enviada &&
+      dto.estado !== 'Cancelado' &&
+      dto.estado !== 'Rechazar'
+    ) {
       throw new BadRequestException(
         `No se puede cambiar el estado de un pedido que ya está en estado '${pedido.estado}'.`,
       );
     }
 
-    if (dto.estado === 'Cancelado') {
+    if (dto.estado === 'Cancelado' || dto.estado === 'Rechazar') {
       return this.cancelar(id, dto.motivo);
+    }
+
+    if (dto.estado === 'Entregado' || dto.estado === 'Cerrar') {
+      const cerrado = await this.prisma.pedido.update({
+        where: { id_pedido: id },
+        data: {
+          estado: EstadoPedido.cerrada,
+        },
+        include: this.domicilioInclude,
+      });
+      return this.mapearEtapaOperativa(cerrado);
     }
 
     let observacionActualizada = pedido.observacion || '';
 
+    // Limpiar tags previos
+    observacionActualizada = observacionActualizada
+      .replace(/\[PENDIENTE\]/gi, '')
+      .replace(/\[EN REPARTO\]/gi, '')
+      .replace(/\[REPARTIDOR:[^\]]+\]/gi, '')
+      .trim();
+
     if (dto.estado === 'En Reparto') {
-      if (!observacionActualizada.includes('[EN REPARTO]')) {
-        observacionActualizada = `[EN REPARTO] ${observacionActualizada}`.trim();
-      }
-    } else if (dto.estado === 'En Preparación') {
-      observacionActualizada = observacionActualizada.replace('[EN REPARTO]', '').trim();
+      const tagRepartidor = dto.repartidor_nombre
+        ? `[REPARTIDOR: ${dto.repartidor_nombre.trim()} | TEL: ${dto.repartidor_telefono?.trim() || 'N/A'}] `
+        : '';
+      observacionActualizada = `[EN REPARTO] ${tagRepartidor}${observacionActualizada}`.trim();
+    } else if (dto.estado === 'En Preparación' || dto.estado === 'Aceptar') {
+      // Al aceptar, se remueve [PENDIENTE] y queda limpio para preparación y cocina
+      observacionActualizada = observacionActualizada.trim();
+    }
+
+    if (observacionActualizada.length > 255) {
+      observacionActualizada = observacionActualizada.slice(0, 255);
     }
 
     const actualizado = await this.prisma.pedido.update({
@@ -344,7 +412,14 @@ export class DomiciliosService {
 
       // 2. Marcar comanda como cancelada
       const notaCancelado = motivo ? `[CANCELADO: ${motivo}]` : '[CANCELADO]';
-      const observacionFinal = `${notaCancelado} ${pedido.observacion || ''}`.trim();
+      const observacionLimpia = (pedido.observacion || '')
+        .replace(/\[PENDIENTE\]/gi, '')
+        .replace(/\[EN REPARTO\]/gi, '')
+        .trim();
+      let observacionFinal = `${notaCancelado} ${observacionLimpia}`.trim();
+      if (observacionFinal.length > 255) {
+        observacionFinal = observacionFinal.slice(0, 255);
+      }
 
       const pedidoCancelado = await tx.pedido.update({
         where: { id_pedido: id },
@@ -363,8 +438,12 @@ export class DomiciliosService {
    * Enriquecimiento reactivo: determina la etapa operativa del pedido para UI
    */
   private mapearEtapaOperativa(pedido: any) {
-    let etapaOperativa: 'En Preparación' | 'En Reparto' | 'Entregado' | 'Cancelado' =
-      'En Preparación';
+    let etapaOperativa:
+      | 'Pendiente'
+      | 'En Preparación'
+      | 'En Reparto'
+      | 'Entregado'
+      | 'Cancelado' = 'Pendiente';
 
     if (pedido.estado === EstadoPedido.cerrada) {
       etapaOperativa = 'Entregado';
@@ -375,9 +454,44 @@ export class DomiciliosService {
       pedido.observacion?.includes('[EN REPARTO]')
     ) {
       etapaOperativa = 'En Reparto';
+    } else if (
+      pedido.estado === EstadoPedido.enviada &&
+      pedido.observacion?.includes('[PENDIENTE]')
+    ) {
+      etapaOperativa = 'Pendiente';
     } else {
       etapaOperativa = 'En Preparación';
     }
+
+    let repartidor: { nombre: string; telefono: string } | null = null;
+    if (pedido.observacion) {
+      const match = pedido.observacion.match(
+        /\[REPARTIDOR:\s*([^|\]]+?)(?:\s*\|\s*TEL:\s*([^\]]+))?\]/i,
+      );
+      if (match) {
+        repartidor = {
+          nombre: match[1]?.trim() || '',
+          telefono: match[2]?.trim() || '',
+        };
+      }
+    }
+
+    let metodo_pago = 'Efectivo';
+    if (pedido.factura?.pagos && pedido.factura.pagos.length > 0) {
+      metodo_pago = pedido.factura.pagos[0].medio_pago;
+    } else if (pedido.observacion) {
+      const matchPago = pedido.observacion.match(/\[PAGO:\s*([^\]]+)\]/i);
+      if (matchPago) {
+        metodo_pago = matchPago[1].trim();
+      }
+    }
+
+    const observacionLimpia = (pedido.observacion || '')
+      .replace(/\[PENDIENTE\]/gi, '')
+      .replace(/\[EN REPARTO\]/gi, '')
+      .replace(/\[REPARTIDOR:[^\]]*\]/gi, '')
+      .replace(/\[PAGO:[^\]]*\]/gi, '')
+      .trim();
 
     const totalCalculado = (pedido.items || []).reduce(
       (acc: number, it: any) => acc + it.cantidad * Number(it.precio_unitario),
@@ -386,7 +500,11 @@ export class DomiciliosService {
 
     return {
       ...pedido,
+      observacion: observacionLimpia || null,
+      observacion_raw: pedido.observacion,
       etapaOperativa,
+      repartidor,
+      metodo_pago,
       totalCalculado,
     };
   }

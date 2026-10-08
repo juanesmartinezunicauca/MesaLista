@@ -135,13 +135,13 @@ export class PedidosService {
             createPedidoDto.tipo === TipoPedido.domicilio
               ? createPedidoDto.id_cliente
               : null,
-          observacion: createPedidoDto.observacion,
+          observacion: createPedidoDto.observacion ? createPedidoDto.observacion.trim().slice(0, 255) : undefined,
           items: {
             create: createPedidoDto.items.map((item) => ({
               id_producto: item.id_producto,
               cantidad: item.cantidad,
-              ingredientes_removidos: item.ingredientes_removidos,
-              observacion: item.observacion,
+              ingredientes_removidos: item.ingredientes_removidos ? item.ingredientes_removidos.trim().slice(0, 255) : undefined,
+              observacion: item.observacion ? item.observacion.trim().slice(0, 255) : undefined,
               // Regla crítica: precio congelado de la carta al momento de ordenar
               precio_unitario: productMap.get(item.id_producto)!.precio_venta,
             })),
@@ -231,6 +231,14 @@ export class PedidosService {
         lte: fechaFin,
       };
     }
+
+    // Excluir pedidos a domicilio pendientes de aprobación por el cajero (aún no van a cocina)
+    where.NOT = [
+      {
+        tipo: TipoPedido.domicilio,
+        observacion: { contains: '[PENDIENTE]' },
+      },
+    ];
 
     return this.prisma.pedido.findMany({
       where,

@@ -13,6 +13,20 @@
       </div>
 
       <div class="nav-auth-actions">
+        <!-- Botón de Carrito en Navbar -->
+        <button
+          type="button"
+          class="btn-cart-nav"
+          (click)="abrirCarrito()"
+          title="Ver Carrito de Compras"
+        >
+          <mat-icon>shopping_cart</mat-icon>
+          <span class="cart-nav-label">Carrito</span>
+          @if (totalCartItems() > 0) {
+            <span class="cart-nav-badge">{{ totalCartItems() }}</span>
+          }
+        </button>
+
         @if (!isAuthenticated()) {
           <button mat-flat-button class="btn-login" (click)="irALogin()">
             <mat-icon>account_circle</mat-icon>
@@ -33,6 +47,150 @@
       </div>
     </div>
   </header>
+
+  <!-- 2. Banner de Seguimiento en Vivo de Pedido Activo (Live Order Tracker) -->
+  @if (pedidoActivoTracking(); as pedido) {
+    <section class="order-tracker-banner">
+      <div class="tracker-container">
+        <div class="tracker-header">
+          <div class="tracker-title-group">
+            <span class="live-dot-pulse"></span>
+            <h3>Seguimiento de tu Pedido #DOM-{{ pedido.numero_pedido }}</h3>
+            <span class="tracker-time">Hora: {{ pedido.fecha_hora | date:'shortTime' }}</span>
+          </div>
+
+          <button class="btn-tracker-close" (click)="cerrarTracking()" title="Ocultar seguimiento">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <!-- Indicador de Estados / Stepper -->
+        <div class="tracker-stepper">
+          <!-- Paso 1: Pendiente de Aceptación -->
+          <div class="step-node" [class.active]="pedido.etapaOperativa === 'Pendiente'" [class.completed]="pedido.etapaOperativa !== 'Pendiente' && pedido.etapaOperativa !== 'Cancelado'">
+            <div class="step-circle">
+              <mat-icon>{{ pedido.etapaOperativa === 'Pendiente' ? 'hourglass_top' : 'check' }}</mat-icon>
+            </div>
+            <div class="step-info">
+              <span class="step-title">1. Recibido</span>
+              <span class="step-sub">En espera de caja</span>
+            </div>
+          </div>
+
+          <div class="step-line" [class.filled]="pedido.etapaOperativa !== 'Pendiente' && pedido.etapaOperativa !== 'Cancelado'"></div>
+
+          <!-- Paso 2: Aceptado / En Cocina -->
+          <div class="step-node" [class.active]="pedido.etapaOperativa === 'En Preparación'" [class.completed]="pedido.etapaOperativa === 'En Reparto' || pedido.etapaOperativa === 'Entregado'">
+            <div class="step-circle">
+              <mat-icon>{{ pedido.etapaOperativa === 'En Preparación' ? 'soup_kitchen' : (pedido.etapaOperativa === 'En Reparto' || pedido.etapaOperativa === 'Entregado' ? 'check' : 'schedule') }}</mat-icon>
+            </div>
+            <div class="step-info">
+              <span class="step-title">2. Aceptado</span>
+              <span class="step-sub">En cocina</span>
+            </div>
+          </div>
+
+          <div class="step-line" [class.filled]="pedido.etapaOperativa === 'En Reparto' || pedido.etapaOperativa === 'Entregado'"></div>
+
+          <!-- Paso 3: En Reparto / Domiciliario en Camino -->
+          <div class="step-node" [class.active]="pedido.etapaOperativa === 'En Reparto'" [class.completed]="pedido.etapaOperativa === 'Entregado'">
+            <div class="step-circle">
+              <mat-icon>{{ pedido.etapaOperativa === 'En Reparto' ? 'two_wheeler' : (pedido.etapaOperativa === 'Entregado' ? 'check' : 'moped') }}</mat-icon>
+            </div>
+            <div class="step-info">
+              <span class="step-title">3. En Camino</span>
+              <span class="step-sub">Domiciliario</span>
+            </div>
+          </div>
+
+          <div class="step-line" [class.filled]="pedido.etapaOperativa === 'Entregado'"></div>
+
+          <!-- Paso 4: Entregado -->
+          <div class="step-node" [class.completed]="pedido.etapaOperativa === 'Entregado'">
+            <div class="step-circle">
+              <mat-icon>task_alt</mat-icon>
+            </div>
+            <div class="step-info">
+              <span class="step-title">4. Entregado</span>
+              <span class="step-sub">¡Buen provecho!</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mensaje y Datos de Entrega Según Estado -->
+        <div class="tracker-status-box">
+          @if (pedido.etapaOperativa === 'Pendiente') {
+            <div class="status-alert pending">
+              <mat-icon>pending_actions</mat-icon>
+              <div class="status-info-col">
+                <strong>Tu orden ha sido recibida en la central.</strong>
+                <p>El cajero está revisando la disponibilidad para enviar la comanda a cocina.</p>
+                @if (pedido.metodo_pago === 'Transferencia') {
+                  <div class="pending-whatsapp-alert">
+                    <span>¿Pagaste por transferencia? Envía el comprobante para agilizar la aprobación:</span>
+                    <a [href]="generarUrlWhatsApp(pedido.numero_pedido.toString())" target="_blank" rel="noopener noreferrer" class="btn-whatsapp-pill">
+                      <mat-icon>chat</mat-icon>
+                      <span>Enviar Comprobante por WhatsApp</span>
+                    </a>
+                  </div>
+                }
+              </div>
+            </div>
+          } @else if (pedido.etapaOperativa === 'En Preparación') {
+            <div class="status-alert kitchen">
+              <mat-icon>restaurant_menu</mat-icon>
+              <div>
+                <strong>¡Pedido Aceptado! La cocina ya está preparando tu comanda.</strong>
+                <p>Se está cocinando con ingredientes frescos. Te avisaremos cuando salga a reparto.</p>
+              </div>
+            </div>
+          } @else if (pedido.etapaOperativa === 'En Reparto') {
+            <div class="status-alert delivery">
+              <mat-icon>electric_moped</mat-icon>
+              <div class="delivery-details">
+                <strong>¡El repartidor va en camino a tu dirección!</strong>
+                @if (pedido.repartidor; as rep) {
+                  @if (rep.nombre) {
+                    <div class="driver-card">
+                      <span class="driver-name">
+                        <mat-icon>person</mat-icon> Domiciliario: <strong>{{ rep.nombre }}</strong>
+                      </span>
+                      @if (rep.telefono && rep.telefono !== 'N/A') {
+                        <a [href]="'tel:' + rep.telefono" class="driver-phone-link">
+                          <mat-icon>call</mat-icon> {{ rep.telefono }}
+                        </a>
+                      }
+                    </div>
+                  }
+                }
+              </div>
+            </div>
+          } @else if (pedido.etapaOperativa === 'Entregado') {
+            <div class="status-alert delivered">
+              <mat-icon>verified</mat-icon>
+              <div>
+                <strong>¡Pedido Entregado con éxito!</strong>
+                <p>Gracias por preferir Luigie's Restaurante. Esperamos que disfrutes tu comida.</p>
+              </div>
+            </div>
+          } @else if (pedido.etapaOperativa === 'Cancelado') {
+            <div class="status-alert cancelled">
+              <mat-icon>cancel</mat-icon>
+              <div>
+                <strong>Pedido Cancelado / Rechazado.</strong>
+                <p>{{ pedido.observacion || 'El pedido no pudo ser procesado por el restaurante.' }}</p>
+              </div>
+            </div>
+          }
+
+          <div class="tracker-meta-row">
+            <span>Dirección: <strong>{{ pedido.cliente.direccion }}</strong></span>
+            <span>Total a pagar: <strong>${{ pedido.totalCalculado | number:'1.0-0' }} COP</strong></span>
+          </div>
+        </div>
+      </div>
+    </section>
+  }
 
   <!-- 3. Catálogo y Menú del Restaurante -->
   <main class="menu-container">
@@ -125,11 +283,20 @@
             <div class="product-footer">
               <button
                 type="button"
+                class="btn-add-cart"
+                (click)="agregarAlCarrito(prod, $event)"
+                title="Agregar plato al carrito"
+              >
+                <mat-icon>add_shopping_cart</mat-icon>
+                <span>+ Carrito</span>
+              </button>
+              <button
+                type="button"
                 class="btn-order-delivery"
                 (click)="solicitarDomicilio(prod)"
               >
                 <mat-icon>two_wheeler</mat-icon>
-                <span>Pedir Domicilio</span>
+                <span>Pedir</span>
               </button>
             </div>
           </div>
@@ -138,39 +305,109 @@
     }
   </main>
 
-  <!-- 4. MODAL: Registro Requerido para Clientes no Autenticados -->
-  @if (mostrarModalAuth()) {
-    <div class="modal-overlay" (click)="cerrarModalAuth()">
-      <div class="modal-window auth-window" (click)="$event.stopPropagation()">
-        <button class="btn-window-close" (click)="cerrarModalAuth()">
-          <mat-icon>close</mat-icon>
-        </button>
+  <!-- 4. BOTÓN FLOTANTE DEL CARRITO (Sticky Bar / Badge) -->
+  @if (totalCartItems() > 0) {
+    <div class="floating-cart-wrapper">
+      <button class="floating-cart-btn" (click)="abrirCarrito()">
+        <div class="cart-pill-icon">
+          <mat-icon>shopping_bag</mat-icon>
+          <span class="cart-pill-count">{{ totalCartItems() }}</span>
+        </div>
+        <div class="cart-pill-content">
+          <span class="cart-pill-text">Ver Carrito</span>
+          <span class="cart-pill-total">${{ totalCartPrecio() | number:'1.0-0' }} COP</span>
+        </div>
+        <mat-icon class="cart-pill-arrow">arrow_forward</mat-icon>
+      </button>
+    </div>
+  }
 
-        <div class="window-icon-circle">
-          <mat-icon>delivery_dining</mat-icon>
+  <!-- 5. MODAL: Carrito de Compras del Cliente -->
+  @if (mostrarModalCarrito()) {
+    <div class="modal-overlay" (click)="cerrarCarrito()">
+      <div class="modal-window cart-window" (click)="$event.stopPropagation()">
+        <div class="cart-window-header">
+          <div class="header-icon-box">
+            <mat-icon>shopping_bag</mat-icon>
+          </div>
+          <div>
+            <h2>Tu Carrito de Pedido</h2>
+            <p>{{ totalCartItems() }} {{ totalCartItems() === 1 ? 'producto' : 'productos' }} listos para ordenar</p>
+          </div>
+          <button class="btn-window-close" (click)="cerrarCarrito()">
+            <mat-icon>close</mat-icon>
+          </button>
         </div>
 
-        <h2>¡Inicia sesión para pedir tu domicilio!</h2>
-        <p class="window-description">
-          Para tomar tu orden de <strong>{{ productoSeleccionado()?.nombre || 'nuestro restaurante' }}</strong> 
-          y enviarla a tu dirección, debes identificarte con tu cuenta de Google o correo registrado.
-        </p>
+        @if (carrito().length === 0) {
+          <div class="cart-empty-state">
+            <mat-icon>remove_shopping_cart</mat-icon>
+            <h3>Tu carrito está vacío</h3>
+            <p>Explora la carta y añade tus hamburguesas y platos favoritos.</p>
+            <button mat-flat-button class="btn-modal-primary" (click)="cerrarCarrito()">
+              Ver Carta
+            </button>
+          </div>
+        } @else {
+          <div class="cart-items-list">
+            @for (item of carrito(); track $index) {
+              <div class="cart-item-row">
+                <div class="cart-item-main">
+                  <span class="item-name">{{ item.producto.nombre }}</span>
+                  <span class="item-unit-price">${{ item.producto.precio_venta | number:'1.0-0' }} COP c/u</span>
+                  @if (item.observacion) {
+                    <span class="item-note">Nota: {{ item.observacion }}</span>
+                  }
+                </div>
 
-        <div class="auth-buttons-group">
-          <button mat-flat-button class="btn-modal-primary" (click)="irALogin()">
-            <mat-icon>login</mat-icon>
-            <span>Iniciar Sesión / Registrarme en 1 Clic</span>
-          </button>
-          <button mat-stroked-button class="btn-modal-cancel" (click)="cerrarModalAuth()">
-            <span>Seguir viendo la carta</span>
-          </button>
-        </div>
+                <div class="cart-item-controls">
+                  <div class="qty-control-box">
+                    <button type="button" class="btn-qty" (click)="decrementarItemCart($index)">
+                      <mat-icon>{{ item.cantidad === 1 ? 'delete' : 'remove' }}</mat-icon>
+                    </button>
+                    <span class="qty-display">{{ item.cantidad }}</span>
+                    <button type="button" class="btn-qty" (click)="incrementarItemCart($index)">
+                      <mat-icon>add</mat-icon>
+                    </button>
+                  </div>
+                  <span class="item-subtotal">${{ (item.cantidad * item.producto.precio_venta) | number:'1.0-0' }}</span>
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="cart-footer-summary">
+            <div class="summary-line">
+              <span>Subtotal:</span>
+              <span>${{ totalCartPrecio() | number:'1.0-0' }} COP</span>
+            </div>
+            <div class="summary-line">
+              <span>Envío a domicilio:</span>
+              <span class="free-badge">Gratis</span>
+            </div>
+            <div class="summary-line total-line">
+              <span>Total:</span>
+              <span class="grand-total">${{ totalCartPrecio() | number:'1.0-0' }} COP</span>
+            </div>
+          </div>
+
+          <div class="cart-actions-row">
+            <button mat-stroked-button class="btn-clear-cart" (click)="vaciarCarrito()">
+              <mat-icon>delete_outline</mat-icon>
+              <span>Vaciar</span>
+            </button>
+            <button mat-flat-button class="btn-modal-primary btn-checkout" (click)="iniciarCheckout()">
+              <mat-icon>check_circle</mat-icon>
+              <span>Continuar a Entrega (${{ totalCartPrecio() | number:'1.0-0' }})</span>
+            </button>
+          </div>
+        }
       </div>
     </div>
   }
 
-  <!-- 5. MODAL: Formulario de Domicilio para Cliente Autenticado -->
-  @if (mostrarModalPedido() && productoSeleccionado()) {
+  <!-- 6. MODAL: Formulario de Domicilio y Datos de Entrega -->
+  @if (mostrarModalPedido()) {
     <div class="modal-overlay" (click)="cerrarModalPedido()">
       <div class="modal-window order-window" (click)="$event.stopPropagation()">
         <button class="btn-window-close" (click)="cerrarModalPedido()">
@@ -183,30 +420,56 @@
           </div>
           <div>
             <h2>Confirmar Pedido a Domicilio</h2>
-            <p>Ingresa tu dirección para despachar desde nuestro restaurante</p>
+            <p>Ingresa tu dirección para despachar desde Luigie's Restaurante</p>
           </div>
         </div>
 
-        <!-- Resumen del Producto -->
-        <div class="order-item-banner">
-          <div class="item-text">
-            <span class="item-name">{{ productoSeleccionado()!.nombre }}</span>
-            <span class="item-price">${{ productoSeleccionado()!.precio_venta | number:'1.0-0' }} COP c/u</span>
-          </div>
-
-          <div class="quantity-selector">
-            <button type="button" class="qty-btn" (click)="decrementarCantidad()" [disabled]="cantidad() <= 1">
-              <mat-icon>remove</mat-icon>
-            </button>
-            <span class="qty-val">{{ cantidad() }}</span>
-            <button type="button" class="qty-btn" (click)="incrementarCantidad()">
-              <mat-icon>add</mat-icon>
-            </button>
-          </div>
+        <!-- Resumen de Platos en el Pedido -->
+        <div class="order-summary-box">
+          <span class="summary-box-title">Platos en este pedido:</span>
+          @if (carrito().length > 0) {
+            <div class="order-items-compact-list">
+              @for (item of carrito(); track $index) {
+                <div class="compact-item">
+                  <span class="item-qty-badge">{{ item.cantidad }}x</span>
+                  <span class="item-title">{{ item.producto.nombre }}</span>
+                  <span class="item-sub">${{ (item.cantidad * item.producto.precio_venta) | number:'1.0-0' }} COP</span>
+                </div>
+              }
+            </div>
+          } @else if (productoSeleccionado()) {
+            <div class="compact-item">
+              <span class="item-qty-badge">{{ cantidad() }}x</span>
+              <span class="item-title">{{ productoSeleccionado()!.nombre }}</span>
+              <span class="item-sub">${{ (cantidad() * productoSeleccionado()!.precio_venta) | number:'1.0-0' }} COP</span>
+            </div>
+          }
         </div>
 
         <!-- Campos de Entrega del Restaurante -->
         <div class="form-fields-container">
+          <div class="field-item">
+            <label class="field-label">Nombre Completo *</label>
+            <input
+              type="text"
+              class="field-input"
+              placeholder="Ej. Juan Pérez"
+              [value]="nombreCliente()"
+              (input)="nombreCliente.set($any($event.target).value)"
+            />
+          </div>
+
+          <div class="field-item">
+            <label class="field-label">Teléfono o Celular de Contacto *</label>
+            <input
+              type="tel"
+              class="field-input"
+              placeholder="Ej. 310 123 4567 (para coordinar con el repartidor)"
+              [value]="telefonoContacto()"
+              (input)="telefonoContacto.set($any($event.target).value)"
+            />
+          </div>
+
           <div class="field-item">
             <label class="field-label">Dirección de Entrega *</label>
             <input
@@ -230,39 +493,95 @@
           </div>
 
           <div class="field-item">
-            <label class="field-label">Teléfono o Celular de Contacto *</label>
-            <input
-              type="tel"
-              class="field-input"
-              placeholder="Ej. 310 123 4567 (para que el repartidor se comunique)"
-              [value]="telefonoContacto()"
-              (input)="telefonoContacto.set($any($event.target).value)"
-            />
-          </div>
-
-          <div class="field-item">
-            <label class="field-label">Indicaciones o Notas para la Cocina</label>
+            <label class="field-label">Indicaciones o Notas para la Cocina (Opcional)</label>
             <input
               type="text"
               class="field-input"
+              maxlength="255"
               placeholder="Ej. Sin cebolla, salsas aparte, pagaré con billete de $50.000"
               [value]="observaciones()"
               (input)="observaciones.set($any($event.target).value)"
             />
           </div>
 
-          <div class="field-item">
-            <label class="field-label">Método de Pago al Recibir</label>
-            <select
-              class="field-select"
-              [value]="metodoPago()"
-              (change)="metodoPago.set($any($event.target).value)"
-            >
-              <option value="Efectivo al recibir">Efectivo al recibir</option>
-              <option value="Transferencia electrónica (Nequi / Daviplata)">Transferencia electrónica (Nequi / Daviplata)</option>
-              <option value="Datáfono / Tarjeta">Datáfono / Tarjeta al recibir</option>
-            </select>
+          <!-- Selección de Forma de Pago -->
+          <div class="field-item payment-selection-group">
+            <label class="field-label">Forma de Pago *</label>
+            <div class="payment-method-options">
+              <button
+                type="button"
+                class="payment-option-card"
+                [class.selected]="metodoPago() === 'Efectivo'"
+                (click)="metodoPago.set('Efectivo')"
+              >
+                <div class="option-icon-box">
+                  <mat-icon>payments</mat-icon>
+                </div>
+                <div class="option-text">
+                  <span class="option-title">Efectivo</span>
+                  <span class="option-sub">Pagas al recibir en casa</span>
+                </div>
+                <mat-icon class="check-indicator">{{ metodoPago() === 'Efectivo' ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+              </button>
+
+              <button
+                type="button"
+                class="payment-option-card"
+                [class.selected]="metodoPago() === 'Transferencia'"
+                (click)="metodoPago.set('Transferencia')"
+              >
+                <div class="option-icon-box transfer-icon">
+                  <mat-icon>account_balance_wallet</mat-icon>
+                </div>
+                <div class="option-text">
+                  <span class="option-title">Transferencia</span>
+                  <span class="option-sub">Nequi, Daviplata, Bancolombia</span>
+                </div>
+                <mat-icon class="check-indicator">{{ metodoPago() === 'Transferencia' ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+              </button>
+
+              <button
+                type="button"
+                class="payment-option-card"
+                [class.selected]="metodoPago() === 'Tarjeta'"
+                (click)="metodoPago.set('Tarjeta')"
+              >
+                <div class="option-icon-box">
+                  <mat-icon>credit_card</mat-icon>
+                </div>
+                <div class="option-text">
+                  <span class="option-title">Tarjeta / Datáfono</span>
+                  <span class="option-sub">Datáfono inalámbrico</span>
+                </div>
+                <mat-icon class="check-indicator">{{ metodoPago() === 'Tarjeta' ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+              </button>
+            </div>
           </div>
+
+          <!-- Alerta Informativa + Botón de WhatsApp para Transferencia -->
+          @if (metodoPago() === 'Transferencia') {
+            <div class="transfer-alert-box">
+              <div class="alert-top">
+                <mat-icon class="alert-icon">notifications_active</mat-icon>
+                <div class="alert-texts">
+                  <strong>Envío obligatorio de comprobante</strong>
+                  <p>Al pagar por transferencia electrónica, debes enviar una captura o comprobante del pago a nuestro WhatsApp para que el cajero apruebe tu pedido y lo envíe a cocina.</p>
+                </div>
+              </div>
+              <div class="alert-actions">
+                <a
+                  [href]="generarUrlWhatsApp()"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="btn-whatsapp-action"
+                >
+                  <mat-icon>chat</mat-icon>
+                  <span>Enviar Comprobante por WhatsApp</span>
+                </a>
+                <span class="support-line-hint">Línea WhatsApp: {{ WHATSAPP_SOPORTE_DISPLAY }}</span>
+              </div>
+            </div>
+          }
         </div>
 
         <!-- Liquidación de la Orden -->
@@ -273,7 +592,7 @@
           </div>
           <div class="bill-line">
             <span>Costo de domicilio:</span>
-            <span class="free-badge">Envío Incluido</span>
+            <span class="free-badge">Envío Gratis</span>
           </div>
           <div class="bill-line total-line">
             <span>Total a Pagar:</span>
@@ -289,17 +608,47 @@
             [disabled]="enviandoPedido()"
           >
             <mat-icon>{{ enviandoPedido() ? 'hourglass_top' : 'check_circle' }}</mat-icon>
-            <span>{{ enviandoPedido() ? 'Enviando a Cocina...' : 'Confirmar Pedido a Domicilio' }}</span>
+            <span>{{ enviandoPedido() ? 'Enviando Pedido...' : 'Confirmar Pedido a Domicilio' }}</span>
           </button>
           <button mat-stroked-button class="btn-modal-cancel" (click)="cerrarModalPedido()">
-            <span>Cancelar</span>
+            <span>Volver</span>
           </button>
         </div>
       </div>
     </div>
   }
 
-  <!-- 6. MODAL: Confirmación Exitosa de Pedido -->
+  <!-- 7. MODAL: Registro Requerido para Clientes no Autenticados -->
+  @if (mostrarModalAuth()) {
+    <div class="modal-overlay" (click)="cerrarModalAuth()">
+      <div class="modal-window auth-window" (click)="$event.stopPropagation()">
+        <button class="btn-window-close" (click)="cerrarModalAuth()">
+          <mat-icon>close</mat-icon>
+        </button>
+
+        <div class="window-icon-circle">
+          <mat-icon>delivery_dining</mat-icon>
+        </div>
+
+        <h2>¡Inicia sesión para pedir tu domicilio!</h2>
+        <p class="window-description">
+          Para tomar tu orden y enviarla a tu dirección, debes identificarte con tu cuenta de Google o correo registrado.
+        </p>
+
+        <div class="auth-buttons-group">
+          <button mat-flat-button class="btn-modal-primary" (click)="irALogin()">
+            <mat-icon>login</mat-icon>
+            <span>Iniciar Sesión / Registrarme en 1 Clic</span>
+          </button>
+          <button mat-stroked-button class="btn-modal-cancel" (click)="cerrarModalAuth()">
+            <span>Seguir viendo la carta</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- 8. MODAL: Confirmación Exitosa de Pedido -->
   @if (pedidoConfirmado()) {
     <div class="modal-overlay" (click)="cerrarModalConfirmacion()">
       <div class="modal-window success-window" (click)="$event.stopPropagation()">
@@ -307,7 +656,7 @@
           <mat-icon>check</mat-icon>
         </div>
 
-        <h2>¡Tu Pedido ha sido Confirmado!</h2>
+        <h2>¡Tu Pedido ha sido Recibido!</h2>
         <div class="order-code-badge">
           <span>Radicado:</span>
           <strong>#{{ pedidoConfirmado()!.codigo }}</strong>
@@ -326,12 +675,33 @@
           </div>
         </div>
 
+        @if (pedidoConfirmado()!.metodoPago === 'Transferencia') {
+          <div class="transfer-success-box">
+            <div class="success-box-header">
+              <mat-icon class="icon-transfer">account_balance_wallet</mat-icon>
+              <div>
+                <strong>Recuerda enviar el comprobante de pago</strong>
+                <p>Tu orden <strong>#{{ pedidoConfirmado()!.codigo }}</strong> pasará a preparación en cuanto el cajero valide tu transferencia.</p>
+              </div>
+            </div>
+            <a
+              [href]="generarUrlWhatsApp(pedidoConfirmado()!.codigo)"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn-whatsapp-action"
+            >
+              <mat-icon>chat</mat-icon>
+              <span>Enviar Comprobante al WhatsApp</span>
+            </a>
+          </div>
+        }
+
         <p class="delivery-hint">
-          El equipo de cocina ya está preparando tu comida. El repartidor te llamará a tu teléfono al llegar.
+          El cajero revisará tu orden para enviarla a cocina. Puedes ver el estado de tu pedido en tiempo real arriba en la pantalla.
         </p>
 
         <button mat-flat-button class="btn-modal-primary" (click)="cerrarModalConfirmacion()">
-          <span>Aceptar y Continuar en la Carta</span>
+          <span>Ver Seguimiento en Vivo</span>
         </button>
       </div>
     </div>

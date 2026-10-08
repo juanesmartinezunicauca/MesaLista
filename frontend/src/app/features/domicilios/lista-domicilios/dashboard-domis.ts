@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -12,9 +12,11 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { NewDeliveryDialogComponent } from '../nuevo-domicilio/nuevo-domi-modal';
+import { FacturaDialogComponent } from '../../mesas/dialogs/factura-dialog';
+import { HistorialFacturasDialogComponent } from '../../../shared/components/historial-facturas/historial-facturas-dialog';
 import { DomiciliosApiService } from '../../../core/services/api/domicilios-api.service';
 import { FacturacionApiService } from '../../../core/services/api/facturacion-api.service';
-import { Domicilio, EtapaOperativaDomicilio } from '../../../core/models';
+import { Domicilio } from '../../../core/models';
 
 @Component({
   selector: 'app-delivery-dashboard',
@@ -35,7 +37,7 @@ import { Domicilio, EtapaOperativaDomicilio } from '../../../core/models';
   templateUrl: './dashboard-domis.html',
   styleUrls: ['./dashboard-domis.scss'],
 })
-export class DashboardDomisComponent implements OnInit {
+export class DashboardDomisComponent implements OnInit, OnDestroy {
   private domiciliosApi = inject(DomiciliosApiService);
   private facturacionApi = inject(FacturacionApiService);
   private dialog = inject(MatDialog);
@@ -48,14 +50,20 @@ export class DashboardDomisComponent implements OnInit {
   busqueda = signal<string>('');
   procesandoId = signal<number | null>(null);
 
+  private pollingTimer: any = null;
+
   // Métricas y KPIs de la jornada
   kpis = computed(() => {
     const list = this.pedidos();
     return {
       total: list.length,
+      pendientes: list.filter((p) => p.etapaOperativa === 'Pendiente').length,
       enPreparacion: list.filter((p) => p.etapaOperativa === 'En Preparación').length,
       enReparto: list.filter((p) => p.etapaOperativa === 'En Reparto').length,
       entregados: list.filter((p) => p.etapaOperativa === 'Entregado').length,
+      historial: list.filter(
+        (p) => p.etapaOperativa === 'Entregado' || p.etapaOperativa === 'Cancelado'
+      ).length,
     };
   });
 
@@ -65,7 +73,13 @@ export class DashboardDomisComponent implements OnInit {
     const query = this.busqueda().trim().toLowerCase();
     let lista = [...this.pedidos()];
 
-    if (filtro !== 'Todos') {
+    if (filtro === 'Pendientes') {
+      lista = lista.filter((p) => p.etapaOperativa === 'Pendiente');
+    } else if (filtro === 'Historial') {
+      lista = lista.filter(
+        (p) => p.etapaOperativa === 'Entregado' || p.etapaOperativa === 'Cancelado'
+      );
+    } else if (filtro !== 'Todos') {
       lista = lista.filter((p) => p.etapaOperativa === filtro);
     }
 
@@ -91,10 +105,20 @@ export class DashboardDomisComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargarPedidos();
+    // Polling reactivo cada 12 segundos para recibir pedidos del cliente en tiempo real
+    this.pollingTimer = setInterval(() => {
+      this.cargarPedidos(false);
+    }, 12000);
   }
 
-  cargarPedidos(): void {
-    this.cargando.set(true);
+  ngOnDestroy(): void {
+    if (this.pollingTimer) {
+      clearInterval(this.pollingTimer);
+    }
+  }
+
+  cargarPedidos(mostrarSpinner = true): void {
+    if (mostrarSpinner) this.cargando.set(true);
     this.domiciliosApi.obtenerTodos().subscribe({
       next: (data) => {
         this.pedidos.set(data);
@@ -102,9 +126,11 @@ export class DashboardDomisComponent implements OnInit {
       },
       error: () => {
         this.cargando.set(false);
-        this.snackBar.open('Error al cargar la lista de domicilios.', 'Cerrar', {
-          duration: 3000,
-        });
+        if (mostrarSpinner) {
+          this.snackBar.open('Error al cargar la lista de domicilios.', 'Cerrar', {
+            duration: 3000,
+          });
+        }
       },
     });
   }
@@ -122,7 +148,7 @@ export class DashboardDomisComponent implements OnInit {
 
     dialogRef.afterClosed().subscribe((resultado) => {
       if (resultado) {
-        this.snackBar.open('¡Pedido a domicilio creado y enviado a cocina!', 'OK', {
+        this.snackBar.open('¡Pedido a domicilio creado!', 'OK', {
           duration: 3500,
         });
         this.cargarPedidos();
@@ -130,22 +156,101 @@ export class DashboardDomisComponent implements OnInit {
     });
   }
 
-  despachar(pedido: Domicilio): void {
+  // 1. Aceptar pedido recibido del cliente y enviarlo a cocina
+  aceptarPedido(pedido: Domicilio): void {
     this.procesandoId.set(pedido.id_pedido);
-    this.domiciliosApi.cambiarEstado(pedido.id_pedido, 'En Reparto').subscribe({
+    this.domiciliosApi.cambiarEstado(pedido.id_pedido, 'Aceptar').subscribe({
       next: (actualizado) => {
         this.procesandoId.set(null);
         this.actualizarPedidoEnLista(actualizado);
-        this.snackBar.open(`Pedido #${pedido.numero_pedido} marcado como En Reparto.`, 'OK', {
-          duration: 2500,
-        });
+        this.snackBar.open(
+          `¡Pedido #${pedido.numero_pedido} aceptado y enviado a Cocina!`,
+          'OK',
+          { duration: 3000 }
+        );
       },
       error: (err) => {
         this.procesandoId.set(null);
-        const msg = err.error?.message || 'Error al despachar el pedido.';
+        const msg = err.error?.message || 'Error al aceptar el pedido.';
         this.snackBar.open(msg, 'Cerrar', { duration: 3000 });
       },
     });
+  }
+
+  // 2. Rechazar pedido recibido del cliente
+  rechazarPedido(pedido: Domicilio): void {
+    const motivo = prompt(
+      `¿Deseas rechazar el pedido #${pedido.numero_pedido}? Motivo del rechazo:`,
+      'Sin disponibilidad de productos'
+    );
+    if (motivo === null) return;
+
+    this.procesandoId.set(pedido.id_pedido);
+    this.domiciliosApi.cambiarEstado(pedido.id_pedido, 'Rechazar', motivo).subscribe({
+      next: (actualizado) => {
+        this.procesandoId.set(null);
+        this.actualizarPedidoEnLista(actualizado);
+        this.snackBar.open(
+          `Pedido #${pedido.numero_pedido} rechazado y cancelado.`,
+          'OK',
+          { duration: 3000 }
+        );
+      },
+      error: (err) => {
+        this.procesandoId.set(null);
+        const msg = err.error?.message || 'Error al rechazar el pedido.';
+        this.snackBar.open(msg, 'Cerrar', { duration: 3000 });
+      },
+    });
+  }
+
+  // 3. Despachar comanda a reparto con nombre y teléfono de domiciliario
+  despachar(pedido: Domicilio, nombreRepartidor?: string, telRepartidor?: string): void {
+    this.procesandoId.set(pedido.id_pedido);
+    const call$ = (nombreRepartidor || telRepartidor)
+      ? this.domiciliosApi.cambiarEstado(
+          pedido.id_pedido,
+          'En Reparto',
+          undefined,
+          nombreRepartidor,
+          telRepartidor
+        )
+      : this.domiciliosApi.cambiarEstado(pedido.id_pedido, 'En Reparto');
+
+    call$.subscribe({
+        next: (actualizado) => {
+          this.procesandoId.set(null);
+          this.actualizarPedidoEnLista(actualizado);
+          this.snackBar.open(
+            `Pedido #${pedido.numero_pedido} despachado a reparto${
+              nombreRepartidor ? ' con ' + nombreRepartidor : ''
+            }.`,
+            'OK',
+            { duration: 3000 }
+          );
+        },
+        error: (err) => {
+          this.procesandoId.set(null);
+          const msg = err.error?.message || 'Error al despachar el pedido.';
+          this.snackBar.open(msg, 'Cerrar', { duration: 3000 });
+        },
+      });
+  }
+
+  solicitarDespachoConRepartidor(pedido: Domicilio): void {
+    const nombre = prompt(
+      `Nombre del domiciliario para pedido #${pedido.numero_pedido}:`,
+      pedido.repartidor?.nombre || ''
+    );
+    if (nombre === null) return;
+
+    const telefono = prompt(
+      `Teléfono o número del domiciliario:`,
+      pedido.repartidor?.telefono || ''
+    );
+    if (telefono === null) return;
+
+    this.despachar(pedido, nombre.trim(), telefono.trim());
   }
 
   regresarAPreparacion(pedido: Domicilio): void {
@@ -154,6 +259,11 @@ export class DashboardDomisComponent implements OnInit {
       next: (actualizado) => {
         this.procesandoId.set(null);
         this.actualizarPedidoEnLista(actualizado);
+        this.snackBar.open(
+          `Pedido #${pedido.numero_pedido} regresado a Cocina.`,
+          'OK',
+          { duration: 2500 }
+        );
       },
       error: () => {
         this.procesandoId.set(null);
@@ -161,7 +271,96 @@ export class DashboardDomisComponent implements OnInit {
     });
   }
 
-  cobrarYEntregar(pedido: Domicilio, medioPago: 'Efectivo' | 'Tarjeta' | 'Transferencia' = 'Efectivo'): void {
+  // 4. Facturación con selección de medios de pago SIN cerrar el pedido
+  facturarDomicilio(pedido: Domicilio): void {
+    const dialogRef = this.dialog.open(FacturaDialogComponent, {
+      data: { pedido },
+      width: '480px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+    });
+
+    dialogRef.afterClosed().subscribe((resultado) => {
+      if (resultado?.cobrado) {
+        const pagosPayload = (resultado.pagos || []).map((p: any) => ({
+          medio_pago:
+            p.metodo === 'efectivo'
+              ? 'Efectivo'
+              : p.metodo === 'tarjeta'
+              ? 'Tarjeta'
+              : 'Transferencia',
+          monto: p.monto,
+        }));
+
+        this.procesandoId.set(pedido.id_pedido);
+        this.facturacionApi
+          .crearFactura({
+            id_pedido: pedido.id_pedido,
+            id_cliente: pedido.id_cliente,
+            propina: resultado.propina,
+            observacion: `Domicilio #${pedido.numero_pedido} - Cliente: ${pedido.cliente?.nombre}`,
+            pagos: pagosPayload,
+            cerrar_pedido: false, // NO cierra el pedido
+          })
+          .subscribe({
+            next: (factura) => {
+              this.procesandoId.set(null);
+              this.snackBar.open(
+                `¡Factura #FAC-${factura.id_venta} registrada en caja! El pedido sigue activo hasta ser entregado.`,
+                'OK',
+                { duration: 4000 }
+              );
+              this.cargarPedidos();
+            },
+            error: (err) => {
+              this.procesandoId.set(null);
+              const msg = err.error?.message || 'Error al procesar la factura.';
+              this.snackBar.open(msg, 'Cerrar', { duration: 4000 });
+            },
+          });
+      }
+    });
+  }
+
+  // 5. Cerrar pedido y enviarlo a historial
+  cerrarDomicilio(pedido: Domicilio): void {
+    const confirmar = confirm(
+      `¿Confirmar que el pedido #${pedido.numero_pedido} fue entregado? Se cerrará y pasará al Historial.`
+    );
+    if (!confirmar) return;
+
+    this.procesandoId.set(pedido.id_pedido);
+    this.domiciliosApi.cambiarEstado(pedido.id_pedido, 'Entregado').subscribe({
+      next: (actualizado) => {
+        this.procesandoId.set(null);
+        this.actualizarPedidoEnLista(actualizado);
+        this.snackBar.open(
+          `Pedido #${pedido.numero_pedido} entregado y archivado en Historial.`,
+          'OK',
+          { duration: 3000 }
+        );
+      },
+      error: (err) => {
+        this.procesandoId.set(null);
+        const msg = err.error?.message || 'Error al cerrar el pedido.';
+        this.snackBar.open(msg, 'Cerrar', { duration: 3000 });
+      },
+    });
+  }
+
+  // 6. Abrir Historial de Facturación y edición de facturas
+  abrirHistorialFacturas(): void {
+    this.dialog.open(HistorialFacturasDialogComponent, {
+      width: '840px',
+      maxWidth: '95vw',
+    });
+  }
+
+  // Cobro rápido compatible hacia atrás
+  cobrarYEntregar(
+    pedido: Domicilio,
+    medioPago: 'Efectivo' | 'Tarjeta' | 'Transferencia' = 'Efectivo'
+  ): void {
     this.procesandoId.set(pedido.id_pedido);
 
     const payload = {
@@ -175,15 +374,16 @@ export class DashboardDomisComponent implements OnInit {
           monto: pedido.totalCalculado,
         },
       ],
+      cerrar_pedido: false,
     };
 
     this.facturacionApi.crearFactura(payload).subscribe({
       next: () => {
         this.procesandoId.set(null);
         this.snackBar.open(
-          `¡Domicilio #${pedido.numero_pedido} cobrado y registrado en caja!`,
+          `¡Domicilio #${pedido.numero_pedido} facturado en caja!`,
           'OK',
-          { duration: 3500 },
+          { duration: 3500 }
         );
         this.cargarPedidos();
       },
@@ -197,30 +397,34 @@ export class DashboardDomisComponent implements OnInit {
 
   cancelar(pedido: Domicilio): void {
     const confirmar = confirm(
-      `¿Estás seguro de cancelar el pedido a domicilio #${pedido.numero_pedido}? Las cantidades volverán al inventario.`,
+      `¿Estás seguro de cancelar el pedido a domicilio #${pedido.numero_pedido}? Las cantidades volverán al inventario.`
     );
     if (!confirmar) return;
 
     this.procesandoId.set(pedido.id_pedido);
-    this.domiciliosApi.cancelar(pedido.id_pedido, 'Cancelado desde panel de domicilios').subscribe({
-      next: (actualizado) => {
-        this.procesandoId.set(null);
-        this.actualizarPedidoEnLista(actualizado);
-        this.snackBar.open(`Pedido #${pedido.numero_pedido} cancelado e inventario revertido.`, 'OK', {
-          duration: 3000,
-        });
-      },
-      error: (err) => {
-        this.procesandoId.set(null);
-        const msg = err.error?.message || 'Error al cancelar el pedido.';
-        this.snackBar.open(msg, 'Cerrar', { duration: 3000 });
-      },
-    });
+    this.domiciliosApi
+      .cancelar(pedido.id_pedido, 'Cancelado desde panel de domicilios')
+      .subscribe({
+        next: (actualizado) => {
+          this.procesandoId.set(null);
+          this.actualizarPedidoEnLista(actualizado);
+          this.snackBar.open(
+            `Pedido #${pedido.numero_pedido} cancelado e inventario revertido.`,
+            'OK',
+            { duration: 3000 }
+          );
+        },
+        error: (err) => {
+          this.procesandoId.set(null);
+          const msg = err.error?.message || 'Error al cancelar el pedido.';
+          this.snackBar.open(msg, 'Cerrar', { duration: 3000 });
+        },
+      });
   }
 
   private actualizarPedidoEnLista(actualizado: Domicilio): void {
     this.pedidos.update((lista) =>
-      lista.map((p) => (p.id_pedido === actualizado.id_pedido ? actualizado : p)),
+      lista.map((p) => (p.id_pedido === actualizado.id_pedido ? actualizado : p))
     );
   }
 

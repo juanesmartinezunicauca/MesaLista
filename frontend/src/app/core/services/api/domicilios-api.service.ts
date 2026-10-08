@@ -44,6 +44,13 @@ export class DomiciliosApiService {
   }
 
   /**
+   * Consulta los pedidos del cliente actual autenticado.
+   */
+  obtenerMisPedidos(): Observable<Domicilio[]> {
+    return this.http.get<Domicilio[]>(`${this.apiUrl}/mis-pedidos`);
+  }
+
+  /**
    * Busca clientes registrados por teléfono o nombre para autocompletado en el formulario.
    */
   buscarClientes(query: string): Observable<Cliente[]> {
@@ -52,10 +59,21 @@ export class DomiciliosApiService {
   }
 
   /**
-   * Cambia la etapa operativa de un domicilio ('En Reparto', 'En Preparación', 'Cancelado').
+   * Cambia la etapa operativa de un domicilio ('Aceptar', 'En Preparación', 'En Reparto', 'Entregado', 'Cancelado').
    */
-  cambiarEstado(id: number, estado: string, motivo?: string): Observable<Domicilio> {
-    return this.http.patch<Domicilio>(`${this.apiUrl}/${id}/estado`, { estado, motivo });
+  cambiarEstado(
+    id: number,
+    estado: string,
+    motivo?: string,
+    repartidor_nombre?: string,
+    repartidor_telefono?: string,
+  ): Observable<Domicilio> {
+    return this.http.patch<Domicilio>(`${this.apiUrl}/${id}/estado`, {
+      estado,
+      motivo,
+      repartidor_nombre,
+      repartidor_telefono,
+    });
   }
 
   /**

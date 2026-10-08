@@ -128,7 +128,7 @@ export class CierreDeCaja {
     this.cajaApi
       .cerrarCaja({
         valor_final_fisico: Number(real),
-        observacion: this.observaciones()?.trim() || undefined,
+        observacion: this.observaciones()?.trim().slice(0, 255) || undefined,
       })
       .subscribe({
         next: (resultado: CierreCajaResult) => {

@@ -1,7 +1,7 @@
 import { Cliente } from './cliente.model';
 import { EstadoPedido, TipoPedido } from './pedido.model';
 
-export type EtapaOperativaDomicilio = 'En Preparación' | 'En Reparto' | 'Entregado' | 'Cancelado';
+export type EtapaOperativaDomicilio = 'Pendiente' | 'En Preparación' | 'En Reparto' | 'Entregado' | 'Cancelado';
 
 export interface PedidoDomicilioItem {
   id_item?: number;
@@ -33,6 +33,12 @@ export interface Domicilio {
   observacion?: string | null;
   cliente: Cliente;
   items: PedidoDomicilioItem[];
+  repartidor?: {
+    nombre: string;
+    telefono: string;
+  } | null;
+  metodo_pago?: string;
+  factura?: any;
   usuario?: {
     id_usuario: number;
     nombre: string;
@@ -53,4 +59,5 @@ export interface CreateDomicilioPayload {
     observacion?: string;
   }[];
   observacion?: string;
+  metodo_pago?: string;
 }
