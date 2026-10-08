@@ -6,13 +6,15 @@ import {
   HttpStatus,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { RolUsuario } from '@prisma/client';
 import { CurrentUser, Roles } from '../../common/decorators';
 import { JwtAuthGuard, RolesGuard } from '../../common/guards';
-import { CreateFacturaDto } from './dto';
+import { CreateFacturaDto, UpdateFacturaDto } from './dto';
 import { FacturacionService } from './facturacion.service';
 
 @Controller('facturas')
@@ -22,7 +24,7 @@ export class FacturacionController {
 
   /**
    * POST /api/v1/facturas
-   * Registra el cobro y facturación de una mesa, asocia a la caja activa y libera la mesa.
+   * Registra el cobro y facturación, asocia a la caja activa.
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -35,6 +37,21 @@ export class FacturacionController {
   }
 
   /**
+   * GET /api/v1/facturas
+   * Consulta el historial general de facturas con filtros.
+   */
+  @Get()
+  @Roles(RolUsuario.administrador, RolUsuario.cajero, RolUsuario.mesero)
+  obtenerTodas(
+    @Query('tipo') tipo?: string,
+    @Query('fecha') fecha?: string,
+    @Query('buscar') buscar?: string,
+    @Query('id_caja') id_caja?: number,
+  ) {
+    return this.facturacionService.obtenerTodas({ tipo, fecha, buscar, id_caja });
+  }
+
+  /**
    * GET /api/v1/facturas/:id
    * Consulta una factura por su ID.
    */
@@ -43,4 +60,18 @@ export class FacturacionController {
   obtenerPorId(@Param('id', ParseIntPipe) id: number) {
     return this.facturacionService.obtenerPorId(id);
   }
+
+  /**
+   * PATCH /api/v1/facturas/:id
+   * Edita una factura existente (pagos, método de pago, propina, observaciones).
+   */
+  @Patch(':id')
+  @Roles(RolUsuario.administrador, RolUsuario.cajero)
+  actualizar(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateFacturaDto,
+  ) {
+    return this.facturacionService.actualizarFactura(id, dto);
+  }
 }
+

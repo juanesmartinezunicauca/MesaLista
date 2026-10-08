@@ -10,10 +10,14 @@
                     <span class="pulse-dot"></span> EN VIVO
                 </span>
             </div>
-            <p class="subtitle">Control y despacho de comandas para llevar y entregas a domicilio</p>
+            <p class="subtitle">Aprobación, despacho a cocina, asignación de domiciliarios y facturación</p>
         </div>
 
         <div class="header-actions">
+            <button mat-stroked-button class="btn-invoice-history" (click)="abrirHistorialFacturas()">
+                <mat-icon>receipt_long</mat-icon>
+                <span>Historial de Facturación</span>
+            </button>
             <button mat-flat-button color="primary" class="btn-create" (click)="crearNuevoPedido()">
                 <mat-icon>add_shopping_cart</mat-icon>
                 <span>Crear Nuevo Domicilio</span>
@@ -30,6 +34,17 @@
             <div class="kpi-data">
                 <span class="kpi-value">{{ kpis().total }}</span>
                 <span class="kpi-label">Total Pedidos</span>
+            </div>
+        </div>
+
+        <div class="kpi-card pending-kpi" (click)="cambiarFiltro('Pendientes')"
+            [class.active]="filtroEstado() === 'Pendientes'" [class.has-pending]="kpis().pendientes > 0">
+            <div class="kpi-icon-wrapper pending">
+                <mat-icon>pending_actions</mat-icon>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-value">{{ kpis().pendientes }}</span>
+                <span class="kpi-label">Por Aceptar</span>
             </div>
         </div>
 
@@ -54,13 +69,13 @@
             </div>
         </div>
 
-        <div class="kpi-card" (click)="cambiarFiltro('Entregado')" [class.active]="filtroEstado() === 'Entregado'">
-            <div class="kpi-icon-wrapper delivered">
-                <mat-icon>task_alt</mat-icon>
+        <div class="kpi-card" (click)="cambiarFiltro('Historial')" [class.active]="filtroEstado() === 'Historial'">
+            <div class="kpi-icon-wrapper history">
+                <mat-icon>history</mat-icon>
             </div>
             <div class="kpi-data">
-                <span class="kpi-value">{{ kpis().entregados }}</span>
-                <span class="kpi-label">Entregados / Pagados</span>
+                <span class="kpi-value">{{ kpis().historial }}</span>
+                <span class="kpi-label">Historial (Cerrados)</span>
             </div>
         </div>
     </div>
@@ -70,9 +85,12 @@
         <mat-button-toggle-group [value]="filtroEstado()" (change)="cambiarFiltro($event.value)"
             class="modern-toggle-group" aria-label="Filtrar pedidos por estado">
             <mat-button-toggle value="Todos">Todos ({{ kpis().total }})</mat-button-toggle>
+            <mat-button-toggle value="Pendientes">
+                Por Aceptar ({{ kpis().pendientes }})
+            </mat-button-toggle>
             <mat-button-toggle value="En Preparación">En Cocina ({{ kpis().enPreparacion }})</mat-button-toggle>
             <mat-button-toggle value="En Reparto">En Reparto ({{ kpis().enReparto }})</mat-button-toggle>
-            <mat-button-toggle value="Entregado">Entregados ({{ kpis().entregados }})</mat-button-toggle>
+            <mat-button-toggle value="Historial">Historial ({{ kpis().historial }})</mat-button-toggle>
         </mat-button-toggle-group>
 
         <div class="search-input-wrapper">
@@ -96,7 +114,8 @@
     } @else {
     <div class="cards-grid">
         @for (pedido of pedidosFiltrados(); track pedido.id_pedido) {
-        <mat-card class="delivery-card" [class.processing]="procesandoId() === pedido.id_pedido">
+        <mat-card class="delivery-card" [class.processing]="procesandoId() === pedido.id_pedido"
+            [class.card-pending]="pedido.etapaOperativa === 'Pendiente'">
 
             <!-- Cabecera de la Tarjeta -->
             <mat-card-header class="card-top-row">
@@ -105,10 +124,24 @@
                     <span class="order-time">
                         <mat-icon>schedule</mat-icon> {{ formatearHora(pedido.fecha_hora) }}
                     </span>
+                    @if (pedido.id_factura) {
+                    <span class="badge-invoiced" matTooltip="Factura generada en caja">
+                        <mat-icon>receipt</mat-icon> #FAC-{{ pedido.id_factura }}
+                    </span>
+                    }
+                    <span class="badge-payment" [ngClass]="{
+                        'pay-transfer': (pedido.metodo_pago || '').toLowerCase().includes('transf'),
+                        'pay-card': (pedido.metodo_pago || '').toLowerCase().includes('tarj'),
+                        'pay-cash': !(pedido.metodo_pago || '').toLowerCase().includes('transf') && !(pedido.metodo_pago || '').toLowerCase().includes('tarj')
+                    }" [matTooltip]="(pedido.metodo_pago || '').toLowerCase().includes('transf') ? 'Pago por Transferencia - Verificar comprobante en WhatsApp' : 'Forma de pago del pedido'">
+                        <mat-icon>{{ (pedido.metodo_pago || '').toLowerCase().includes('transf') ? 'account_balance_wallet' : ((pedido.metodo_pago || '').toLowerCase().includes('tarj') ? 'credit_card' : 'payments') }}</mat-icon>
+                        <span>{{ pedido.metodo_pago || 'Efectivo' }}</span>
+                    </span>
                 </div>
 
                 <div class="header-right">
                     <mat-chip class="status-chip" [ngClass]="{
+                        'chip-pending': pedido.etapaOperativa === 'Pendiente',
                         'chip-preparation': pedido.etapaOperativa === 'En Preparación',
                         'chip-delivery': pedido.etapaOperativa === 'En Reparto',
                         'chip-delivered': pedido.etapaOperativa === 'Entregado',
@@ -131,7 +164,7 @@
                         }
                         <button mat-menu-item class="menu-danger" (click)="cancelar(pedido)">
                             <mat-icon color="warn">cancel</mat-icon>
-                            <span>Cancelar Pedido</span>
+                            <span>Anular Pedido</span>
                         </button>
                     </mat-menu>
                     }
@@ -145,10 +178,15 @@
                     <span class="label">CLIENTE</span>
                     <div class="name-phone-row">
                         <span class="value name">{{ pedido.cliente.nombre }}</span>
-                        <a class="phone-link" [href]="'tel:' + pedido.cliente.telefono" matTooltip="Llamar al cliente">
-                            <mat-icon>call</mat-icon>
-                            <span>{{ pedido.cliente.telefono }}</span>
-                        </a>
+                        <div class="contact-actions">
+                            <a class="phone-link" [href]="'tel:' + pedido.cliente.telefono" matTooltip="Llamar al cliente">
+                                <mat-icon>call</mat-icon>
+                                <span>{{ pedido.cliente.telefono }}</span>
+                            </a>
+                            <a class="whatsapp-link" [href]="'https://wa.me/57' + pedido.cliente.telefono" target="_blank" rel="noopener noreferrer" matTooltip="Abrir WhatsApp del cliente">
+                                <mat-icon>chat</mat-icon>
+                            </a>
+                        </div>
                     </div>
                 </div>
 
@@ -160,6 +198,26 @@
                         <span>{{ pedido.cliente.direccion }}</span>
                     </span>
                 </div>
+
+                <!-- Repartidor Asignado (si está en reparto) -->
+                @if (pedido.repartidor; as rep) {
+                @if (rep.nombre) {
+                <div class="driver-info-box">
+                    <span class="label">DOMICILIARIO ASIGNADO</span>
+                    <div class="driver-row">
+                        <span class="driver-name">
+                            <mat-icon>sports_motorsports</mat-icon>
+                            <strong>{{ rep.nombre }}</strong>
+                        </span>
+                        @if (rep.telefono && rep.telefono !== 'N/A') {
+                        <a class="driver-phone" [href]="'tel:' + rep.telefono">
+                            <mat-icon>call</mat-icon> {{ rep.telefono }}
+                        </a>
+                        }
+                    </div>
+                </div>
+                }
+                }
 
                 <!-- Nota o referencia -->
                 @if (pedido.observacion) {
@@ -189,44 +247,73 @@
             <!-- Footer con Total y Acciones -->
             <mat-card-footer class="card-footer-row">
                 <div class="total-block">
-                    <span class="total-label">Total a cobrar</span>
+                    <span class="total-label">Total comanda</span>
                     <span class="total-amount">$ {{ pedido.totalCalculado | number:'1.0-0' }}</span>
                 </div>
 
                 <div class="actions-block">
-                    @if (pedido.etapaOperativa === 'En Preparación') {
-                    <button mat-flat-button color="accent" class="btn-action-dispatch" (click)="despachar(pedido)">
+                    <!-- 1. Pedido Pendiente: Cajero Acepta (Envia a Cocina) o Rechaza -->
+                    @if (pedido.etapaOperativa === 'Pendiente') {
+                    <button mat-flat-button color="primary" class="btn-action-accept" (click)="aceptarPedido(pedido)"
+                        matTooltip="Aprobar pedido y enviar la comanda directamente a la cocina">
+                        <mat-icon>soup_kitchen</mat-icon>
+                        <span>Aceptar a Cocina</span>
+                    </button>
+                    <button mat-stroked-button color="warn" class="btn-action-reject" (click)="rechazarPedido(pedido)"
+                        matTooltip="Rechazar pedido del cliente">
+                        <mat-icon>cancel</mat-icon>
+                        <span>Rechazar</span>
+                    </button>
+                    }
+
+                    <!-- 2. En Cocina: Despachar a Reparto o Facturar -->
+                    @else if (pedido.etapaOperativa === 'En Preparación') {
+                    <button mat-flat-button color="accent" class="btn-action-dispatch"
+                        (click)="solicitarDespachoConRepartidor(pedido)"
+                        matTooltip="Asignar repartidor y despachar">
                         <mat-icon>delivery_dining</mat-icon>
                         <span>Despachar</span>
                     </button>
-                    } @else if (pedido.etapaOperativa === 'En Reparto') {
-                    <button mat-flat-button color="primary" class="btn-action-pay" [matMenuTriggerFor]="menuPago">
-                        <mat-icon>paid</mat-icon>
-                        <span>Cobrar en Caja</span>
+                    <button mat-stroked-button class="btn-action-invoice" (click)="facturarDomicilio(pedido)"
+                        matTooltip="Registrar cobro y método de pago en caja sin cerrar el pedido">
+                        <mat-icon>receipt</mat-icon>
+                        <span>{{ pedido.id_factura ? 'Refacturar' : 'Facturar' }}</span>
                     </button>
-                    <mat-menu #menuPago="matMenu">
-                        <button mat-menu-item (click)="cobrarYEntregar(pedido, 'Efectivo')">
-                            <mat-icon>payments</mat-icon>
-                            <span>Efectivo</span>
-                        </button>
-                        <button mat-menu-item (click)="cobrarYEntregar(pedido, 'Transferencia')">
-                            <mat-icon>account_balance</mat-icon>
-                            <span>Transferencia / Nequi</span>
-                        </button>
-                        <button mat-menu-item (click)="cobrarYEntregar(pedido, 'Tarjeta')">
-                            <mat-icon>credit_card</mat-icon>
-                            <span>Datáfono / Tarjeta</span>
-                        </button>
-                    </mat-menu>
-                    } @else if (pedido.etapaOperativa === 'Entregado') {
+                    }
+
+                    <!-- 3. En Reparto: Facturar o Cerrar Domicilio (va a historial) -->
+                    @else if (pedido.etapaOperativa === 'En Reparto') {
+                    <button mat-flat-button color="primary" class="btn-action-close" (click)="cerrarDomicilio(pedido)"
+                        matTooltip="Marcar como entregado y archivar en historial">
+                        <mat-icon>task_alt</mat-icon>
+                        <span>Cerrar Domicilio</span>
+                    </button>
+                    <button mat-stroked-button class="btn-action-invoice" (click)="facturarDomicilio(pedido)"
+                        matTooltip="Registrar cobro y forma de pago en caja">
+                        <mat-icon>receipt</mat-icon>
+                        <span>{{ pedido.id_factura ? 'Facturado' : 'Facturar' }}</span>
+                    </button>
+                    }
+
+                    <!-- 4. Entregado / Cerrado (Historial) -->
+                    @else if (pedido.etapaOperativa === 'Entregado') {
                     <div class="badge-finished success">
-                        <mat-icon>check_circle</mat-icon>
-                        <span>Pagado</span>
+                        <mat-icon>task_alt</mat-icon>
+                        <span>Entregado / Cerrado</span>
                     </div>
-                    } @else if (pedido.etapaOperativa === 'Cancelado') {
+                    @if (!pedido.id_factura) {
+                    <button mat-stroked-button class="btn-action-invoice" (click)="facturarDomicilio(pedido)">
+                        <mat-icon>receipt</mat-icon>
+                        <span>Facturar</span>
+                    </button>
+                    }
+                    }
+
+                    <!-- 5. Cancelado (Historial) -->
+                    @else if (pedido.etapaOperativa === 'Cancelado') {
                     <div class="badge-finished cancelled">
                         <mat-icon>cancel</mat-icon>
-                        <span>Anulado</span>
+                        <span>Cancelado / Rechazado</span>
                     </div>
                     }
                 </div>

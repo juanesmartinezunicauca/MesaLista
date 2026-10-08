@@ -4,14 +4,25 @@
     <!-- 1. Encabezado Limpio con Mesero Responsable -->
     <div class="modal-header">
       <div class="header-left">
-        <span class="mesa-badge">Mesa #{{ data.mesa.numero }}</span>
-        <div class="header-titles">
-          <h2>Cuenta de la Mesa</h2>
-          <span class="mesero-sub">
-            <mat-icon>person</mat-icon>
-            Atendido por: <strong>{{ data.mesa.mesero_actual || 'Mesero de turno' }}</strong>
-          </span>
-        </div>
+        @if (data.mesa) {
+          <span class="mesa-badge">Mesa #{{ data.mesa.numero }}</span>
+          <div class="header-titles">
+            <h2>Cuenta de la Mesa</h2>
+            <span class="mesero-sub">
+              <mat-icon>person</mat-icon>
+              Atendido por: <strong>{{ data.mesa.mesero_actual || 'Mesero de turno' }}</strong>
+            </span>
+          </div>
+        } @else if (data.pedido) {
+          <span class="mesa-badge delivery-badge">Domicilio #{{ data.pedido.numero_pedido }}</span>
+          <div class="header-titles">
+            <h2>Facturar Domicilio</h2>
+            <span class="mesero-sub">
+              <mat-icon>person</mat-icon>
+              Cliente: <strong>{{ data.pedido.cliente?.nombre || 'Cliente' }}</strong>
+            </span>
+          </div>
+        }
       </div>
       <button mat-icon-button class="btn-close" (click)="cerrarSinCobrar()" aria-label="Cerrar">
         <mat-icon>close</mat-icon>

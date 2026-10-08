@@ -11,6 +11,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatSelectModule } from '@angular/material/select';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { CatalogoApiService } from '../../../core/services/api/catalogo-api.service';
 import { DomiciliosApiService } from '../../../core/services/api/domicilios-api.service';
@@ -38,6 +39,7 @@ export interface ItemSeleccionado {
     MatIconModule,
     MatInputModule,
     MatFormFieldModule,
+    MatSelectModule,
     MatDividerModule,
     MatChipsModule,
     MatProgressSpinnerModule,
@@ -109,7 +111,7 @@ export class NewDeliveryDialogComponent implements OnInit {
       nombreCompleto: ['', [Validators.required, Validators.minLength(3)]],
       telefono: ['', [Validators.required, Validators.pattern(/^[0-9]{7,15}$/)]],
       direccion: ['', [Validators.required, Validators.minLength(5)]],
-      notas: [''],
+      notas: ['', [Validators.maxLength(255)]],
     });
   }
 

@@ -8,6 +8,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -34,6 +35,7 @@ export class CreatePedidoDto {
 
   @IsOptional()
   @IsString({ message: 'La observación debe ser una cadena de texto.' })
+  @MaxLength(255, { message: 'La observación no puede superar los 255 caracteres.' })
   observacion?: string;
 
   @IsArray({ message: 'Los items del pedido deben enviarse como una lista.' })

@@ -230,6 +230,7 @@
             <mat-label>Nota de preparación libre (ej. término carne, salsas aparte)</mat-label>
             <input
               matInput
+              maxlength="255"
               placeholder="Escribe aquí las preferencias..."
               [ngModel]="observacionLibre()"
               (ngModelChange)="observacionLibre.set($event)"

@@ -1,0 +1,260 @@
+<div class="historial-dialog-container">
+  <!-- Cabecera -->
+  <header class="dialog-header">
+    <div class="title-group">
+      <div class="header-icon-box">
+        <mat-icon>receipt_long</mat-icon>
+      </div>
+      <div>
+        <h2>Historial de Facturación</h2>
+        <p>Consulta y edición de facturas emitidas para Domicilios y Mesas</p>
+      </div>
+    </div>
+    <button mat-icon-button class="btn-close" (click)="cerrar()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <mat-divider></mat-divider>
+
+  <!-- Filtros y Búsqueda -->
+  <div class="filter-controls">
+    <mat-button-toggle-group
+      [value]="filtroTipo()"
+      (change)="cambiarFiltro($event.value)"
+      class="type-toggle-group"
+    >
+      <mat-button-toggle value="todos">Todas ({{ facturas().length }})</mat-button-toggle>
+      <mat-button-toggle value="domicilio">Domicilios</mat-button-toggle>
+      <mat-button-toggle value="salon">Mesas / Salón</mat-button-toggle>
+    </mat-button-toggle-group>
+
+    <div class="search-box">
+      <mat-icon>search</mat-icon>
+      <input
+        type="text"
+        placeholder="Buscar por cliente, #FAC, mesa, teléfono..."
+        [ngModel]="busqueda()"
+        (ngModelChange)="busqueda.set($event)"
+      />
+      @if (busqueda()) {
+        <button type="button" class="btn-clear" (click)="busqueda.set('')">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Formulario Modal de Edición de Factura (cuando se activa) -->
+  @if (facturaEditando(); as fe) {
+    <div class="edit-banner-card">
+      <div class="edit-header">
+        <div class="edit-title">
+          <mat-icon>edit_note</mat-icon>
+          <h3>Editando Factura #FAC-{{ fe.id_venta }}</h3>
+          <span class="edit-target-badge">
+            {{ fe.mesa ? 'Mesa #' + fe.mesa.numero : (fe.cliente ? 'Domicilio - ' + fe.cliente.nombre : 'Venta Directa') }}
+          </span>
+        </div>
+        <button mat-icon-button (click)="cancelarEdicion()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <div class="edit-fields-grid">
+        <div class="field-item">
+          <label>Método de Pago</label>
+          <select
+            class="styled-select"
+            [ngModel]="editMedioPago()"
+            (ngModelChange)="editMedioPago.set($event)"
+          >
+            <option value="Efectivo">Efectivo</option>
+            <option value="Transferencia">Transferencia (Nequi / Daviplata)</option>
+            <option value="Tarjeta">Tarjeta / Datáfono</option>
+            <option value="Mixto">Pago Mixto / Combinado</option>
+          </select>
+        </div>
+
+        @if (editMedioPago() === 'Mixto') {
+          <div class="mixed-payments-row">
+            <div class="field-item">
+              <label>Monto Efectivo ($)</label>
+              <input
+                type="number"
+                class="styled-input"
+                [ngModel]="editMontoEfectivo()"
+                (ngModelChange)="editMontoEfectivo.set($event)"
+              />
+            </div>
+            <div class="field-item">
+              <label>Monto Tarjeta ($)</label>
+              <input
+                type="number"
+                class="styled-input"
+                [ngModel]="editMontoTarjeta()"
+                (ngModelChange)="editMontoTarjeta.set($event)"
+              />
+            </div>
+            <div class="field-item">
+              <label>Monto Transferencia ($)</label>
+              <input
+                type="number"
+                class="styled-input"
+                [ngModel]="editMontoTransferencia()"
+                (ngModelChange)="editMontoTransferencia.set($event)"
+              />
+            </div>
+          </div>
+        }
+
+        <div class="field-item">
+          <label>Propina Voluntaria ($)</label>
+          <input
+            type="number"
+            class="styled-input"
+            [ngModel]="editPropina()"
+            (ngModelChange)="editPropina.set($event)"
+          />
+        </div>
+
+        <div class="field-item full-width">
+          <label>Observación / Nota de Facturación</label>
+          <input
+            type="text"
+            class="styled-input"
+            maxlength="255"
+            placeholder="Ej. Pago corregido por solicitud de cliente, transferido a Nequi"
+            [ngModel]="editObservacion()"
+            (ngModelChange)="editObservacion.set($event)"
+          />
+        </div>
+      </div>
+
+      <div class="edit-actions">
+        <button mat-stroked-button (click)="cancelarEdicion()">Cancelar</button>
+        <button
+          mat-flat-button
+          color="primary"
+          (click)="guardarEdicion()"
+          [disabled]="guardandoEdicion()"
+        >
+          <mat-icon>{{ guardandoEdicion() ? 'hourglass_top' : 'save' }}</mat-icon>
+          <span>{{ guardandoEdicion() ? 'Guardando...' : 'Guardar y Actualizar Factura' }}</span>
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Contenido Principal: Spinner o Lista de Facturas -->
+  <div class="dialog-body">
+    @if (cargando()) {
+      <div class="loading-state">
+        <mat-spinner diameter="40"></mat-spinner>
+        <span>Cargando facturas...</span>
+      </div>
+    } @else {
+      <div class="facturas-list">
+        @for (f of facturasFiltradas(); track f.id_venta) {
+          <div class="factura-card" [class.being-edited]="facturaEditando()?.id_venta === f.id_venta">
+            <div class="factura-top-row">
+              <div class="folio-info">
+                <span class="folio-tag">#FAC-{{ f.id_venta }}</span>
+                <span class="factura-date">
+                  <mat-icon>schedule</mat-icon>
+                  {{ f.fecha_hora | date:'medium' }}
+                </span>
+              </div>
+
+              <div class="type-badge-box">
+                @if (f.mesa) {
+                  <span class="badge salon">
+                    <mat-icon>table_restaurant</mat-icon> Mesa #{{ f.mesa.numero }}
+                  </span>
+                } @else if (f.cliente) {
+                  <span class="badge delivery">
+                    <mat-icon>two_wheeler</mat-icon> Domicilio
+                  </span>
+                } @else {
+                  <span class="badge direct">
+                    <mat-icon>point_of_sale</mat-icon> Mostrador
+                  </span>
+                }
+
+                <button
+                  mat-stroked-button
+                  class="btn-edit-invoice"
+                  (click)="iniciarEdicion(f)"
+                  title="Editar método de pago o detalles de esta factura"
+                >
+                  <mat-icon>edit</mat-icon>
+                  <span>Editar</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Datos del Cliente o Mesa -->
+            <div class="factura-target-info">
+              @if (f.cliente) {
+                <div class="target-row">
+                  <span class="target-label">Cliente:</span>
+                  <span class="target-val"><strong>{{ f.cliente.nombre }}</strong> ({{ f.cliente.telefono }})</span>
+                </div>
+                <div class="target-row">
+                  <span class="target-label">Dirección:</span>
+                  <span class="target-val">{{ f.cliente.direccion }}</span>
+                </div>
+              } @else if (f.mesa) {
+                <div class="target-row">
+                  <span class="target-label">Atendido en salón:</span>
+                  <span class="target-val">Mesa #{{ f.mesa.numero }}</span>
+                </div>
+              }
+              @if (f.observacion) {
+                <div class="target-row obs-row">
+                  <span class="target-label">Nota:</span>
+                  <span class="target-val">{{ f.observacion }}</span>
+                </div>
+              }
+            </div>
+
+            <!-- Desglose de Pagos Registrados -->
+            <div class="payments-strip">
+              <span class="payments-label">Pagos registrados:</span>
+              <div class="payments-chips">
+                @for (p of f.pagos; track p.id_pago) {
+                  <span class="payment-chip">
+                    <mat-icon>payments</mat-icon>
+                    <strong>{{ p.medioPago?.nombre }}:</strong> ${{ p.monto | number:'1.0-0' }}
+                  </span>
+                }
+              </div>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <!-- Totales -->
+            <div class="factura-totals-row">
+              <div class="totals-left">
+                <span>Subtotal: ${{ f.valor | number:'1.0-0' }}</span>
+                @if (f.propina && f.propina > 0) {
+                  <span class="tip-text">+ Propina: ${{ f.propina | number:'1.0-0' }}</span>
+                }
+              </div>
+              <div class="totals-right">
+                <span class="total-label">Total Facturado:</span>
+                <span class="total-amount">${{ f.valor_total | number:'1.0-0' }} COP</span>
+              </div>
+            </div>
+          </div>
+        } @empty {
+          <div class="empty-state">
+            <mat-icon>receipt</mat-icon>
+            <h3>No se encontraron facturas</h3>
+            <p>No hay facturas registradas que coincidan con los filtros seleccionados.</p>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

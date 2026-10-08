@@ -100,7 +100,7 @@
         <div class="observations-container">
             <label class="obs-label">Observaciones (Opcional)</label>
             <mat-form-field appearance="outline" class="modern-textarea">
-                <textarea matInput rows="3" placeholder="Añade notas sobre el cierre, sobrantes o faltantes..."
+                <textarea matInput rows="3" maxlength="255" placeholder="Añade notas sobre el cierre, sobrantes o faltantes..."
                     [ngModel]="observaciones()" (ngModelChange)="observaciones.set($event)" [disabled]="isClosing()"></textarea>
             </mat-form-field>
         </div>

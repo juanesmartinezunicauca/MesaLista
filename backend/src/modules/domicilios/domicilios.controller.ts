@@ -16,6 +16,7 @@ import { CurrentUser, Roles } from '../../common/decorators';
 import { JwtAuthGuard, RolesGuard } from '../../common/guards';
 import {
   CambiarEstadoDomicilioDto,
+  CancelarDomicilioDto,
   CreateDomicilioDto,
 } from './dto';
 import { DomiciliosService } from './domicilios.service';
@@ -69,11 +70,26 @@ export class DomiciliosController {
   }
 
   /**
+   * GET /api/v1/domicilios/mis-pedidos
+   * Consulta los pedidos del cliente autenticado.
+   */
+  @Get('mis-pedidos')
+  @Roles(RolUsuario.cliente, RolUsuario.administrador, RolUsuario.cajero, RolUsuario.mesero)
+  obtenerMisPedidos(@CurrentUser('id_usuario') id_usuario: number) {
+    return this.domiciliosService.obtenerMisPedidos(id_usuario);
+  }
+
+  /**
    * GET /api/v1/domicilios/:id
    * Obtiene la información detallada de un pedido a domicilio por su identificador.
    */
   @Get(':id')
-  @Roles(RolUsuario.administrador, RolUsuario.cajero, RolUsuario.mesero)
+  @Roles(
+    RolUsuario.administrador,
+    RolUsuario.cajero,
+    RolUsuario.mesero,
+    RolUsuario.cliente,
+  )
   obtenerPorId(@Param('id', ParseIntPipe) id: number) {
     return this.domiciliosService.obtenerPorId(id);
   }
@@ -99,8 +115,9 @@ export class DomiciliosController {
   @Roles(RolUsuario.administrador, RolUsuario.cajero)
   cancelar(
     @Param('id', ParseIntPipe) id: number,
-    @Body('motivo') motivo?: string,
+    @Body() dto?: CancelarDomicilioDto | string,
   ) {
+    const motivo = typeof dto === 'string' ? dto : dto?.motivo;
     return this.domiciliosService.cancelar(id, motivo);
   }
 }

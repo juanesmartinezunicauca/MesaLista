@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CerrarCajaDto {
@@ -9,6 +9,7 @@ export class CerrarCajaDto {
   valor_final_fisico!: number;
 
   @IsOptional()
-  @IsString()
+  @IsString({ message: 'La observación debe ser una cadena de texto.' })
+  @MaxLength(255, { message: 'La observación no puede superar los 255 caracteres.' })
   observacion?: string;
 }

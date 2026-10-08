@@ -31,15 +31,21 @@ export * from '../models/factura.model';
   styleUrl: './factura-dialog.scss',
 })
 export class FacturaDialogComponent {
-  data = inject<{ mesa: Mesa }>(MAT_DIALOG_DATA);
+  data = inject<{ mesa?: Mesa; pedido?: any }>(MAT_DIALOG_DATA);
   private dialogRef = inject(MatDialogRef<FacturaDialogComponent>);
 
   fechaActual = new Date();
   folioId = Math.floor(1000 + Math.random() * 9000);
 
   // Estados de Pago y Propinas
-  metodoPago = signal<MetodoPagoTipo>('efectivo');
-  tipoPropina = signal<'cero' | 'diez' | 'personalizada'>('diez');
+  metodoPago = signal<MetodoPagoTipo>(
+    this.data?.pedido?.metodo_pago?.toLowerCase().includes('transf')
+      ? 'transferencia'
+      : this.data?.pedido?.metodo_pago?.toLowerCase().includes('tarj')
+      ? 'tarjeta'
+      : 'efectivo'
+  );
+  tipoPropina = signal<'cero' | 'diez' | 'personalizada'>(this.data?.pedido ? 'cero' : 'diez');
   propinaPersonalizada = signal<number>(0);
   efectivoRecibido = signal<number>(0);
 
@@ -48,40 +54,61 @@ export class FacturaDialogComponent {
   montoTarjeta = signal<number>(0);
   montoTransferencia = signal<number>(0);
 
-  // Consolidación de todos los ítems de todos los pedidos de la mesa
+  // Consolidación de todos los ítems de todos los pedidos de la mesa o domicilio
   itemsConsolidados = computed<ItemConsolidado[]>(() => {
     const items: ItemConsolidado[] = [];
 
-    const pedidos = this.data.mesa.pedidos || [];
-    for (const pedido of pedidos) {
+    if (this.data?.mesa) {
+      const pedidos = this.data.mesa.pedidos || [];
+      for (const pedido of pedidos) {
+        for (const item of pedido.items || []) {
+          const notas: string[] = [];
+          if (item.ingredientes_removidos && item.ingredientes_removidos.length > 0) {
+            notas.push(`Sin: ${item.ingredientes_removidos.join(', ')}`);
+          }
+          if (item.observacion) {
+            notas.push(item.observacion);
+          }
+
+          const existing = items.find(
+            (i) =>
+              i.nombre === item.nombre &&
+              i.precio_unitario === item.precio_unitario &&
+              i.notas.join('|') === notas.join('|')
+          );
+
+          if (existing) {
+            existing.cantidad += item.cantidad;
+            existing.subtotal += item.subtotal;
+          } else {
+            items.push({
+              nombre: item.nombre || `Producto #${item.id_producto}`,
+              cantidad: item.cantidad,
+              precio_unitario: item.precio_unitario,
+              subtotal: item.subtotal,
+              notas,
+            });
+          }
+        }
+      }
+    } else if (this.data?.pedido) {
+      const pedido = this.data.pedido;
       for (const item of pedido.items || []) {
         const notas: string[] = [];
-        if (item.ingredientes_removidos && item.ingredientes_removidos.length > 0) {
-          notas.push(`Sin: ${item.ingredientes_removidos.join(', ')}`);
+        if (item.ingredientes_removidos) {
+          notas.push(item.ingredientes_removidos);
         }
         if (item.observacion) {
           notas.push(item.observacion);
         }
-
-        const existing = items.find(
-          (i) =>
-            i.nombre === item.nombre &&
-            i.precio_unitario === item.precio_unitario &&
-            i.notas.join('|') === notas.join('|')
-        );
-
-        if (existing) {
-          existing.cantidad += item.cantidad;
-          existing.subtotal += item.subtotal;
-        } else {
-          items.push({
-            nombre: item.nombre || `Producto #${item.id_producto}`,
-            cantidad: item.cantidad,
-            precio_unitario: item.precio_unitario,
-            subtotal: item.subtotal,
-            notas,
-          });
-        }
+        const unit = Number(item.precio_unitario || item.producto?.precio_venta || 0);
+        items.push({
+          nombre: item.producto?.nombre || item.nombre || `Producto #${item.id_producto}`,
+          cantidad: item.cantidad,
+          precio_unitario: unit,
+          subtotal: item.cantidad * unit,
+          notas,
+        });
       }
     }
 
@@ -93,7 +120,13 @@ export class FacturaDialogComponent {
     if (items.length > 0) {
       return items.reduce((acc, i) => acc + i.subtotal, 0);
     }
-    return this.data.mesa.total_acumulado || 0;
+    if (this.data?.mesa) {
+      return this.data.mesa.total_acumulado || 0;
+    }
+    if (this.data?.pedido) {
+      return Number(this.data.pedido.totalCalculado || 0);
+    }
+    return 0;
   });
 
   propinaDiez = computed(() => Math.round(this.subtotal() * 0.1));

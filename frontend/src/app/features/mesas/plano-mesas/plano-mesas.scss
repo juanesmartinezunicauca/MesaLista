@@ -19,6 +19,26 @@
 .plano-header {
   @include unified-view-header;
 
+  .btn-historial-facturas {
+    background-color: #ffffff;
+    color: $text-secondary;
+    border-color: $border-color;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+
+    mat-icon {
+      color: $brand-blue;
+    }
+
+    &:hover {
+      background-color: #f8fafc;
+      color: $text-primary;
+    }
+  }
+
   .btn-nueva-mesa {
     background-color: $brand-orange !important;
     color: #ffffff !important;

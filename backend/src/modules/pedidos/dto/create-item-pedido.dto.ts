@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
 export class CreateItemPedidoDto {
   @IsNotEmpty({ message: 'El ID del producto es requerido.' })
@@ -16,9 +16,11 @@ export class CreateItemPedidoDto {
 
   @IsOptional()
   @IsString({ message: 'Los ingredientes removidos deben ser una cadena de texto.' })
+  @MaxLength(255, { message: 'Los ingredientes removidos no pueden superar los 255 caracteres.' })
   ingredientes_removidos?: string;
 
   @IsOptional()
   @IsString({ message: 'La observación debe ser una cadena de texto.' })
+  @MaxLength(255, { message: 'La observación no puede superar los 255 caracteres.' })
   observacion?: string;
 }

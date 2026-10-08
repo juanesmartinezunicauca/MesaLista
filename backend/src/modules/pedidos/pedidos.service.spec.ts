@@ -239,7 +239,7 @@ describe('PedidosService', () => {
 
       expect(prisma.pedido.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { estado: EstadoPedido.enviada },
+          where: expect.objectContaining({ estado: EstadoPedido.enviada }),
           orderBy: { fecha_hora: 'desc' },
         }),
       );

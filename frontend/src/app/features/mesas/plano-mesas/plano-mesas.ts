@@ -15,6 +15,7 @@ import { MesasService } from '../services/mesas.service';
 import { NuevaMesaDialogComponent } from '../dialogs/nueva-mesa-dialog';
 import { TransferirMesaDialogComponent } from '../dialogs/transferir-mesa-dialog';
 import { FacturaCobroResult, FacturaDialogComponent } from '../dialogs/factura-dialog';
+import { HistorialFacturasDialogComponent } from '../../../shared/components/historial-facturas/historial-facturas-dialog';
 import { BorradorPedidoComponent } from '../borrador-pedido/borrador-pedido';
 import { DetalleMesaComponent } from '../detalle-mesa/detalle-mesa';
 import { AuthService } from '../../../core/services/auth/auth.service';
@@ -68,6 +69,15 @@ export class PlanoMesasComponent implements OnInit {
   abrirNuevaMesaDialog(): void {
     this.dialog.open(NuevaMesaDialogComponent, {
       width: '380px',
+    });
+  }
+
+  abrirHistorialFacturas(): void {
+    this.dialog.open(HistorialFacturasDialogComponent, {
+      width: '950px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+      panelClass: 'modal-historial-facturas',
     });
   }
 

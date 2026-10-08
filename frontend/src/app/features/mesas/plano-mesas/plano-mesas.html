@@ -25,6 +25,10 @@
         </div>
 
         <div class="header-actions">
+          <button mat-stroked-button class="btn-historial-facturas" (click)="abrirHistorialFacturas()">
+            <mat-icon>receipt_long</mat-icon>
+            <span>Historial Facturas</span>
+          </button>
           @if (esAdmin()) {
             <button mat-flat-button class="btn-nueva-mesa" (click)="abrirNuevaMesaDialog()">
               <mat-icon>add</mat-icon>

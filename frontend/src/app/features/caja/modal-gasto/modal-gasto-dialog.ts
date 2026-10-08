@@ -43,11 +43,11 @@ export class ModalGastoDialogComponent {
   mediosPago: string[] = ['Efectivo', 'Transferencia'];
 
   gastoForm: FormGroup = this.fb.group({
-    descripcion: ['', [Validators.required, Validators.minLength(3)]],
+    descripcion: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(255)]],
     total: [null, [Validators.required, Validators.min(1)]],
-    tipo_gasto: ['Insumos', [Validators.required]],
-    medio_pago: ['Efectivo', [Validators.required]],
-    observacion: [''],
+    tipo_gasto: ['Insumos', [Validators.required, Validators.maxLength(50)]],
+    medio_pago: ['Efectivo', [Validators.required, Validators.maxLength(50)]],
+    observacion: ['', [Validators.maxLength(255)]],
   });
 
   guardar(): void {
