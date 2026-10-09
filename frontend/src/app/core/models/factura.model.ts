@@ -13,6 +13,9 @@ export interface Factura {
   valor_total: number;
   fecha_hora: Date | string;
   observacion?: string | null;
+  estado?: 'emitida' | 'anulada';
+  fecha_anulacion?: Date | string | null;
+  motivo_anulacion?: string | null;
   pedidos?: Pedido[];
   pagos?: Pago[];
   cliente?: Cliente;

@@ -18,6 +18,17 @@ export const routes: Routes = [
       ),
   },
 
+  // Vista dedicada del Carrito de Compras
+  {
+    path: 'cliente/carrito',
+    canActivate: [clienteViewGuard],
+    loadComponent: () =>
+      import('./features/cliente/vista-carrito/vista-carrito').then(
+        (m) => m.VistaCarritoComponent
+      ),
+  },
+  { path: 'carrito', redirectTo: 'cliente/carrito', pathMatch: 'full' },
+
   // Ruta pública de autenticación
   {
     path: 'login',
@@ -112,6 +123,24 @@ export const routes: Routes = [
           import(
             './features/domicilios/lista-domicilios/dashboard-domis'
           ).then((m) => m.DashboardDomisComponent),
+      },
+      {
+        path: 'clientes',
+        canActivate: [roleGuard],
+        data: { roles: ['administrador', 'cajero', 'mesero'] },
+        loadComponent: () =>
+          import(
+            './features/clientes/vista-clientes/vista-clientes'
+          ).then((m) => m.VistaClientesComponent),
+      },
+      {
+        path: 'historial',
+        canActivate: [roleGuard],
+        data: { roles: ['administrador', 'cajero'] },
+        loadComponent: () =>
+          import(
+            './features/historial/vista-historial/vista-historial'
+          ).then((m) => m.VistaHistorialComponent),
       },
       {
         path: 'reportes',

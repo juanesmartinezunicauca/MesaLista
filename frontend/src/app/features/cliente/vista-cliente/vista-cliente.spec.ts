@@ -74,16 +74,18 @@ describe('VistaClienteComponent', () => {
     open: vi.fn(),
   };
 
+  let router: Router;
+
   beforeEach(async () => {
     mockCurrentUserSignal.set(null);
     mockIsAuthenticatedSignal.set(false);
+    localStorage.clear();
     vi.clearAllMocks();
 
     await TestBed.configureTestingModule({
       imports: [VistaClienteComponent],
       providers: [
         provideRouter([]),
-        { provide: Router, useValue: mockRouter },
         { provide: CatalogoApiService, useValue: mockCatalogoService },
         { provide: DomiciliosApiService, useValue: mockDomiciliosService },
         { provide: AuthService, useValue: mockAuthService },
@@ -92,6 +94,8 @@ describe('VistaClienteComponent', () => {
 
     fixture = TestBed.createComponent(VistaClienteComponent);
     component = fixture.componentInstance;
+    router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigate').mockImplementation(() => Promise.resolve(true));
     snackBar = fixture.debugElement.injector.get(MatSnackBar);
     vi.spyOn(snackBar, 'open').mockImplementation(() => ({ onAction: () => of(null) } as any));
     fixture.detectChanges();
@@ -117,30 +121,21 @@ describe('VistaClienteComponent', () => {
     expect(filtrados[0].nombre).toBe('Pizza Especial');
   });
 
-  it('debe abrir modal de autenticación si un visitante no autenticado solicita domicilio', () => {
-    mockIsAuthenticatedSignal.set(false);
+  it('debe agregar producto al carrito y redirigir a /cliente/carrito al solicitar domicilio', () => {
     component.solicitarDomicilio(mockProductos[0]);
-
-    expect(component.mostrarModalAuth()).toBe(true);
-    expect(component.mostrarModalPedido()).toBe(false);
+    expect(component.carrito().length).toBe(1);
+    expect(router.navigate).toHaveBeenCalledWith(['/cliente/carrito']);
   });
 
-  it('debe abrir modal de pedido si un cliente autenticado solicita domicilio', () => {
-    mockIsAuthenticatedSignal.set(true);
-    mockCurrentUserSignal.set({
-      id_usuario: 1,
-      nombre: 'Carlos Gómez',
-      usuario: 'carlos@gmail.com',
-      rol: 'cliente',
-      token: 'jwt-token',
-      iniciales: 'CG',
+  it('debe alertar si el servicio de domicilios se encuentra inactivo al solicitar domicilio', () => {
+    component.estadoServicio.set({
+      activo: false,
+      cajaAbierta: false,
+      recibiendoDomicilios: false,
+      motivo: 'Caja cerrada',
     });
-
     component.solicitarDomicilio(mockProductos[0]);
-
-    expect(component.mostrarModalAuth()).toBe(false);
-    expect(component.mostrarModalPedido()).toBe(true);
-    expect(component.productoSeleccionado()?.nombre).toBe('Pizza Especial');
+    expect(snackBar.open).toHaveBeenCalled();
   });
 
   it('debe validar dirección y teléfono al confirmar pedido de domicilio', () => {
@@ -166,7 +161,7 @@ describe('VistaClienteComponent', () => {
 
   it('debe permitir navegar al login al invocar irALogin', () => {
     component.irALogin();
-    expect(mockRouter.navigate).toHaveBeenCalledWith(['/login'], {
+    expect(router.navigate).toHaveBeenCalledWith(['/login'], {
       queryParams: { returnUrl: '/cliente' },
     });
   });
@@ -192,20 +187,8 @@ describe('VistaClienteComponent', () => {
     expect(component.vistaActiva()).toBe('mis-pedidos');
   });
 
-  it('debe bloquear checkout si el servicio de domicilios está pausado', () => {
-    component.estadoServicio.set({
-      activo: false,
-      cajaAbierta: false,
-      recibiendoDomicilios: false,
-      motivo: 'Caja cerrada',
-    });
-    component.agregarAlCarrito(mockProductos[0]);
+  it('debe navegar a la vista del carrito al iniciar checkout o abrir carrito', () => {
     component.iniciarCheckout();
-    expect(component.mostrarModalPedido()).toBe(false);
-    expect(snackBar.open).toHaveBeenCalledWith(
-      expect.stringContaining('En este momento no hay servicio de domicilios'),
-      'Entendido',
-      expect.any(Object),
-    );
+    expect(router.navigate).toHaveBeenCalledWith(['/cliente/carrito']);
   });
 });

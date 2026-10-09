@@ -63,6 +63,7 @@ export class CierreDeCaja {
   // Entrada del conteo físico real
   conteoFisico = signal<number | null>(null);
   observaciones = signal<string>('');
+  transferenciasVerificadas = signal<boolean>(false);
 
   isClosing = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
@@ -129,12 +130,19 @@ export class CierreDeCaja {
     }
 
     this.isClosing.set(true);
-    this.errorMessage.set(null);
+    const notas: string[] = [];
+    if (this.transferenciasVerificadas()) {
+      notas.push('[Transferencias bancarias verificadas]');
+    }
+    if (this.observaciones()?.trim()) {
+      notas.push(this.observaciones().trim());
+    }
+    const obsFinal = notas.length > 0 ? notas.join(' | ').slice(0, 255) : undefined;
 
     this.cajaApi
       .cerrarCaja({
         valor_final_fisico: Number(real),
-        observacion: this.observaciones()?.trim().slice(0, 255) || undefined,
+        observacion: obsFinal,
       })
       .subscribe({
         next: (resultado: CierreCajaResult) => {

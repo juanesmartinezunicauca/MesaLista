@@ -8,6 +8,7 @@ export interface ResumenCajaTurno {
   total_ventas: number;
   total_propinas: number;
   total_transacciones: number;
+  total_facturas_anuladas?: number;
   ventas_efectivo: number;
   ventas_tarjeta: number;
   ventas_transferencia: number;
@@ -22,7 +23,7 @@ export interface MovimientoCaja {
   id: string;
   hora: string;
   descripcion: string;
-  tipo: 'Ingreso' | 'Gasto';
+  tipo: 'Ingreso' | 'Gasto' | 'Anulada';
   monto: number;
   medio_pago: string;
   responsable: string;

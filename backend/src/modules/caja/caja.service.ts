@@ -4,9 +4,26 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EstadoCaja, EstadoPedido, Prisma } from '@prisma/client';
+import { EstadoCaja, EstadoFactura, EstadoPedido, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AbrirCajaDto, CerrarCajaDto, CreateGastoDto, ActualizarBaseDto } from './dto';
+
+/**
+ * Normaliza y categoriza un medio de pago para evitar inconsistencias contables por diferencias de mayúsculas o nombres extendidos.
+ */
+function normalizarMedioPago(nombre?: string | null): 'efectivo' | 'tarjeta' | 'transferencia' {
+  const norm = (nombre || '').toLowerCase().trim();
+  if (norm.includes('efectivo')) return 'efectivo';
+  if (norm.includes('tarjeta') || norm.includes('datafono') || norm.includes('pos')) return 'tarjeta';
+  return 'transferencia'; // transferencia, nequi, daviplata, bancolombia, etc.
+}
+
+/**
+ * Redondea valores a 2 decimales evitando imprecisiones de punto flotante binario (IEEE 754).
+ */
+function redondearMoneda(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
 
 @Injectable()
 export class CajaService {
@@ -75,6 +92,7 @@ export class CajaService {
 
   /**
    * Consulta el estado del turno actual (si está abierto, sus métricas consolidadas y movimientos).
+   * Excluye estrictamente facturas anuladas para que el arqueo de caja físico no presente discrepancias.
    */
   async obtenerEstadoActual() {
     await this.asegurarCatalogosBase();
@@ -116,25 +134,33 @@ export class CajaService {
       };
     }
 
-    const valorBase = Number(caja.valor_inicial);
+    const valorBase = redondearMoneda(Number(caja.valor_inicial));
 
-    // Calcular ventas por medio de pago
+    // Calcular ventas por medio de pago (excluyendo facturas anuladas)
     let ventasEfectivo = 0;
     let ventasTarjeta = 0;
     let ventasTransferencia = 0;
     let totalVentas = 0;
     let totalPropinas = 0;
+    let transaccionesValidas = 0;
+    let totalFacturasAnuladas = 0;
 
     for (const f of caja.facturas) {
+      if (f.estado === EstadoFactura.anulada) {
+        totalFacturasAnuladas++;
+        continue; // NO sumar al dinero en caja ni a las ventas netas
+      }
+
+      transaccionesValidas++;
       totalVentas += Number(f.valor_total);
       totalPropinas += Number(f.propina);
 
       for (const p of f.pagos) {
-        const metodo = p.medioPago?.nombre?.toLowerCase() || '';
+        const metodo = normalizarMedioPago(p.medioPago?.nombre);
         const monto = Number(p.monto);
-        if (metodo.includes('efectivo')) {
+        if (metodo === 'efectivo') {
           ventasEfectivo += monto;
-        } else if (metodo.includes('tarjeta')) {
+        } else if (metodo === 'tarjeta') {
           ventasTarjeta += monto;
         } else {
           ventasTransferencia += monto;
@@ -151,31 +177,47 @@ export class CajaService {
       const monto = Number(g.total);
       totalGastos += monto;
 
-      const metodo = g.medioPago?.nombre?.toLowerCase() || '';
-      if (metodo.includes('efectivo') || metodo === '') {
+      const metodo = normalizarMedioPago(g.medioPago?.nombre);
+      if (metodo === 'efectivo' || !g.medioPago) {
         gastosEfectivo += monto;
       }
 
       const tipo = g.tipoGasto?.nombre || 'Otros';
-      desgloseGastos[tipo] = (desgloseGastos[tipo] || 0) + monto;
+      desgloseGastos[tipo] = redondearMoneda((desgloseGastos[tipo] || 0) + monto);
     }
 
-    // Efectivo esperado en cajón: Base + Ventas en Efectivo - Gastos en Efectivo
-    const efectivoEsperado = valorBase + ventasEfectivo - gastosEfectivo;
+    // Redondear todos los acumulados contables
+    ventasEfectivo = redondearMoneda(ventasEfectivo);
+    ventasTarjeta = redondearMoneda(ventasTarjeta);
+    ventasTransferencia = redondearMoneda(ventasTransferencia);
+    totalVentas = redondearMoneda(totalVentas);
+    totalPropinas = redondearMoneda(totalPropinas);
+    totalGastos = redondearMoneda(totalGastos);
+    gastosEfectivo = redondearMoneda(gastosEfectivo);
 
-    // Consolidar lista cronológica de movimientos
+    // Efectivo esperado en cajón: Base Inicial + Ventas en Efectivo - Gastos retirados en Efectivo
+    const efectivoEsperado = redondearMoneda(valorBase + ventasEfectivo - gastosEfectivo);
+
+    // Consolidar lista cronológica de movimientos de caja
     const movimientos = [
-      ...caja.facturas.map((f) => ({
-        id: `factura-${f.id_venta}`,
-        hora: f.fecha_hora,
-        descripcion: f.id_mesa
+      ...caja.facturas.map((f) => {
+        const esAnulada = f.estado === EstadoFactura.anulada;
+        const origenStr = f.id_mesa
           ? `Pago Mesa #${f.mesa?.numero}`
-          : (f.cliente ? `Domicilio - ${f.cliente.nombre}` : 'Venta Directa / Barra'),
-        tipo: 'Ingreso' as const,
-        monto: Number(f.valor_total),
-        medio_pago: f.pagos.map((p) => p.medioPago?.nombre).join(', ') || 'Efectivo',
-        responsable: f.usuario?.nombre || 'Cajero',
-      })),
+          : (f.cliente ? `Domicilio - ${f.cliente.nombre}` : 'Venta Directa / Barra');
+
+        return {
+          id: `factura-${f.id_venta}`,
+          hora: f.fecha_hora,
+          descripcion: esAnulada
+            ? `[ANULADA] ${origenStr} (${f.motivo_anulacion || 'Anulada'})`
+            : origenStr,
+          tipo: (esAnulada ? 'Anulada' : 'Ingreso') as 'Ingreso' | 'Gasto' | 'Anulada',
+          monto: esAnulada ? 0 : Number(f.valor_total),
+          medio_pago: f.pagos.map((p) => p.medioPago?.nombre).join(', ') || 'Efectivo',
+          responsable: f.usuario?.nombre || 'Cajero',
+        };
+      }),
       ...caja.gastos.map((g) => ({
         id: `gasto-${g.id_gasto}`,
         hora: g.fecha_hora,
@@ -199,7 +241,8 @@ export class CajaService {
         valor_base: valorBase,
         total_ventas: totalVentas,
         total_propinas: totalPropinas,
-        total_transacciones: caja.facturas.length,
+        total_transacciones: transaccionesValidas,
+        total_facturas_anuladas: totalFacturasAnuladas,
         ventas_efectivo: ventasEfectivo,
         ventas_tarjeta: ventasTarjeta,
         ventas_transferencia: ventasTransferencia,
@@ -288,9 +331,14 @@ export class CajaService {
       );
     }
 
-    const valorTeorico = estadoActual.resumen.efectivo_esperado;
-    const valorFisico = dto.valor_final_fisico;
-    const diferencia = valorFisico - valorTeorico;
+    const valorTeorico = redondearMoneda(estadoActual.resumen.efectivo_esperado);
+    const valorFisico = redondearMoneda(dto.valor_final_fisico);
+    let diferencia = redondearMoneda(valorFisico - valorTeorico);
+
+    // Evitar discrepancias espurias por microfracciones flotantes IEEE 754
+    if (Math.abs(diferencia) < 0.01) {
+      diferencia = 0;
+    }
 
     const cajaCerrada = await this.prisma.caja.update({
       where: { id_caja: estadoActual.caja.id_caja },
@@ -315,7 +363,12 @@ export class CajaService {
       fecha_cierre: cajaCerrada.fecha_cierre,
       valor_inicial: Number(cajaCerrada.valor_inicial),
       total_ventas: estadoActual.resumen.total_ventas,
+      ventas_efectivo: estadoActual.resumen.ventas_efectivo,
+      ventas_transferencia: estadoActual.resumen.ventas_transferencia,
+      ventas_tarjeta: estadoActual.resumen.ventas_tarjeta,
       total_gastos: estadoActual.resumen.total_gastos,
+      gastos_efectivo: estadoActual.resumen.gastos_efectivo,
+      total_propinas: estadoActual.resumen.total_propinas,
       valor_final_teorico: valorTeorico,
       valor_final_fisico: valorFisico,
       diferencia,
@@ -356,10 +409,11 @@ export class CajaService {
   }
 
   /**
-   * Obtiene el histórico de turnos de caja cerrados.
+   * Obtiene el histórico de turnos de caja cerrados con desglose contable (Efectivo vs Transferencias vs Tarjeta).
+   * Excluye facturas anuladas de las ventas y normaliza medios de pago.
    */
-  async obtenerHistorial(limite = 15) {
-    return this.prisma.caja.findMany({
+  async obtenerHistorial(limite = 30) {
+    const turnos = await this.prisma.caja.findMany({
       where: { estado: EstadoCaja.cerrada },
       orderBy: { fecha_cierre: 'desc' },
       take: limite,
@@ -369,7 +423,82 @@ export class CajaService {
         _count: {
           select: { facturas: true, gastos: true },
         },
+        facturas: {
+          include: {
+            pagos: {
+              include: { medioPago: true },
+            },
+          },
+        },
+        gastos: {
+          include: {
+            medioPago: true,
+            tipoGasto: true,
+          },
+        },
       },
+    });
+
+    return turnos.map((t) => {
+      let totalVentas = 0;
+      let ventasEfectivo = 0;
+      let ventasTransferencia = 0;
+      let ventasTarjeta = 0;
+      let totalPropinas = 0;
+      let facturasValidas = 0;
+      let facturasAnuladas = 0;
+
+      for (const fac of t.facturas) {
+        if (fac.estado === EstadoFactura.anulada) {
+          facturasAnuladas++;
+          continue; // Excluir facturas anuladas de los totales financieros históricos
+        }
+
+        facturasValidas++;
+        totalVentas += Number(fac.valor_total);
+        totalPropinas += Number(fac.propina);
+
+        for (const p of fac.pagos) {
+          const monto = Number(p.monto);
+          const medio = normalizarMedioPago(p.medioPago?.nombre);
+          if (medio === 'efectivo') ventasEfectivo += monto;
+          else if (medio === 'tarjeta') ventasTarjeta += monto;
+          else ventasTransferencia += monto;
+        }
+      }
+
+      let totalGastos = 0;
+      let gastosEfectivo = 0;
+      for (const g of t.gastos) {
+        const monto = Number(g.total);
+        totalGastos += monto;
+        const medio = normalizarMedioPago(g.medioPago?.nombre);
+        if (medio === 'efectivo' || !g.medioPago) {
+          gastosEfectivo += monto;
+        }
+      }
+
+      return {
+        id_caja: t.id_caja,
+        fecha_apertura: t.fecha_apertura,
+        fecha_cierre: t.fecha_cierre,
+        usuarioApertura: t.usuarioApertura,
+        usuarioCierre: t.usuarioCierre,
+        valor_inicial: Number(t.valor_inicial),
+        valor_final_teorico: Number(t.valor_final_teorico || 0),
+        valor_final_fisico: Number(t.valor_final_fisico || 0),
+        diferencia: Number(t.diferencia || 0),
+        total_ventas: redondearMoneda(totalVentas),
+        ventas_efectivo: redondearMoneda(ventasEfectivo),
+        ventas_transferencia: redondearMoneda(ventasTransferencia),
+        ventas_tarjeta: redondearMoneda(ventasTarjeta),
+        total_propinas: redondearMoneda(totalPropinas),
+        total_gastos: redondearMoneda(totalGastos),
+        gastos_efectivo: redondearMoneda(gastosEfectivo),
+        facturas_validas: facturasValidas,
+        facturas_anuladas: facturasAnuladas,
+        _count: t._count,
+      };
     });
   }
 }

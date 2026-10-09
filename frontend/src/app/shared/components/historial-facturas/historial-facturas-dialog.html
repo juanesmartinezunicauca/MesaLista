@@ -181,25 +181,35 @@
                   </span>
                 }
 
-                <button
-                  mat-stroked-button
-                  class="btn-edit-invoice"
-                  (click)="iniciarEdicion(f)"
-                  title="Editar método de pago o detalles de esta factura"
-                >
-                  <mat-icon>edit</mat-icon>
-                  <span>Editar</span>
-                </button>
-                <button
-                  mat-stroked-button
-                  color="warn"
-                  class="btn-delete-invoice"
-                  (click)="eliminarFactura(f)"
-                  title="Anular y eliminar esta factura del turno de caja"
-                >
-                  <mat-icon color="warn">delete</mat-icon>
-                  <span>Borrar</span>
-                </button>
+                @if (f.estado === 'anulada') {
+                  <span
+                    class="badge anulada"
+                    style="background: #fee2e2; color: #b91c1c; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px;"
+                    [title]="'Anulada: ' + (f.motivo_anulacion || 'Sin motivo')"
+                  >
+                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;">cancel</mat-icon> ANULADA
+                  </span>
+                } @else {
+                  <button
+                    mat-stroked-button
+                    class="btn-edit-invoice"
+                    (click)="iniciarEdicion(f)"
+                    title="Editar método de pago o detalles de esta factura"
+                  >
+                    <mat-icon>edit</mat-icon>
+                    <span>Editar</span>
+                  </button>
+                  <button
+                    mat-stroked-button
+                    color="warn"
+                    class="btn-delete-invoice"
+                    (click)="anularFactura(f)"
+                    title="Anular formalmente esta factura del turno de caja"
+                  >
+                    <mat-icon color="warn">block</mat-icon>
+                    <span>Anular</span>
+                  </button>
+                }
               </div>
             </div>
 

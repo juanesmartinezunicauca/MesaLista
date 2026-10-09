@@ -82,6 +82,9 @@ export class UsuariosService {
 
     if (filtros?.rol) {
       where.rol = filtros.rol;
+    } else {
+      // Por regla de negocio, el módulo de Personal solo lista colaboradores operativos
+      where.rol = { not: RolUsuario.cliente };
     }
 
     if (filtros?.estado) {

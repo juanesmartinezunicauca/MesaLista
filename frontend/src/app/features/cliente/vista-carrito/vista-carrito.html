@@ -1,0 +1,491 @@
+<div class="cart-view-container">
+  <!-- Encabezado Superior de la Vista -->
+  <header class="cart-view-header">
+    <div class="header-inner">
+      <button mat-button class="btn-back-menu" (click)="volverALaCarta()">
+        <mat-icon>arrow_back</mat-icon>
+        <span>Volver a la Carta</span>
+      </button>
+
+      <div class="header-titles">
+        <h1>Tu Carrito de Pedido</h1>
+        <p>Revisa tus platos, personaliza ingredientes a tu gusto y confirma la entrega</p>
+      </div>
+
+      @if (carritoService.carrito().length > 0) {
+        <button mat-stroked-button color="warn" class="btn-clear-all" (click)="vaciar()">
+          <mat-icon>delete_sweep</mat-icon>
+          <span>Vaciar Carrito</span>
+        </button>
+      }
+    </div>
+  </header>
+
+  <main class="cart-view-main">
+    <!-- Estado: Carrito Vacío -->
+    @if (carritoService.carrito().length === 0) {
+      <div class="empty-cart-state">
+        <div class="empty-icon-wrap">
+          <mat-icon>remove_shopping_cart</mat-icon>
+        </div>
+        <h2>Tu carrito está vacío</h2>
+        <p>Aún no has agregado platos o especialidades de Luigie's Restaurante.</p>
+        <button mat-flat-button class="btn-go-menu" (click)="volverALaCarta()">
+          <mat-icon>restaurant_menu</mat-icon>
+          <span>Explorar la Carta</span>
+        </button>
+      </div>
+    }
+
+    <!-- Estado: Carrito con Productos -->
+    @else {
+      <div class="cart-grid-layout">
+        <!-- Columna Izquierda: Lista de Platos en el Carrito -->
+        <section class="cart-items-section">
+          <div class="section-top-bar">
+            <h2>
+              Platos seleccionados
+              <span class="count-badge">({{ carritoService.totalItems() }})</span>
+            </h2>
+            <span class="edit-hint">Puedes personalizar ingredientes en cada plato</span>
+          </div>
+
+          <div class="items-card-list">
+            @for (item of carritoService.carrito(); track $index) {
+              <div class="cart-item-card">
+                <!-- Imagen o Icono del Producto -->
+                <div class="item-visual">
+                  @if (item.producto.imagen) {
+                    <img [src]="item.producto.imagen" [alt]="item.producto.nombre" class="item-img" />
+                  } @else {
+                    <div class="item-placeholder-icon">
+                      <mat-icon>lunch_dining</mat-icon>
+                    </div>
+                  }
+                </div>
+
+                <!-- Detalles Principales del Producto -->
+                <div class="item-content">
+                  <div class="item-header-row">
+                    <div>
+                      <span class="item-category">{{ item.producto.categoria }}</span>
+                      <h3 class="item-title">{{ item.producto.nombre }}</h3>
+                    </div>
+                    <span class="item-unit-price">${{ item.producto.precio_venta | number:'1.0-0' }} COP c/u</span>
+                  </div>
+
+                  <!-- Desglose de Personalización (Ingredientes Removidos y Notas) -->
+                  <div class="customization-display">
+                    @if (item.ingredientes_removidos && item.ingredientes_removidos.length > 0) {
+                      <div class="removed-tags-list">
+                        @for (rem of item.ingredientes_removidos; track rem) {
+                          <span class="sin-badge">
+                            <mat-icon>remove_circle</mat-icon>
+                            <span>Sin {{ rem }}</span>
+                          </span>
+                        }
+                      </div>
+                    }
+
+                    @if (item.observacion) {
+                      <div class="note-display">
+                        <mat-icon>edit_note</mat-icon>
+                        <span>Nota: "{{ item.observacion }}"</span>
+                      </div>
+                    }
+                  </div>
+
+                  <!-- Fila de Acciones y Controles de Cantidad -->
+                  <div class="item-actions-row">
+                    <!-- Botón para Personalizar Ingredientes en Modal -->
+                    @if (item.producto.ingredientes_removibles && item.producto.ingredientes_removibles.length > 0) {
+                      <button
+                        type="button"
+                        class="btn-customize-item"
+                        (click)="abrirPersonalizacion(item, $index)"
+                        title="Modificar ingredientes de este plato"
+                      >
+                        <mat-icon>tune</mat-icon>
+                        <span>Personalizar ingredientes</span>
+                      </button>
+                    }
+
+                    <div class="controls-group">
+                      <!-- Controles de Cantidad (+ / -) -->
+                      <div class="qty-pill">
+                        <button
+                          type="button"
+                          class="btn-qty-action"
+                          (click)="decrementar($index)"
+                          [matTooltip]="item.cantidad === 1 ? 'Eliminar del carrito' : 'Reducir cantidad'"
+                        >
+                          <mat-icon>{{ item.cantidad === 1 ? 'delete' : 'remove' }}</mat-icon>
+                        </button>
+                        <span class="qty-number">{{ item.cantidad }}</span>
+                        <button
+                          type="button"
+                          class="btn-qty-action"
+                          (click)="incrementar($index)"
+                          matTooltip="Aumentar cantidad"
+                        >
+                          <mat-icon>add</mat-icon>
+                        </button>
+                      </div>
+
+                      <!-- Subtotal del Plato -->
+                      <div class="subtotal-box">
+                        <span class="subtotal-label">Subtotal:</span>
+                        <span class="subtotal-val">${{ (item.cantidad * item.producto.precio_venta) | number:'1.0-0' }} COP</span>
+                      </div>
+
+                      <!-- Botón Eliminar Directo -->
+                      <button
+                        type="button"
+                        class="btn-delete-row"
+                        (click)="eliminar($index)"
+                        matTooltip="Eliminar plato"
+                      >
+                        <mat-icon>delete_outline</mat-icon>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="add-more-row">
+            <button mat-stroked-button class="btn-add-more" (click)="volverALaCarta()">
+              <mat-icon>add</mat-icon>
+              <span>Agregar más platos desde la carta</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Columna Derecha: Formulario de Entrega y Liquidación -->
+        <aside class="checkout-aside">
+          <!-- Resumen Económico -->
+          <div class="summary-card">
+            <h3 class="summary-title">Resumen de la Orden</h3>
+
+            <div class="summary-lines">
+              <div class="sum-row">
+                <span>Subtotal ({{ carritoService.totalItems() }} platos):</span>
+                <span>${{ carritoService.totalPrecio() | number:'1.0-0' }} COP</span>
+              </div>
+              <div class="sum-row">
+                <span>Costo de envío a domicilio:</span>
+                <span class="free-shipping">Gratis</span>
+              </div>
+              <mat-divider></mat-divider>
+              <div class="sum-row total-highlight">
+                <span>Total a Pagar:</span>
+                <span class="total-number">${{ carritoService.totalPrecio() | number:'1.0-0' }} COP</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Formulario de Entrega -->
+          <div class="delivery-form-card">
+            <div class="form-card-header">
+              <mat-icon>location_on</mat-icon>
+              <div>
+                <h3>Datos de Entrega</h3>
+                <p>Ingresa la información para despachar tu comanda</p>
+              </div>
+            </div>
+
+            <div class="form-body">
+              <div class="input-field-group">
+                <label>Nombre Completo *</label>
+                <div class="field-with-icon">
+                  <mat-icon>person</mat-icon>
+                  <input
+                    type="text"
+                    placeholder="Ej. Juan Gómez"
+                    [value]="nombreCliente()"
+                    (input)="nombreCliente.set($any($event.target).value)"
+                  />
+                </div>
+              </div>
+
+              <div class="input-field-group">
+                <label>Teléfono o Celular *</label>
+                <div class="field-with-icon">
+                  <mat-icon>call</mat-icon>
+                  <input
+                    type="tel"
+                    placeholder="Ej. 312 456 7890"
+                    [value]="telefonoContacto()"
+                    (input)="telefonoContacto.set($any($event.target).value)"
+                  />
+                </div>
+              </div>
+
+              <div class="input-field-group">
+                <label>Dirección de Entrega *</label>
+                <div class="field-with-icon">
+                  <mat-icon>home</mat-icon>
+                  <input
+                    type="text"
+                    placeholder="Ej. Calle 15 # 8-42, Barrio Bolívar"
+                    [value]="direccionEntrega()"
+                    (input)="direccionEntrega.set($any($event.target).value)"
+                  />
+                </div>
+              </div>
+
+              <div class="input-field-group">
+                <label>Apartamento / Casa / Punto de Referencia</label>
+                <div class="field-with-icon">
+                  <mat-icon>apartment</mat-icon>
+                  <input
+                    type="text"
+                    placeholder="Ej. Apto 302, casa frente al parque"
+                    [value]="referenciaUbicacion()"
+                    (input)="referenciaUbicacion.set($any($event.target).value)"
+                  />
+                </div>
+              </div>
+
+              <div class="input-field-group">
+                <label>Notas generales para el restaurante (Opcional)</label>
+                <div class="field-with-icon">
+                  <mat-icon>edit_note</mat-icon>
+                  <input
+                    type="text"
+                    maxlength="255"
+                    placeholder="Ej. Timbre dañado, llamar al llegar..."
+                    [value]="observaciones()"
+                    (input)="observaciones.set($any($event.target).value)"
+                  />
+                </div>
+              </div>
+
+              <!-- Selector de Método de Pago -->
+              <div class="payment-selector-group">
+                <label>Método de Pago *</label>
+                <div class="payment-cards-grid">
+                  <div
+                    class="pay-choice-card"
+                    [class.selected]="metodoPago() === 'Efectivo'"
+                    (click)="metodoPago.set('Efectivo')"
+                  >
+                    <mat-icon class="pay-icon">payments</mat-icon>
+                    <div class="pay-info">
+                      <span class="pay-name">Efectivo</span>
+                      <span class="pay-desc">Pagas al recibir</span>
+                    </div>
+                    <mat-icon class="check-dot">{{ metodoPago() === 'Efectivo' ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+                  </div>
+
+                  <div
+                    class="pay-choice-card"
+                    [class.selected]="metodoPago() === 'Transferencia'"
+                    (click)="metodoPago.set('Transferencia')"
+                  >
+                    <mat-icon class="pay-icon transfer-icon">account_balance_wallet</mat-icon>
+                    <div class="pay-info">
+                      <span class="pay-name">Transferencia</span>
+                      <span class="pay-desc">Nequi / Bancolombia</span>
+                    </div>
+                    <mat-icon class="check-dot">{{ metodoPago() === 'Transferencia' ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Alerta Informativa de Transferencia -->
+              @if (metodoPago() === 'Transferencia') {
+                <div class="transfer-guideline-box">
+                  <div class="guideline-top">
+                    <mat-icon>info</mat-icon>
+                    <div>
+                      <strong>Comprobante obligatorio</strong>
+                      <p>Envía la captura de tu transferencia a nuestro WhatsApp para aprobar tu pedido en caja.</p>
+                    </div>
+                  </div>
+                  <a
+                    [href]="generarUrlWhatsApp()"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="btn-send-whatsapp"
+                  >
+                    <mat-icon>chat</mat-icon>
+                    <span>Enviar Comprobante por WhatsApp</span>
+                  </a>
+                </div>
+              }
+
+              <!-- Botón Principal de Envío -->
+              <button
+                type="button"
+                mat-flat-button
+                class="btn-submit-order"
+                [disabled]="enviandoPedido() || carritoService.carrito().length === 0"
+                (click)="confirmarPedido()"
+              >
+                @if (enviandoPedido()) {
+                  <ng-container>
+                    <mat-spinner diameter="22" class="order-spinner"></mat-spinner>
+                    <span>Enviando Comanda a Cocina...</span>
+                  </ng-container>
+                } @else {
+                  <ng-container>
+                    <mat-icon>check_circle</mat-icon>
+                    <span>Confirmar y Enviar Pedido (${{ carritoService.totalPrecio() | number:'1.0-0' }} COP)</span>
+                  </ng-container>
+                }
+              </button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    }
+  </main>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: PERSONALIZACIÓN DE INGREDIENTES DENTRO DEL CARRITO     -->
+  <!-- ============================================================== -->
+  @if (itemEnEdicion(); as edicion) {
+    <div class="modal-overlay" (click)="cerrarPersonalizacion()">
+      <div class="modal-window customize-window" (click)="$event.stopPropagation()">
+        <!-- Encabezado del Modal -->
+        <div class="customize-modal-header">
+          <div class="header-icon-box">
+            <mat-icon>tune</mat-icon>
+          </div>
+          <div class="header-titles">
+            <h2>Personalizar {{ edicion.item.producto.nombre }}</h2>
+            <p>Selecciona qué ingredientes deseas incluir o quitar de este plato</p>
+          </div>
+          <button class="btn-window-close" (click)="cerrarPersonalizacion()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="customize-modal-body">
+          <!-- Banner del Producto -->
+          <div class="customize-prod-banner">
+            @if (edicion.item.producto.imagen) {
+              <img [src]="edicion.item.producto.imagen" [alt]="edicion.item.producto.nombre" class="banner-img" />
+            }
+            <div class="banner-info">
+              <span class="banner-title">{{ edicion.item.producto.nombre }}</span>
+              <span class="banner-price">${{ edicion.item.producto.precio_venta | number:'1.0-0' }} COP</span>
+            </div>
+          </div>
+
+          <!-- Selección de Ingredientes Removibles -->
+          <div class="ingredients-section">
+            <span class="section-label">
+              <mat-icon>checklist</mat-icon>
+              <span>Ingredientes de la receta (desmarca los que NO deseas):</span>
+            </span>
+
+            <div class="ingredients-grid">
+              @for (ing of edicion.item.producto.ingredientes_removibles; track ing) {
+                <div
+                  class="ingredient-item-chip"
+                  [class.included]="ingredientesSeleccionados().includes(ing)"
+                  [class.removed]="!ingredientesSeleccionados().includes(ing)"
+                  (click)="toggleIngrediente(ing)"
+                >
+                  <mat-icon class="ing-check-icon">
+                    {{ ingredientesSeleccionados().includes(ing) ? 'check_box' : 'indeterminate_check_box' }}
+                  </mat-icon>
+                  <span class="ing-name">{{ ing }}</span>
+                  <span class="ing-tag">
+                    {{ ingredientesSeleccionados().includes(ing) ? 'Incluido' : 'Sin ' + ing }}
+                  </span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Campo de Notas para la Cocina -->
+          <div class="notes-section">
+            <label class="notes-label">Notas o instrucciones para este plato (opcional):</label>
+            <input
+              type="text"
+              class="notes-input"
+              maxlength="150"
+              placeholder="Ej. Término 3/4, salsa aparte, bien tostado..."
+              [value]="observacionItem()"
+              (input)="observacionItem.set($any($event.target).value)"
+            />
+          </div>
+        </div>
+
+        <!-- Acciones del Modal -->
+        <div class="customize-modal-footer">
+          <button mat-stroked-button class="btn-cancel" (click)="cerrarPersonalizacion()">
+            <span>Cancelar</span>
+          </button>
+          <button mat-flat-button class="btn-save-custom" (click)="guardarPersonalizacion()">
+            <mat-icon>check</mat-icon>
+            <span>Guardar en el Carrito</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ============================================================== -->
+  <!-- MODAL: CONFIRMACIÓN EXITOSA DE PEDIDO                          -->
+  <!-- ============================================================== -->
+  @if (pedidoConfirmado(); as conf) {
+    <div class="modal-overlay" (click)="cerrarModalConfirmacion()">
+      <div class="modal-window success-window" (click)="$event.stopPropagation()">
+        <div class="success-icon-box">
+          <mat-icon>check_circle</mat-icon>
+        </div>
+
+        <h2>¡Tu Pedido ha sido Recibido!</h2>
+        <div class="radicado-badge">
+          <span>Radicado Oficial:</span>
+          <strong>#{{ conf.codigo }}</strong>
+        </div>
+
+        <p class="success-message">
+          Tu comanda por un total de <strong>${{ conf.total | number:'1.0-0' }} COP</strong> ha sido enviada con éxito a nuestro sistema de cocina.
+        </p>
+
+        <div class="delivery-summary-card">
+          <mat-icon>location_on</mat-icon>
+          <div>
+            <span class="label">Dirección de entrega:</span>
+            <span class="val">{{ conf.direccion }}</span>
+          </div>
+        </div>
+
+        @if (conf.metodoPago === 'Transferencia') {
+          <div class="transfer-whatsapp-reminder">
+            <div class="reminder-top">
+              <mat-icon>notifications_active</mat-icon>
+              <div>
+                <strong>Envía tu comprobante de pago</strong>
+                <p>Para agilizar la aprobación de tu pedido, adjunta tu comprobante por WhatsApp.</p>
+              </div>
+            </div>
+            <a
+              [href]="generarUrlWhatsApp(conf.codigo)"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn-send-receipt"
+            >
+              <mat-icon>chat</mat-icon>
+              <span>Enviar Comprobante al WhatsApp</span>
+            </a>
+          </div>
+        }
+
+        <div class="success-actions">
+          <button mat-flat-button class="btn-view-tracker" (click)="cerrarModalConfirmacion()">
+            <mat-icon>track_changes</mat-icon>
+            <span>Ver Seguimiento en Vivo</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

@@ -71,6 +71,16 @@ export class FacturacionApiService {
   }
 
   /**
+   * Anula formalmente una factura registrada por auditoría o corrección contable
+   */
+  anularFactura(id: number, motivo: string): Observable<{ exito: boolean; mensaje: string; factura: any }> {
+    return this.http.patch<{ exito: boolean; mensaje: string; factura: any }>(
+      `${this.apiUrl}/${id}/anular`,
+      { motivo },
+    );
+  }
+
+  /**
    * Elimina / anula una factura registrada y ajusta el saldo de caja
    */
   eliminarFactura(id: number): Observable<{ exito: boolean; mensaje: string }> {

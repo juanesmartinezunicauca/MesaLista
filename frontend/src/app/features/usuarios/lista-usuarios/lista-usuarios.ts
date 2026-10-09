@@ -68,7 +68,7 @@ export class ListaUsuariosComponent implements OnInit {
 
   // Métricas computadas
   metricas = computed<MetricasUsuarios>(() => {
-    const list = this.usuarios();
+    const list = this.usuarios().filter((u) => (u.rol as string) !== 'cliente');
     return {
       total: list.length,
       activos: list.filter((u) => u.estado === 'activo').length,
@@ -80,9 +80,9 @@ export class ListaUsuariosComponent implements OnInit {
     };
   });
 
-  // Lista filtrada reactivamente
+  // Lista filtrada reactivamente (excluye clientes, enfocado exclusivamente en personal)
   usuariosFiltrados = computed<Usuario[]>(() => {
-    const list = this.usuarios();
+    const list = this.usuarios().filter((u) => (u.rol as string) !== 'cliente');
     const rol = this.filtroRol();
     const estado = this.filtroEstado();
     const search = this.busqueda().trim().toLowerCase();

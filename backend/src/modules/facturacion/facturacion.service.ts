@@ -4,7 +4,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { EstadoCaja, EstadoMesa, EstadoPedido, Prisma } from '@prisma/client';
+import { EstadoCaja, EstadoFactura, EstadoMesa, EstadoPedido, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFacturaDto, UpdateFacturaDto } from './dto';
 
@@ -207,11 +207,16 @@ export class FacturacionService {
     fecha?: string;
     buscar?: string;
     id_caja?: number;
+    estado?: string;
   }) {
     const where: any = {};
 
     if (filtros?.id_caja) {
       where.id_caja = Number(filtros.id_caja);
+    }
+
+    if (filtros?.estado) {
+      where.estado = filtros.estado as EstadoFactura;
     }
 
     if (filtros?.tipo === 'salon') {
@@ -362,42 +367,102 @@ export class FacturacionService {
   }
 
   /**
-   * Elimina / anula una factura registrada en el turno de caja.
-   * Desvincula los pedidos asociados y remueve los pagos para restituir
-   * los saldos de caja.
+   * Anula formalmente una factura registrada sin eliminarla de la base de datos (cumplimiento contable/DIAN).
+   * Deja la factura en estado 'anulada' para preservar la secuencia consecutiva,
+   * excluye automáticamente sus importes del arqueo del turno y registra el motivo y responsable.
    */
-  async eliminarFactura(id: number) {
-    const facturaExistente = await this.prisma.factura.findUnique({
+  async anularFactura(id: number, motivo: string, id_usuario: number) {
+    if (!motivo || motivo.trim().length === 0) {
+      throw new BadRequestException('El motivo de anulación de la factura es obligatorio.');
+    }
+
+    const factura = await this.prisma.factura.findUnique({
       where: { id_venta: id },
+      include: {
+        caja: true,
+        pagos: { include: { medioPago: true } },
+      },
     });
 
-    if (!facturaExistente) {
-      throw new NotFoundException(`La factura #${id} no existe.`);
+    if (!factura) {
+      throw new NotFoundException(`La factura #FAC-${id} no existe.`);
+    }
+
+    if (factura.estado === EstadoFactura.anulada) {
+      throw new BadRequestException(`La factura #FAC-${id} ya se encuentra anulada.`);
+    }
+
+    // Regla de negocio: Solo se pueden anular facturas de turnos de caja activos
+    if (factura.caja.estado !== EstadoCaja.abierta) {
+      throw new BadRequestException(
+        `No es posible anular la factura #FAC-${id}: El turno de caja #${factura.id_caja} ya fue cerrado y arqueado contablemente.`,
+      );
     }
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. Desvincular cualquier pedido asociado a esta factura
+      // 1. Marcar la factura como anulada
+      const facturaAnulada = await tx.factura.update({
+        where: { id_venta: id },
+        data: {
+          estado: EstadoFactura.anulada,
+          fecha_anulacion: new Date(),
+          motivo_anulacion: motivo.trim().slice(0, 255),
+        },
+        include: {
+          mesa: true,
+          cliente: true,
+          usuario: { select: { nombre: true, rol: true } },
+          pagos: { include: { medioPago: true } },
+        },
+      });
+
+      // 2. Si tenía pedidos asociados, restituir existencias en inventario y marcarlos como cancelados
+      const pedidosAsociados = await tx.pedido.findMany({
+        where: { id_factura: id },
+        include: {
+          items: {
+            include: { producto: true },
+          },
+        },
+      });
+
+      for (const ped of pedidosAsociados) {
+        for (const item of ped.items) {
+          if (item.producto?.controla_inventario) {
+            await tx.producto.update({
+              where: { id_producto: item.id_producto },
+              data: {
+                cantidad_inventario: {
+                  increment: item.cantidad,
+                },
+              },
+            });
+          }
+        }
+      }
+
       await tx.pedido.updateMany({
         where: { id_factura: id },
-        data: { id_factura: null },
+        data: { estado: EstadoPedido.cancelada },
       });
 
-      // 2. Eliminar los registros de pagos asociados
-      await tx.pago.deleteMany({
-        where: { id_venta: id },
-      });
-
-      // 3. Eliminar la factura
-      await tx.factura.delete({
-        where: { id_venta: id },
-      });
-
-      this.logger.warn(`[SECURITY_AUDIT] Anulación/eliminación de factura #FAC-${id} completada.`);
+      this.logger.warn(
+        `[SECURITY_AUDIT] Factura #FAC-${id} ANULADA por usuario #${id_usuario}. Motivo: ${motivo.trim()}`,
+      );
 
       return {
         exito: true,
-        mensaje: `Factura #FAC-${id} eliminada exitosamente.`,
+        mensaje: `Factura #FAC-${id} anulada exitosamente.`,
+        factura: facturaAnulada,
       };
     });
+  }
+
+  /**
+   * Elimina / anula una factura registrada en el turno de caja.
+   * Por retrocompatibilidad, redirige a anularFactura.
+   */
+  async eliminarFactura(id: number) {
+    return this.anularFactura(id, 'Eliminación solicitada por administración', 1);
   }
 }

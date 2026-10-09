@@ -47,6 +47,8 @@ export class SidebarComponent {
     { icon: 'point_of_sale', label: 'Caja', route: '/caja', roles: ['administrador', 'cajero'] },
     { icon: 'inventory_2', label: 'Catálogo', route: '/catalogo', roles: ['administrador', 'cajero'] },
     { icon: 'manage_accounts', label: 'Personal', route: '/usuarios', roles: ['administrador'] },
+    { icon: 'contacts', label: 'Clientes', route: '/clientes', roles: ['administrador', 'cajero', 'mesero'] },
+    { icon: 'manage_history', label: 'Historial', route: '/historial', roles: ['administrador', 'cajero'] },
     { icon: 'bar_chart', label: 'Reportes', route: '/reportes', roles: ['administrador'] }
   ];
 

@@ -1,7 +1,7 @@
 import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -16,6 +16,7 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { AuthService } from '../../../core/services/auth/auth.service';
 import { CatalogoApiService } from '../../../core/services/api/catalogo-api.service';
 import { DomiciliosApiService } from '../../../core/services/api/domicilios-api.service';
+import { CarritoService } from '../../../core/services/carrito/carrito.service';
 import { Producto } from '../../../core/models/producto.model';
 import { CreateDomicilioPayload, Domicilio, EstadoServicioDomicilio } from '../../../core/models';
 
@@ -51,10 +52,12 @@ export interface CartItem {
 })
 export class VistaClienteComponent implements OnInit, OnDestroy {
   authService = inject(AuthService);
+  carritoService = inject(CarritoService);
   private catalogoService = inject(CatalogoApiService);
   private domiciliosApi = inject(DomiciliosApiService);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   currentUser = this.authService.currentUser;
   isAuthenticated = this.authService.isAuthenticated;
@@ -72,9 +75,8 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
   // Estado del servicio de domicilios (Caja abierta y toggle del cajero)
   estadoServicio = signal<EstadoServicioDomicilio | null>(null);
 
-  // Carrito de compras persistente en localStorage
-  private readonly CART_STORAGE_KEY = 'mesalista_cliente_carrito';
-  carrito = signal<CartItem[]>([]);
+  // Carrito de compras delegado al CarritoService reactivo
+  carrito = this.carritoService.carrito;
   mostrarModalCarrito = signal<boolean>(false);
 
   // Estados de Modales / Diálogos
@@ -133,17 +135,9 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
     return activosEnLista;
   });
 
-  // Cálculos reactivos de Carrito
-  totalCartItems = computed(() =>
-    this.carrito().reduce((sum, item) => sum + item.cantidad, 0)
-  );
-
-  totalCartPrecio = computed(() =>
-    this.carrito().reduce(
-      (sum, item) => sum + item.cantidad * Number(item.producto.precio_venta),
-      0
-    )
-  );
+  // Cálculos reactivos delegados a CarritoService
+  totalCartItems = this.carritoService.totalItems;
+  totalCartPrecio = this.carritoService.totalPrecio;
 
   // Filtro reactivo de productos por categoría y texto de búsqueda
   productosFiltrados = computed(() => {
@@ -171,9 +165,19 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    this.recuperarCarrito();
     this.cargarCatalogo();
     this.cargarEstadoServicio();
+
+    // Si viene redirigido desde el carrito u otra vista hacia Mis Pedidos
+    this.route.queryParams.subscribe((params) => {
+      if (params['tab'] === 'mis-pedidos') {
+        this.vistaActiva.set('mis-pedidos');
+        this.recuperarUltimoPedido();
+        if (this.isAuthenticated()) {
+          this.cargarMisPedidos(false);
+        }
+      }
+    });
 
     if (this.isAuthenticated()) {
       this.cargarMisPedidos();
@@ -282,24 +286,6 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Métodos de Persistencia de Carrito en localStorage
-  private guardarCarrito(): void {
-    try {
-      localStorage.setItem(this.CART_STORAGE_KEY, JSON.stringify(this.carrito()));
-    } catch {}
-  }
-
-  private recuperarCarrito(): void {
-    try {
-      const guardado = localStorage.getItem(this.CART_STORAGE_KEY);
-      if (guardado) {
-        const items = JSON.parse(guardado);
-        if (Array.isArray(items) && items.length > 0) {
-          this.carrito.set(items);
-        }
-      }
-    } catch {}
-  }
 
   // Métodos de Personalización de Ingredientes y Carrito
   iniciarPersonalizacion(producto: Producto, event?: MouseEvent): void {
@@ -345,7 +331,17 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
     if (event) {
       event.stopPropagation();
     }
-    this.agregarItemPersonalizadoAlCarrito(producto, [], undefined);
+    this.carritoService.agregarAlCarrito(producto);
+    const snackRef = this.snackBar.open(
+      `¡${producto.nombre} agregado al carrito!`,
+      'Ver Carrito',
+      { duration: 4000 }
+    );
+    if (snackRef?.onAction) {
+      snackRef.onAction().subscribe(() => {
+        this.abrirCarrito();
+      });
+    }
   }
 
   agregarItemPersonalizadoAlCarrito(
@@ -353,39 +349,11 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
     removidos: string[],
     observacion?: string
   ): void {
-    const items = [...this.carrito()];
-    const removidosKey = (removidos || []).slice().sort().join('|');
-
-    const index = items.findIndex((it) => {
-      const itRemovidosKey = (it.ingredientes_removidos || []).slice().sort().join('|');
-      return (
-        it.producto.id_producto === producto.id_producto &&
-        itRemovidosKey === removidosKey &&
-        (it.observacion || '') === (observacion || '')
-      );
-    });
-
-    if (index >= 0) {
-      items[index] = {
-        ...items[index],
-        cantidad: items[index].cantidad + 1,
-      };
-    } else {
-      items.push({
-        producto,
-        cantidad: 1,
-        ingredientes_removidos: removidos.length > 0 ? removidos : undefined,
-        observacion,
-      });
-    }
-
-    this.carrito.set(items);
-    this.guardarCarrito();
-
+    this.carritoService.agregarAlCarrito(producto, removidos, observacion);
     const snackRef = this.snackBar.open(
       `¡${producto.nombre} agregado al carrito!`,
       'Ver Carrito',
-      { duration: 3000 }
+      { duration: 4000 }
     );
     if (snackRef?.onAction) {
       snackRef.onAction().subscribe(() => {
@@ -395,49 +363,23 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
   }
 
   incrementarItemCart(index: number): void {
-    const items = [...this.carrito()];
-    if (items[index]) {
-      items[index] = {
-        ...items[index],
-        cantidad: items[index].cantidad + 1,
-      };
-      this.carrito.set(items);
-      this.guardarCarrito();
-    }
+    this.carritoService.incrementar(index);
   }
 
   decrementarItemCart(index: number): void {
-    const items = [...this.carrito()];
-    if (!items[index]) return;
-
-    if (items[index].cantidad > 1) {
-      items[index] = {
-        ...items[index],
-        cantidad: items[index].cantidad - 1,
-      };
-      this.carrito.set(items);
-      this.guardarCarrito();
-    } else {
-      this.eliminarItemCart(index);
-    }
+    this.carritoService.decrementar(index);
   }
 
   eliminarItemCart(index: number): void {
-    const items = [...this.carrito()];
-    items.splice(index, 1);
-    this.carrito.set(items);
-    this.guardarCarrito();
+    this.carritoService.eliminar(index);
   }
 
   vaciarCarrito(): void {
-    this.carrito.set([]);
-    try {
-      localStorage.removeItem(this.CART_STORAGE_KEY);
-    } catch {}
+    this.carritoService.vaciarCarrito();
   }
 
   abrirCarrito(): void {
-    this.mostrarModalCarrito.set(true);
+    this.router.navigate(['/cliente/carrito']);
   }
 
   cerrarCarrito(): void {
@@ -445,45 +387,7 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
   }
 
   iniciarCheckout(): void {
-    if (this.carrito().length === 0) {
-      this.snackBar.open('Tu carrito está vacío. Agrega platos para continuar.', 'Cerrar', {
-        duration: 3000,
-      });
-      return;
-    }
-
-    if (this.estadoServicio() && !this.estadoServicio()?.activo) {
-      this.snackBar.open(
-        `En este momento no hay servicio de domicilios: ${this.estadoServicio()?.motivo || 'Servicio cerrado'}`,
-        'Entendido',
-        { duration: 5000 }
-      );
-      return;
-    }
-
-    if (!this.isAuthenticated()) {
-      this.guardarCarrito();
-      const snackRef = this.snackBar.open(
-        'Tus platos están guardados en tu carrito. Inicia sesión o regístrate para ingresar tus datos y enviar el pedido.',
-        'Iniciar Sesión',
-        { duration: 6000 }
-      );
-      if (snackRef?.onAction) {
-        snackRef.onAction().subscribe(() => {
-          this.irALogin();
-        });
-      }
-      this.mostrarModalCarrito.set(false);
-      this.mostrarModalAuth.set(true);
-      return;
-    }
-
-    if (!this.nombreCliente() && this.currentUser()?.nombre) {
-      this.nombreCliente.set(this.currentUser()!.nombre);
-    }
-
-    this.mostrarModalCarrito.set(false);
-    this.mostrarModalPedido.set(true);
+    this.abrirCarrito();
   }
 
   solicitarDomicilio(producto?: Producto): void {
@@ -496,39 +400,10 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this.isAuthenticated()) {
-      if (producto) {
-        this.productoSeleccionado.set(producto);
-        this.agregarAlCarrito(producto);
-      }
-      this.mostrarModalAuth.set(true);
-      return;
-    }
-
     if (producto) {
-      this.productoSeleccionado.set(producto);
-      const existe = this.carrito().some(
-        (it) => it.producto.id_producto === producto.id_producto
-      );
-      if (!existe) {
-        this.carrito.set([{ producto, cantidad: 1 }]);
-        this.guardarCarrito();
-      }
-    } else if (this.carrito().length === 0 && this.productos().length > 0) {
-      this.productoSeleccionado.set(this.productos()[0]);
-      this.carrito.set([{ producto: this.productos()[0], cantidad: 1 }]);
-      this.guardarCarrito();
+      this.carritoService.agregarAlCarrito(producto);
     }
-
-    if (!this.nombreCliente() && this.currentUser()?.nombre) {
-      this.nombreCliente.set(this.currentUser()!.nombre);
-    }
-
-    this.cantidad.set(1);
-    this.direccionEntrega.set('');
-    this.referenciaUbicacion.set('');
-    this.observaciones.set('');
-    this.mostrarModalPedido.set(true);
+    this.router.navigate(['/cliente/carrito']);
   }
 
   generarUrlWhatsApp(codigoPedido?: string): string {
@@ -809,5 +684,35 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
       hour: '2-digit',
       minute: '2-digit',
     });
+  }
+
+  obtenerEtapaPaso(etapa?: string): number {
+    switch (etapa) {
+      case 'Pendiente':
+        return 1;
+      case 'En Preparación':
+        return 2;
+      case 'En Reparto':
+        return 3;
+      case 'Entregado':
+        return 4;
+      default:
+        return 0;
+    }
+  }
+
+  obtenerProgresoPorcentaje(etapa?: string): number {
+    switch (etapa) {
+      case 'Pendiente':
+        return 0;
+      case 'En Preparación':
+        return 33.3;
+      case 'En Reparto':
+        return 66.6;
+      case 'Entregado':
+        return 100;
+      default:
+        return 0;
+    }
   }
 }
