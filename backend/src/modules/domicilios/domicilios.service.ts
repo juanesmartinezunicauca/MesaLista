@@ -370,7 +370,7 @@ export class DomiciliosService {
   /**
    * Modifica la etapa operativa de un domicilio (aceptar/enviar a cocina, despachar a reparto con repartidor, cerrar/entregar o cancelar).
    */
-  async cambiarEstado(id: number, dto: CambiarEstadoDomicilioDto) {
+  async cambiarEstado(id: number, dto: CambiarEstadoDomicilioDto, id_usuario?: number) {
     const pedido = await this.obtenerPorId(id);
 
     if (
@@ -392,6 +392,7 @@ export class DomiciliosService {
         where: { id_pedido: id },
         data: {
           estado: EstadoPedido.cerrada,
+          ...(id_usuario ? { id_usuario } : {}),
         },
         include: this.domicilioInclude,
       });
@@ -425,6 +426,7 @@ export class DomiciliosService {
       where: { id_pedido: id },
       data: {
         observacion: observacionActualizada || null,
+        ...(id_usuario ? { id_usuario } : {}),
       },
       include: this.domicilioInclude,
     });
@@ -527,7 +529,7 @@ export class DomiciliosService {
 
     let metodo_pago = 'Efectivo';
     if (pedido.factura?.pagos && pedido.factura.pagos.length > 0) {
-      metodo_pago = pedido.factura.pagos[0].medio_pago;
+      metodo_pago = pedido.factura.pagos[0].medioPago?.nombre || 'Efectivo';
     } else if (pedido.observacion) {
       const matchPago = pedido.observacion.match(/\[PAGO:\s*([^\]]+)\]/i);
       if (matchPago) {
@@ -556,5 +558,70 @@ export class DomiciliosService {
       metodo_pago,
       totalCalculado,
     };
+  }
+
+  /**
+   * Limpia el historial de pedidos a domicilio cerrados (entregados) y cancelados.
+   * Totalmente seguro: no afecta pedidos de salón, no afecta clientes, y preserva
+   * íntegras las facturas y arqueos de caja del restaurante.
+   */
+  async limpiarHistorial() {
+    const pedidosCerrados = await this.prisma.pedido.findMany({
+      where: {
+        tipo: TipoPedido.domicilio,
+        estado: { in: [EstadoPedido.cerrada, EstadoPedido.cancelada] },
+      },
+      select: { id_pedido: true },
+    });
+
+    const ids = pedidosCerrados.map((p) => p.id_pedido);
+    if (ids.length === 0) {
+      return { eliminados: 0, mensaje: 'No hay pedidos en el historial para limpiar.' };
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.itemPedido.deleteMany({
+        where: { id_pedido: { in: ids } },
+      });
+
+      const res = await tx.pedido.deleteMany({
+        where: { id_pedido: { in: ids } },
+      });
+
+      return {
+        eliminados: res.count,
+        mensaje: `Se limpiaron ${res.count} pedidos del historial de domicilios.`,
+      };
+    });
+  }
+
+  /**
+   * Elimina un domicilio específico del historial (solo cerrado o cancelado).
+   */
+  async eliminar(id: number) {
+    const pedido = await this.prisma.pedido.findUnique({
+      where: { id_pedido: id },
+    });
+
+    if (!pedido || pedido.tipo !== TipoPedido.domicilio) {
+      throw new NotFoundException(`El pedido a domicilio #${id} no existe.`);
+    }
+
+    if (pedido.estado !== EstadoPedido.cerrada && pedido.estado !== EstadoPedido.cancelada) {
+      throw new BadRequestException(
+        `Solo se pueden eliminar pedidos del historial que estén entregados o cancelados.`,
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.itemPedido.deleteMany({
+        where: { id_pedido: id },
+      });
+      await tx.pedido.delete({
+        where: { id_pedido: id },
+      });
+
+      return { exito: true, mensaje: `Pedido #${id} eliminado del historial.` };
+    });
   }
 }

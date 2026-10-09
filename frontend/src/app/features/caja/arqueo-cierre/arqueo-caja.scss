@@ -99,6 +99,37 @@
             }
         }
 
+        .electronic-sales-banner {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #EFF6FF;
+            border: 1px solid #BFDBFE;
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #1E40AF;
+
+            mat-icon {
+                font-size: 20px;
+                width: 20px;
+                height: 20px;
+                color: #2563EB;
+                flex-shrink: 0;
+            }
+
+            .banner-text {
+                line-height: 1.4;
+
+                .electronic-hint {
+                    color: #64748B;
+                    font-size: 12px;
+                    margin-left: 6px;
+                }
+            }
+        }
+
         // Sección de Cálculo Intermedia
         .calculation-section {
             display: flex;

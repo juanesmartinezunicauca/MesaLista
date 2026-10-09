@@ -89,15 +89,17 @@
           <span>Efectivo</span>
         </button>
 
-        <button
-          type="button"
-          class="pago-btn"
-          [class.activo]="metodoPago() === 'tarjeta'"
-          (click)="seleccionarMetodo('tarjeta')"
-        >
-          <mat-icon>credit_card</mat-icon>
-          <span>Tarjeta</span>
-        </button>
+        @if (!esDomicilio()) {
+          <button
+            type="button"
+            class="pago-btn"
+            [class.activo]="metodoPago() === 'tarjeta'"
+            (click)="seleccionarMetodo('tarjeta')"
+          >
+            <mat-icon>credit_card</mat-icon>
+            <span>Tarjeta</span>
+          </button>
+        }
 
         <button
           type="button"
@@ -109,15 +111,17 @@
           <span>Transferencia</span>
         </button>
 
-        <button
-          type="button"
-          class="pago-btn mixto-btn"
-          [class.activo]="metodoPago() === 'mixto'"
-          (click)="seleccionarMetodo('mixto')"
-        >
-          <mat-icon>call_split</mat-icon>
-          <span>Mixto</span>
-        </button>
+        @if (!esDomicilio()) {
+          <button
+            type="button"
+            class="pago-btn mixto-btn"
+            [class.activo]="metodoPago() === 'mixto'"
+            (click)="seleccionarMetodo('mixto')"
+          >
+            <mat-icon>call_split</mat-icon>
+            <span>Mixto</span>
+          </button>
+        }
       </div>
 
       <!-- 4A. Pago 100% Efectivo -->

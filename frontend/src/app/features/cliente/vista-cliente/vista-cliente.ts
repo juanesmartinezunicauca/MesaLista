@@ -23,6 +23,7 @@ export interface CartItem {
   producto: Producto;
   cantidad: number;
   observacion?: string;
+  ingredientes_removidos?: string[];
 }
 
 @Component({
@@ -79,6 +80,9 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
   // Estados de Modales / Diálogos
   mostrarModalAuth = signal<boolean>(false);
   mostrarModalPedido = signal<boolean>(false);
+  productoEnPersonalizacion = signal<Producto | null>(null);
+  ingredientesSeleccionados = signal<string[]>([]);
+  observacionItemPersonalizado = signal<string>('');
   pedidoConfirmado = signal<{
     codigo: string;
     total: number;
@@ -299,14 +303,69 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
     } catch {}
   }
 
-  // Métodos de Carrito
+  // Métodos de Personalización de Ingredientes y Carrito
+  iniciarPersonalizacion(producto: Producto, event?: MouseEvent): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.productoEnPersonalizacion.set(producto);
+    this.ingredientesSeleccionados.set([...(producto.ingredientes_removibles || [])]);
+    this.observacionItemPersonalizado.set('');
+  }
+
+  toggleIngrediente(ing: string): void {
+    const list = this.ingredientesSeleccionados();
+    if (list.includes(ing)) {
+      this.ingredientesSeleccionados.set(list.filter((i) => i !== ing));
+    } else {
+      this.ingredientesSeleccionados.set([...list, ing]);
+    }
+  }
+
+  cancelarPersonalizacion(): void {
+    this.productoEnPersonalizacion.set(null);
+  }
+
+  confirmarPersonalizacion(): void {
+    const prod = this.productoEnPersonalizacion();
+    if (!prod) return;
+
+    const removidos = (prod.ingredientes_removibles || []).filter(
+      (ing) => !this.ingredientesSeleccionados().includes(ing)
+    );
+
+    this.agregarItemPersonalizadoAlCarrito(
+      prod,
+      removidos,
+      this.observacionItemPersonalizado().trim() || undefined
+    );
+
+    this.productoEnPersonalizacion.set(null);
+  }
+
   agregarAlCarrito(producto: Producto, event?: MouseEvent): void {
     if (event) {
       event.stopPropagation();
     }
+    this.agregarItemPersonalizadoAlCarrito(producto, [], undefined);
+  }
 
+  agregarItemPersonalizadoAlCarrito(
+    producto: Producto,
+    removidos: string[],
+    observacion?: string
+  ): void {
     const items = [...this.carrito()];
-    const index = items.findIndex((it) => it.producto.id_producto === producto.id_producto);
+    const removidosKey = (removidos || []).slice().sort().join('|');
+
+    const index = items.findIndex((it) => {
+      const itRemovidosKey = (it.ingredientes_removidos || []).slice().sort().join('|');
+      return (
+        it.producto.id_producto === producto.id_producto &&
+        itRemovidosKey === removidosKey &&
+        (it.observacion || '') === (observacion || '')
+      );
+    });
 
     if (index >= 0) {
       items[index] = {
@@ -317,6 +376,8 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
       items.push({
         producto,
         cantidad: 1,
+        ingredientes_removidos: removidos.length > 0 ? removidos : undefined,
+        observacion,
       });
     }
 
@@ -324,7 +385,7 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
     this.guardarCarrito();
 
     const snackRef = this.snackBar.open(
-      `¡${producto.nombre} añadido al carrito!`,
+      `¡${producto.nombre} agregado al carrito!`,
       'Ver Carrito',
       { duration: 3000 }
     );
@@ -556,6 +617,10 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
       itemsPayload = this.carrito().map((it) => ({
         id_producto: it.producto.id_producto,
         cantidad: it.cantidad,
+        ingredientes_removidos:
+          it.ingredientes_removidos && it.ingredientes_removidos.length > 0
+            ? it.ingredientes_removidos.join(', ')
+            : undefined,
         observacion: it.observacion?.trim() || undefined,
       }));
       descripcionResumen = this.carrito()

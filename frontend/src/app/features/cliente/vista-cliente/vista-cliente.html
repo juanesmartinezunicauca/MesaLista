@@ -204,6 +204,17 @@
             </div>
 
             <div class="product-footer">
+              @if (prod.ingredientes_removibles && prod.ingredientes_removibles.length > 0) {
+                <button
+                  type="button"
+                  class="btn-customize-dish"
+                  (click)="iniciarPersonalizacion(prod, $event)"
+                  title="Elegir ingredientes a quitar de este plato"
+                >
+                  <mat-icon>tune</mat-icon>
+                  <span>Personalizar</span>
+                </button>
+              }
               <button
                 type="button"
                 class="btn-add-cart"
@@ -310,10 +321,9 @@
                     </span>
                     <span class="order-payment-badge" [ngClass]="{
                       'pay-transfer': (pedido.metodo_pago || '').toLowerCase().includes('transf'),
-                      'pay-card': (pedido.metodo_pago || '').toLowerCase().includes('tarj'),
-                      'pay-cash': !(pedido.metodo_pago || '').toLowerCase().includes('transf') && !(pedido.metodo_pago || '').toLowerCase().includes('tarj')
+                      'pay-cash': !(pedido.metodo_pago || '').toLowerCase().includes('transf')
                     }">
-                      <mat-icon>{{ (pedido.metodo_pago || '').toLowerCase().includes('transf') ? 'account_balance_wallet' : ((pedido.metodo_pago || '').toLowerCase().includes('tarj') ? 'credit_card' : 'payments') }}</mat-icon>
+                      <mat-icon>{{ (pedido.metodo_pago || '').toLowerCase().includes('transf') ? 'account_balance_wallet' : 'payments' }}</mat-icon>
                       <span>{{ pedido.metodo_pago || 'Efectivo' }}</span>
                     </span>
                   </div>
@@ -325,57 +335,69 @@
                 </div>
 
                 <!-- Stepper de Progreso en Vivo del Pedido -->
-                <div class="tracker-stepper">
-                  <!-- Paso 1: Recibido -->
-                  <div class="step-node" [class.active]="pedido.etapaOperativa === 'Pendiente'" [class.completed]="pedido.etapaOperativa !== 'Pendiente' && pedido.etapaOperativa !== 'Cancelado'">
-                    <div class="step-circle">
-                      <mat-icon>{{ pedido.etapaOperativa === 'Pendiente' ? 'hourglass_top' : 'check' }}</mat-icon>
+                @if (pedido.etapaOperativa === 'Cancelado') {
+                  <div class="cancelled-tracker-bar">
+                    <div class="cancelled-icon-wrap">
+                      <mat-icon>cancel</mat-icon>
                     </div>
-                    <div class="step-info">
-                      <span class="step-title">1. Recibido</span>
-                      <span class="step-sub">En espera de caja</span>
-                    </div>
-                  </div>
-
-                  <div class="step-line" [class.filled]="pedido.etapaOperativa !== 'Pendiente' && pedido.etapaOperativa !== 'Cancelado'"></div>
-
-                  <!-- Paso 2: Aceptado / En Cocina -->
-                  <div class="step-node" [class.active]="pedido.etapaOperativa === 'En Preparación'" [class.completed]="pedido.etapaOperativa === 'En Reparto' || pedido.etapaOperativa === 'Entregado'">
-                    <div class="step-circle">
-                      <mat-icon>{{ pedido.etapaOperativa === 'En Preparación' ? 'soup_kitchen' : (pedido.etapaOperativa === 'En Reparto' || pedido.etapaOperativa === 'Entregado' ? 'check' : 'schedule') }}</mat-icon>
-                    </div>
-                    <div class="step-info">
-                      <span class="step-title">2. Aceptado</span>
-                      <span class="step-sub">En cocina</span>
+                    <div class="cancelled-details">
+                      <span class="cancelled-main">Pedido Cancelado o Rechazado</span>
+                      <span class="cancelled-sub">{{ pedido.observacion || 'El pedido no pudo completarse por el restaurante.' }}</span>
                     </div>
                   </div>
-
-                  <div class="step-line" [class.filled]="pedido.etapaOperativa === 'En Reparto' || pedido.etapaOperativa === 'Entregado'"></div>
-
-                  <!-- Paso 3: En Reparto -->
-                  <div class="step-node" [class.active]="pedido.etapaOperativa === 'En Reparto'" [class.completed]="pedido.etapaOperativa === 'Entregado'">
-                    <div class="step-circle">
-                      <mat-icon>{{ pedido.etapaOperativa === 'En Reparto' ? 'two_wheeler' : (pedido.etapaOperativa === 'Entregado' ? 'check' : 'moped') }}</mat-icon>
+                } @else {
+                  <div class="tracker-stepper">
+                    <!-- Paso 1: Recibido -->
+                    <div class="step-node" [class.active]="pedido.etapaOperativa === 'Pendiente'" [class.completed]="pedido.etapaOperativa !== 'Pendiente'">
+                      <div class="step-circle">
+                        <mat-icon>{{ pedido.etapaOperativa === 'Pendiente' ? 'hourglass_top' : 'check' }}</mat-icon>
+                      </div>
+                      <div class="step-info">
+                        <span class="step-title">1. Recibido</span>
+                        <span class="step-sub">En espera de caja</span>
+                      </div>
                     </div>
-                    <div class="step-info">
-                      <span class="step-title">3. En Camino</span>
-                      <span class="step-sub">Domiciliario</span>
+
+                    <div class="step-line" [class.filled]="pedido.etapaOperativa !== 'Pendiente'"></div>
+
+                    <!-- Paso 2: Aceptado / En Cocina -->
+                    <div class="step-node" [class.active]="pedido.etapaOperativa === 'En Preparación'" [class.completed]="pedido.etapaOperativa === 'En Reparto' || pedido.etapaOperativa === 'Entregado'">
+                      <div class="step-circle">
+                        <mat-icon>{{ pedido.etapaOperativa === 'En Preparación' ? 'soup_kitchen' : (pedido.etapaOperativa === 'En Reparto' || pedido.etapaOperativa === 'Entregado' ? 'check' : 'schedule') }}</mat-icon>
+                      </div>
+                      <div class="step-info">
+                        <span class="step-title">2. Aceptado</span>
+                        <span class="step-sub">En cocina</span>
+                      </div>
+                    </div>
+
+                    <div class="step-line" [class.filled]="pedido.etapaOperativa === 'En Reparto' || pedido.etapaOperativa === 'Entregado'"></div>
+
+                    <!-- Paso 3: En Reparto -->
+                    <div class="step-node" [class.active]="pedido.etapaOperativa === 'En Reparto'" [class.completed]="pedido.etapaOperativa === 'Entregado'">
+                      <div class="step-circle">
+                        <mat-icon>{{ pedido.etapaOperativa === 'En Reparto' ? 'two_wheeler' : (pedido.etapaOperativa === 'Entregado' ? 'check' : 'moped') }}</mat-icon>
+                      </div>
+                      <div class="step-info">
+                        <span class="step-title">3. En Camino</span>
+                        <span class="step-sub">Domiciliario</span>
+                      </div>
+                    </div>
+
+                    <div class="step-line" [class.filled]="pedido.etapaOperativa === 'Entregado'"></div>
+
+                    <!-- Paso 4: Entregado -->
+                    <div class="step-node" [class.active]="pedido.etapaOperativa === 'Entregado'" [class.completed]="pedido.etapaOperativa === 'Entregado'">
+                      <div class="step-circle">
+                        <mat-icon>{{ pedido.etapaOperativa === 'Entregado' ? 'verified' : 'task_alt' }}</mat-icon>
+                      </div>
+                      <div class="step-info">
+                        <span class="step-title">4. Entregado</span>
+                        <span class="step-sub">¡Completado!</span>
+                      </div>
                     </div>
                   </div>
-
-                  <div class="step-line" [class.filled]="pedido.etapaOperativa === 'Entregado'"></div>
-
-                  <!-- Paso 4: Entregado -->
-                  <div class="step-node" [class.completed]="pedido.etapaOperativa === 'Entregado'">
-                    <div class="step-circle">
-                      <mat-icon>task_alt</mat-icon>
-                    </div>
-                    <div class="step-info">
-                      <span class="step-title">4. Entregado</span>
-                      <span class="step-sub">¡Completado!</span>
-                    </div>
-                  </div>
-                </div>
+                }
 
                 <!-- Detalle y Alerta Operativa Según Estado -->
                 <div class="status-context-box">
@@ -455,6 +477,9 @@
                         <div class="item-row">
                           <span class="item-quantity">{{ it.cantidad }}x</span>
                           <span class="item-name">{{ it.producto?.nombre || 'Producto' }}</span>
+                          @if (it.ingredientes_removidos) {
+                            <span class="item-sin-tag">Sin: {{ it.ingredientes_removidos }}</span>
+                          }
                           @if (it.observacion) {
                             <span class="item-note">({{ it.observacion }})</span>
                           }
@@ -508,6 +533,87 @@
     </section>
   }
 
+  <!-- MODAL: Personalización de Ingredientes Removibles -->
+  @if (productoEnPersonalizacion(); as prod) {
+    <div class="modal-overlay" (click)="cancelarPersonalizacion()">
+      <div class="modal-window customize-window" (click)="$event.stopPropagation()">
+        <button class="btn-window-close" (click)="cancelarPersonalizacion()">
+          <mat-icon>close</mat-icon>
+        </button>
+
+        <div class="customize-window-header">
+          <div class="header-icon-box">
+            <mat-icon>tune</mat-icon>
+          </div>
+          <div>
+            <h2>Personalizar {{ prod.nombre }}</h2>
+            <p>Selecciona qué ingredientes deseas quitar de tu plato</p>
+          </div>
+        </div>
+
+        <div class="customize-body">
+          <div class="customize-prod-banner">
+            @if (prod.imagen) {
+              <img [src]="prod.imagen" [alt]="prod.nombre" class="banner-img" />
+            }
+            <div class="banner-info">
+              <span class="banner-title">{{ prod.nombre }}</span>
+              <span class="banner-price">${{ prod.precio_venta | number:'1.0-0' }} COP</span>
+            </div>
+          </div>
+
+          <div class="ingredients-section">
+            <span class="section-subtitle">
+              <mat-icon>checklist</mat-icon>
+              <span>Ingredientes (desmarca los que NO deseas):</span>
+            </span>
+
+            <div class="ingredients-grid">
+              @for (ing of prod.ingredientes_removibles; track ing) {
+                <div
+                  class="ingredient-item-card"
+                  [class.included]="ingredientesSeleccionados().includes(ing)"
+                  [class.removed]="!ingredientesSeleccionados().includes(ing)"
+                  (click)="toggleIngrediente(ing)"
+                >
+                  <mat-icon class="ing-check-icon">
+                    {{ ingredientesSeleccionados().includes(ing) ? 'check_box' : 'indeterminate_check_box' }}
+                  </mat-icon>
+                  <span class="ing-name">{{ ing }}</span>
+                  <span class="ing-status-tag">
+                    {{ ingredientesSeleccionados().includes(ing) ? 'Incluido' : 'Sin ' + ing }}
+                  </span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="customize-notes-section">
+            <label class="notes-label">Observación adicional para este plato (opcional):</label>
+            <input
+              type="text"
+              class="notes-input"
+              maxlength="150"
+              placeholder="Ej. Término 3/4, salsa aparte..."
+              [value]="observacionItemPersonalizado()"
+              (input)="observacionItemPersonalizado.set($any($event.target).value)"
+            />
+          </div>
+        </div>
+
+        <div class="customize-actions">
+          <button mat-stroked-button class="btn-modal-cancel" (click)="cancelarPersonalizacion()">
+            <span>Cancelar</span>
+          </button>
+          <button mat-flat-button class="btn-modal-primary" (click)="confirmarPersonalizacion()">
+            <mat-icon>add_shopping_cart</mat-icon>
+            <span>Agregar al Carrito</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
   <!-- 5. MODAL: Carrito de Compras del Cliente -->
   @if (mostrarModalCarrito()) {
     <div class="modal-overlay" (click)="cerrarCarrito()">
@@ -541,6 +647,12 @@
                 <div class="cart-item-main">
                   <span class="item-name">{{ item.producto.nombre }}</span>
                   <span class="item-unit-price">${{ item.producto.precio_venta | number:'1.0-0' }} COP c/u</span>
+                  @if (item.ingredientes_removidos && item.ingredientes_removidos.length > 0) {
+                    <span class="cart-item-sin">
+                      <mat-icon>remove_circle_outline</mat-icon>
+                      Sin: {{ item.ingredientes_removidos.join(', ') }}
+                    </span>
+                  }
                   @if (item.observacion) {
                     <span class="item-note">Nota: {{ item.observacion }}</span>
                   }
@@ -617,8 +729,13 @@
             <div class="order-items-compact-list">
               @for (item of carrito(); track $index) {
                 <div class="compact-item">
-                  <span class="item-qty-badge">{{ item.cantidad }}x</span>
-                  <span class="item-title">{{ item.producto.nombre }}</span>
+                  <div class="compact-item-main">
+                    <span class="item-qty-badge">{{ item.cantidad }}x</span>
+                    <span class="item-title">{{ item.producto.nombre }}</span>
+                    @if (item.ingredientes_removidos && item.ingredientes_removidos.length > 0) {
+                      <span class="compact-item-sin">Sin: {{ item.ingredientes_removidos.join(', ') }}</span>
+                    }
+                  </div>
                   <span class="item-sub">${{ (item.cantidad * item.producto.precio_venta) | number:'1.0-0' }} COP</span>
                 </div>
               }
@@ -724,22 +841,6 @@
                   <span class="option-sub">Nequi, Daviplata, Bancolombia</span>
                 </div>
                 <mat-icon class="check-indicator">{{ metodoPago() === 'Transferencia' ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
-              </button>
-
-              <button
-                type="button"
-                class="payment-option-card"
-                [class.selected]="metodoPago() === 'Tarjeta'"
-                (click)="metodoPago.set('Tarjeta')"
-              >
-                <div class="option-icon-box">
-                  <mat-icon>credit_card</mat-icon>
-                </div>
-                <div class="option-text">
-                  <span class="option-title">Tarjeta / Datáfono</span>
-                  <span class="option-sub">Datáfono inalámbrico</span>
-                </div>
-                <mat-icon class="check-indicator">{{ metodoPago() === 'Tarjeta' ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
               </button>
             </div>
           </div>

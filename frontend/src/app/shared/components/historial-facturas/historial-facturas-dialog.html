@@ -190,6 +190,16 @@
                   <mat-icon>edit</mat-icon>
                   <span>Editar</span>
                 </button>
+                <button
+                  mat-stroked-button
+                  color="warn"
+                  class="btn-delete-invoice"
+                  (click)="eliminarFactura(f)"
+                  title="Anular y eliminar esta factura del turno de caja"
+                >
+                  <mat-icon color="warn">delete</mat-icon>
+                  <span>Borrar</span>
+                </button>
               </div>
             </div>
 

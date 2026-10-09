@@ -207,6 +207,31 @@ export class HistorialFacturasDialogComponent implements OnInit {
     });
   }
 
+  eliminarFactura(factura: any): void {
+    const confirmar = confirm(
+      `¿Estás seguro de anular y eliminar la factura #FAC-${factura.id_venta}? Esta acción removerá el cobro del turno de caja y desvinculará el pedido.`
+    );
+    if (!confirmar) return;
+
+    this.facturacionApi.eliminarFactura(factura.id_venta).subscribe({
+      next: (res) => {
+        this.snackBar.open(
+          res.mensaje || `Factura #FAC-${factura.id_venta} eliminada exitosamente.`,
+          'OK',
+          { duration: 3500 }
+        );
+        this.facturas.update((list) => list.filter((f) => f.id_venta !== factura.id_venta));
+        if (this.facturaEditando()?.id_venta === factura.id_venta) {
+          this.facturaEditando.set(null);
+        }
+      },
+      error: (err) => {
+        const msg = err.error?.message || 'Error al eliminar la factura.';
+        this.snackBar.open(msg, 'Cerrar', { duration: 4000 });
+      },
+    });
+  }
+
   obtenerResumenMediosPago(pagos: any[]): string {
     if (!pagos || pagos.length === 0) return 'Sin pagos registrados';
     return pagos

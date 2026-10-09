@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -72,6 +73,16 @@ export class FacturacionController {
     @Body() dto: UpdateFacturaDto,
   ) {
     return this.facturacionService.actualizarFactura(id, dto);
+  }
+
+  /**
+   * DELETE /api/v1/facturas/:id
+   * Elimina / anula una factura registrada y restituye el saldo en el turno de caja.
+   */
+  @Delete(':id')
+  @Roles(RolUsuario.administrador, RolUsuario.cajero)
+  eliminar(@Param('id', ParseIntPipe) id: number) {
+    return this.facturacionService.eliminarFactura(id);
   }
 }
 

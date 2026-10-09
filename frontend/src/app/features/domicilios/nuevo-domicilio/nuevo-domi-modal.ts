@@ -222,6 +222,27 @@ export class NewDeliveryDialogComponent implements OnInit {
     this.itemsSeleccionados.update((items) => items.filter((i) => i.id_producto !== id_producto));
   }
 
+  toggleIngredienteItem(item: ItemSeleccionado, ing: string): void {
+    const currentList = item.ingredientes_removidos
+      ? item.ingredientes_removidos.split(',').map((s) => s.trim()).filter(Boolean)
+      : [];
+    let updatedList: string[];
+    if (currentList.includes(ing)) {
+      updatedList = currentList.filter((s) => s !== ing);
+    } else {
+      updatedList = [...currentList, ing];
+    }
+    item.ingredientes_removidos = updatedList.length > 0 ? updatedList.join(', ') : undefined;
+  }
+
+  isIngredienteRemovido(item: ItemSeleccionado, ing: string): boolean {
+    if (!item.ingredientes_removidos) return false;
+    return item.ingredientes_removidos
+      .split(',')
+      .map((s) => s.trim())
+      .includes(ing);
+  }
+
   onCancel(): void {
     this.dialogRef.close(false);
   }

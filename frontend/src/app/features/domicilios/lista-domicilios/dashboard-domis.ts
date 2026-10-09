@@ -181,9 +181,9 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
   abrirDetalle(pedido: Domicilio): void {
     const dialogRef = this.dialog.open(DetalleDomiDialogComponent, {
       data: { pedido },
-      width: '680px',
+      width: '780px',
       maxWidth: '95vw',
-      maxHeight: '90vh',
+      maxHeight: '92vh',
     });
 
     dialogRef.afterClosed().subscribe((res) => {
@@ -367,6 +367,33 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
         }));
 
         this.procesandoId.set(pedido.id_pedido);
+
+        // Si ya cuenta con factura previa, actualizar la misma en caja en lugar de duplicar
+        if (pedido.id_factura) {
+          this.facturacionApi
+            .actualizarFactura(pedido.id_factura, {
+              propina: resultado.propina,
+              pagos: pagosPayload,
+            })
+            .subscribe({
+              next: () => {
+                this.procesandoId.set(null);
+                this.snackBar.open(
+                  `¡Factura #FAC-${pedido.id_factura} actualizada exitosamente en caja!`,
+                  'OK',
+                  { duration: 4000 }
+                );
+                this.cargarPedidos();
+              },
+              error: (err) => {
+                this.procesandoId.set(null);
+                const msg = err.error?.message || 'Error al actualizar la factura.';
+                this.snackBar.open(msg, 'Cerrar', { duration: 4000 });
+              },
+            });
+          return;
+        }
+
         this.facturacionApi
           .crearFactura({
             id_pedido: pedido.id_pedido,
@@ -500,6 +527,53 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
     this.pedidos.update((lista) =>
       lista.map((p) => (p.id_pedido === actualizado.id_pedido ? actualizado : p))
     );
+  }
+
+  limpiarHistorial(): void {
+    const confirmar = confirm(
+      '¿Estás seguro de que deseas limpiar todo el historial de domicilios cerrados y cancelados? Esta acción eliminará estos pedidos del listado sin alterar las facturas ni los registros de caja.'
+    );
+    if (!confirmar) return;
+
+    this.cargando.set(true);
+    this.domiciliosApi.limpiarHistorial().subscribe({
+      next: (res) => {
+        this.snackBar.open(
+          res.mensaje || 'Historial de domicilios limpiado exitosamente.',
+          'OK',
+          { duration: 4000 }
+        );
+        this.cargarPedidos();
+      },
+      error: (err) => {
+        this.cargando.set(false);
+        const msg = err.error?.message || 'Error al limpiar el historial.';
+        this.snackBar.open(msg, 'Cerrar', { duration: 4000 });
+      },
+    });
+  }
+
+  eliminarDelHistorial(pedido: Domicilio): void {
+    const confirmar = confirm(
+      `¿Eliminar el pedido #${pedido.numero_pedido} del historial? (La factura en caja permanecerá intacta).`
+    );
+    if (!confirmar) return;
+
+    this.procesandoId.set(pedido.id_pedido);
+    this.domiciliosApi.eliminar(pedido.id_pedido).subscribe({
+      next: () => {
+        this.procesandoId.set(null);
+        this.snackBar.open(`Pedido #${pedido.numero_pedido} eliminado del historial.`, 'OK', {
+          duration: 3000,
+        });
+        this.pedidos.update((lista) => lista.filter((p) => p.id_pedido !== pedido.id_pedido));
+      },
+      error: (err) => {
+        this.procesandoId.set(null);
+        const msg = err.error?.message || 'Error al eliminar el pedido del historial.';
+        this.snackBar.open(msg, 'Cerrar', { duration: 4000 });
+      },
+    });
   }
 
   formatearHora(fecha: string | Date): string {
