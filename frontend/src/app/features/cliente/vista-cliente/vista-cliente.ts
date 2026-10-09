@@ -174,10 +174,10 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
     this.recuperarCarrito();
     this.cargarCatalogo();
     this.cargarEstadoServicio();
-    this.recuperarUltimoPedido();
 
     if (this.isAuthenticated()) {
       this.cargarMisPedidos();
+      this.recuperarUltimoPedido();
     }
 
     // Polling de verificación de estado del servicio cada 15 segundos
@@ -268,8 +268,6 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
     this.vistaActiva.set('mis-pedidos');
     if (this.isAuthenticated()) {
       this.cargarMisPedidos();
-    } else {
-      this.recuperarUltimoPedido();
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -747,10 +745,13 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
             }
           }
         },
-        error: () => {
+        error: (err) => {
           if (this.intervaloTracking) {
             clearInterval(this.intervaloTracking);
             this.intervaloTracking = null;
+          }
+          if (err?.status === 403 || err?.status === 404) {
+            this.cerrarTracking();
           }
         },
       });
@@ -772,10 +773,10 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
   }
 
   cerrarSesion(): void {
+    this.cerrarTracking();
     this.authService.logout('/cliente');
     this.misPedidos.set([]);
     this.carrito.set([]);
-    this.pedidoActivoTracking.set(null);
     this.vistaActiva.set('carta');
     this.snackBar.open('Has cerrado sesión correctamente.', 'Entendido', {
       duration: 3000,

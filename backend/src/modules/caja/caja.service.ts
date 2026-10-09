@@ -12,10 +12,15 @@ import { AbrirCajaDto, CerrarCajaDto, CreateGastoDto, ActualizarBaseDto } from '
 export class CajaService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private catalogosAsegurados = false;
+
   /**
    * Asegura que existan los medios de pago y tipos de gasto básicos en la BD.
+   * Optimización: cachea el estado para evitar 7 consultas upsert redundantes por cada sondeo.
    */
   async asegurarCatalogosBase(): Promise<void> {
+    if (this.catalogosAsegurados) return;
+
     const mediosBase = ['Efectivo', 'Tarjeta', 'Transferencia'];
     for (const nombre of mediosBase) {
       await this.prisma.medioPago.upsert({
@@ -33,6 +38,8 @@ export class CajaService {
         create: { nombre },
       });
     }
+
+    this.catalogosAsegurados = true;
   }
 
   /**
@@ -81,6 +88,7 @@ export class CajaService {
         facturas: {
           include: {
             mesa: true,
+            cliente: { select: { id_cliente: true, nombre: true } },
             usuario: { select: { id_usuario: true, nombre: true } },
             pagos: {
               include: { medioPago: true },
@@ -160,7 +168,9 @@ export class CajaService {
       ...caja.facturas.map((f) => ({
         id: `factura-${f.id_venta}`,
         hora: f.fecha_hora,
-        descripcion: f.id_mesa ? `Pago Mesa #${f.mesa?.numero}` : 'Venta Directa / Barra',
+        descripcion: f.id_mesa
+          ? `Pago Mesa #${f.mesa?.numero}`
+          : (f.cliente ? `Domicilio - ${f.cliente.nombre}` : 'Venta Directa / Barra'),
         tipo: 'Ingreso' as const,
         monto: Number(f.valor_total),
         medio_pago: f.pagos.map((p) => p.medioPago?.nombre).join(', ') || 'Efectivo',

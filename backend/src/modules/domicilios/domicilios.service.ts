@@ -405,7 +405,6 @@ export class DomiciliosService {
         where: { id_pedido: id },
         data: {
           estado: EstadoPedido.cerrada,
-          ...(id_usuario ? { id_usuario } : {}),
         },
         include: this.domicilioInclude,
       });
@@ -439,7 +438,6 @@ export class DomiciliosService {
       where: { id_pedido: id },
       data: {
         observacion: observacionActualizada || null,
-        ...(id_usuario ? { id_usuario } : {}),
       },
       include: this.domicilioInclude,
     });
