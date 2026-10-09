@@ -12,10 +12,14 @@ Sistema POS y de gestión operativa para restaurantes y locales gastronómicos: 
 MesaLista/
 ├── docker-compose.yml          # Orquestación con Docker (PostgreSQL, Backend, Frontend)
 ├── configurar_postgres.bat     # Script de configuración rápida de PostgreSQL local (Windows)
+├── OWASP_COMPLIANCE.md         # Matriz técnica de cumplimiento OWASP Top 10 (2021)
 ├── README.md                   # Documentación general y guía de ejecución
 ├── backend/                    # API REST con NestJS 12, Prisma ORM, PostgreSQL
 └── frontend/                   # SPA con Angular 22, Material/SCSS, Standalone Components
 ```
+
+> [!TIP]
+> 🛡️ **Seguridad y Auditoría:** Consulta la [Matriz de Cumplimiento OWASP Top 10](OWASP_COMPLIANCE.md) para revisar en detalle cómo el proyecto mitiga cada vulnerabilidad con hipervínculos directos a las líneas del código fuente.
 
 ## Requisitos Previos
 Antes de comenzar, asegúrate de contar con:
