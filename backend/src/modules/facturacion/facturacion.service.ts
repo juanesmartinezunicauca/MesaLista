@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { EstadoCaja, EstadoMesa, EstadoPedido, Prisma } from '@prisma/client';
@@ -9,6 +10,8 @@ import { CreateFacturaDto, UpdateFacturaDto } from './dto';
 
 @Injectable()
 export class FacturacionService {
+  private readonly logger = new Logger('SecurityAudit');
+
   constructor(private readonly prisma: PrismaService) {}
 
   /**
@@ -388,6 +391,8 @@ export class FacturacionService {
       await tx.factura.delete({
         where: { id_venta: id },
       });
+
+      this.logger.warn(`[SECURITY_AUDIT] Anulación/eliminación de factura #FAC-${id} completada.`);
 
       return {
         exito: true,

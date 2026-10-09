@@ -1,4 +1,4 @@
-import { IsOptional, IsString, Length } from 'class-validator';
+import { IsOptional, IsString, Length, Matches } from 'class-validator';
 
 export class UpdatePerfilDto {
   @IsOptional()
@@ -8,6 +8,9 @@ export class UpdatePerfilDto {
 
   @IsOptional()
   @IsString({ message: 'La contraseña debe ser una cadena de texto' })
-  @Length(6, 100, { message: 'La contraseña debe tener al menos 6 caracteres' })
+  @Length(8, 100, { message: 'La contraseña debe tener al menos 8 caracteres' })
+  @Matches(/^(?=.*[a-zA-Z])(?=.*\d)/, {
+    message: 'La contraseña debe contener al menos una letra y un número',
+  })
   password?: string;
 }

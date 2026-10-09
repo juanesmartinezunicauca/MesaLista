@@ -80,7 +80,7 @@ describe('DomiciliosController', () => {
 
     const result = await controller.obtenerPorId(5);
 
-    expect(service.obtenerPorId).toHaveBeenCalledWith(5);
+    expect(service.obtenerPorId).toHaveBeenCalledWith(5, undefined);
     expect(result).toEqual({ id_pedido: 5 });
   });
 

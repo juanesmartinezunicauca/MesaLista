@@ -1,9 +1,10 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EstadoCaja, EstadoPedido, TipoPedido } from '@prisma/client';
+import { EstadoCaja, EstadoPedido, RolUsuario, TipoPedido } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CambiarEstadoDomicilioDto, CreateDomicilioDto } from './dto';
 
@@ -329,8 +330,9 @@ export class DomiciliosService {
 
   /**
    * Consulta el detalle de un pedido a domicilio por su ID.
+   * Valida IDOR: Si el usuario es de rol cliente, verifica que sea el titular del pedido.
    */
-  async obtenerPorId(id: number) {
+  async obtenerPorId(id: number, usuarioAuth?: any) {
     const pedido = await this.prisma.pedido.findUnique({
       where: { id_pedido: id },
       include: this.domicilioInclude,
@@ -338,6 +340,17 @@ export class DomiciliosService {
 
     if (!pedido || pedido.tipo !== TipoPedido.domicilio) {
       throw new NotFoundException(`Pedido a domicilio #${id} no fue encontrado.`);
+    }
+
+    // OWASP A01: Control de acceso basado en propietario (prevención de IDOR)
+    if (
+      usuarioAuth &&
+      usuarioAuth.rol === RolUsuario.cliente &&
+      pedido.id_usuario !== usuarioAuth.id_usuario
+    ) {
+      throw new ForbiddenException(
+        'No tienes autorización para acceder a los datos de este pedido.',
+      );
     }
 
     return this.mapearEtapaOperativa(pedido);

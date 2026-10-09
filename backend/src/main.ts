@@ -1,17 +1,21 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { json, urlencoded } from 'express';
+import helmet from 'helmet';
 import { PrismaExceptionFilter } from './common/filters';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Aumento del límite de payload para permitir imágenes en base64 de productos
-  app.use(json({ limit: '10mb' }));
-  app.use(urlencoded({ extended: true, limit: '10mb' }));
+  // OWASP A05: Protección de cabeceras HTTP de seguridad con Helmet
+  app.use(helmet());
 
-  // A-05: CORS para entornos de desarrollo local, LAN y dominios en Vercel
+  // Límite controlado de payload para permitir imágenes en base64 evitando saturación por DoS
+  app.use(json({ limit: '2mb' }));
+  app.use(urlencoded({ extended: true, limit: '2mb' }));
+
+  // OWASP A05: CORS restringido para entornos autorizados (desarrollo local, LAN y dominios en Vercel)
   const configuredOrigins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
     : [];
@@ -32,7 +36,7 @@ async function bootstrap() {
         return callback(null, true);
       }
 
-      return callback(null, true);
+      return callback(new Error('Acceso no permitido por política CORS'), false);
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,

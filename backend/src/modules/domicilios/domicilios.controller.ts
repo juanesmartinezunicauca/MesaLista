@@ -112,8 +112,11 @@ export class DomiciliosController {
     RolUsuario.mesero,
     RolUsuario.cliente,
   )
-  obtenerPorId(@Param('id', ParseIntPipe) id: number) {
-    return this.domiciliosService.obtenerPorId(id);
+  obtenerPorId(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() usuario?: any,
+  ) {
+    return this.domiciliosService.obtenerPorId(id, usuario);
   }
 
   /**

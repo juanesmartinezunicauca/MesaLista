@@ -25,7 +25,10 @@ export class CreateUsuarioDto {
 
   @IsString({ message: 'La contraseña debe ser una cadena de texto' })
   @IsNotEmpty({ message: 'La contraseña es obligatoria' })
-  @Length(6, 100, { message: 'La contraseña debe tener entre 6 y 100 caracteres' })
+  @Length(8, 100, { message: 'La contraseña debe tener al menos 8 caracteres' })
+  @Matches(/^(?=.*[a-zA-Z])(?=.*\d)/, {
+    message: 'La contraseña debe contener al menos una letra y un número',
+  })
   password!: string;
 
   @IsEnum(RolUsuario, {

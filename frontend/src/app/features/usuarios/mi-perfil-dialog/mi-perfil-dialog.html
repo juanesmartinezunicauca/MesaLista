@@ -81,7 +81,10 @@
             <mat-icon>{{ mostrarPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
           </button>
           @if (tieneError('password', 'minlength')) {
-            <mat-error>La contraseña debe tener mínimo 6 caracteres.</mat-error>
+            <mat-error>La contraseña debe tener mínimo 8 caracteres.</mat-error>
+          }
+          @if (tieneError('password', 'pattern')) {
+            <mat-error>Debe contener al menos una letra y un número.</mat-error>
           }
         </mat-form-field>
 

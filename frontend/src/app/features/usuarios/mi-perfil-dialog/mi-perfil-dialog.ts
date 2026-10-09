@@ -41,7 +41,7 @@ export class MiPerfilDialogComponent {
     const user = this.usuarioActual();
     this.perfilForm = this.fb.group({
       nombre: [user?.nombre || '', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
-      password: ['', [Validators.minLength(6), Validators.maxLength(100)]],
+      password: ['', [Validators.minLength(8), Validators.maxLength(100), Validators.pattern(/^(?=.*[a-zA-Z])(?=.*\d)/)]],
       confirmPassword: [''],
     });
   }

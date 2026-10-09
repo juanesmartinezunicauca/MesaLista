@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   ForbiddenException,
   Injectable,
+  Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { RolUsuario } from '@prisma/client';
@@ -10,6 +11,8 @@ import { ROLES_KEY } from '../decorators/roles.decorator';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
+  private readonly logger = new Logger('SecurityAudit');
+
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
@@ -26,6 +29,9 @@ export class RolesGuard implements CanActivate {
     const { user } = context.switchToHttp().getRequest();
 
     if (!user || !user.rol) {
+      this.logger.warn(
+        '[SECURITY_AUDIT] Acceso denegado: Petición sin información de rol en sesión.',
+      );
       throw new ForbiddenException(
         'Acceso denegado: no se encontró información de rol en la sesión del usuario.',
       );
@@ -34,6 +40,9 @@ export class RolesGuard implements CanActivate {
     const tieneRolPermitido = requiredRoles.includes(user.rol);
 
     if (!tieneRolPermitido) {
+      this.logger.warn(
+        `[SECURITY_AUDIT] Acceso denegado: Usuario '${user?.usuario || user?.id_usuario}' (Rol: ${user.rol}) intentó acceder a recurso que requiere: [${requiredRoles.join(', ')}].`,
+      );
       throw new ForbiddenException(
         `Acceso denegado: el rol '${user.rol}' no tiene permisos para acceder a este recurso.`,
       );
