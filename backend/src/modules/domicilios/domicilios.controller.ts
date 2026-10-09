@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -111,8 +112,11 @@ export class DomiciliosController {
     RolUsuario.mesero,
     RolUsuario.cliente,
   )
-  obtenerPorId(@Param('id', ParseIntPipe) id: number) {
-    return this.domiciliosService.obtenerPorId(id);
+  obtenerPorId(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() usuario?: any,
+  ) {
+    return this.domiciliosService.obtenerPorId(id, usuario);
   }
 
   /**
@@ -124,8 +128,9 @@ export class DomiciliosController {
   cambiarEstado(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: CambiarEstadoDomicilioDto,
+    @CurrentUser('id_usuario') id_usuario: number,
   ) {
-    return this.domiciliosService.cambiarEstado(id, dto);
+    return this.domiciliosService.cambiarEstado(id, dto, id_usuario);
   }
 
   /**
@@ -140,5 +145,26 @@ export class DomiciliosController {
   ) {
     const motivo = typeof dto === 'string' ? dto : dto?.motivo;
     return this.domiciliosService.cancelar(id, motivo);
+  }
+
+  /**
+   * DELETE /api/v1/domicilios/historial
+   * Limpia todos los pedidos a domicilio entregados y cancelados del historial.
+   * Totalmente seguro: no afecta mesas de salón, clientes ni facturación de caja.
+   */
+  @Delete('historial')
+  @Roles(RolUsuario.administrador, RolUsuario.cajero)
+  limpiarHistorial() {
+    return this.domiciliosService.limpiarHistorial();
+  }
+
+  /**
+   * DELETE /api/v1/domicilios/:id
+   * Elimina un pedido cerrado o cancelado específico del historial.
+   */
+  @Delete(':id')
+  @Roles(RolUsuario.administrador, RolUsuario.cajero)
+  eliminar(@Param('id', ParseIntPipe) id: number) {
+    return this.domiciliosService.eliminar(id);
   }
 }

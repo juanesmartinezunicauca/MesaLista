@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { EstadoCaja, EstadoMesa, EstadoPedido, Prisma } from '@prisma/client';
@@ -9,6 +10,8 @@ import { CreateFacturaDto, UpdateFacturaDto } from './dto';
 
 @Injectable()
 export class FacturacionService {
+  private readonly logger = new Logger('SecurityAudit');
+
   constructor(private readonly prisma: PrismaService) {}
 
   /**
@@ -73,6 +76,15 @@ export class FacturacionService {
 
       if (!pedido) {
         throw new NotFoundException(`El pedido #${dto.id_pedido} no existe.`);
+      }
+
+      // Si el pedido ya cuenta con una factura registrada, editar la misma en vez de crear duplicados
+      if (pedido.id_factura) {
+        return this.actualizarFactura(pedido.id_factura, {
+          pagos: dto.pagos,
+          propina: dto.propina,
+          observacion: dto.observacion,
+        });
       }
 
       if (pedido.estado !== EstadoPedido.enviada) {
@@ -347,5 +359,45 @@ export class FacturacionService {
     }
 
     return factura;
+  }
+
+  /**
+   * Elimina / anula una factura registrada en el turno de caja.
+   * Desvincula los pedidos asociados y remueve los pagos para restituir
+   * los saldos de caja.
+   */
+  async eliminarFactura(id: number) {
+    const facturaExistente = await this.prisma.factura.findUnique({
+      where: { id_venta: id },
+    });
+
+    if (!facturaExistente) {
+      throw new NotFoundException(`La factura #${id} no existe.`);
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Desvincular cualquier pedido asociado a esta factura
+      await tx.pedido.updateMany({
+        where: { id_factura: id },
+        data: { id_factura: null },
+      });
+
+      // 2. Eliminar los registros de pagos asociados
+      await tx.pago.deleteMany({
+        where: { id_venta: id },
+      });
+
+      // 3. Eliminar la factura
+      await tx.factura.delete({
+        where: { id_venta: id },
+      });
+
+      this.logger.warn(`[SECURITY_AUDIT] Anulación/eliminación de factura #FAC-${id} completada.`);
+
+      return {
+        exito: true,
+        mensaje: `Factura #FAC-${id} eliminada exitosamente.`,
+      };
+    });
   }
 }

@@ -80,7 +80,7 @@ describe('DomiciliosController', () => {
 
     const result = await controller.obtenerPorId(5);
 
-    expect(service.obtenerPorId).toHaveBeenCalledWith(5);
+    expect(service.obtenerPorId).toHaveBeenCalledWith(5, undefined);
     expect(result).toEqual({ id_pedido: 5 });
   });
 
@@ -88,9 +88,9 @@ describe('DomiciliosController', () => {
     const dto = { estado: 'En Reparto' };
     service.cambiarEstado.mockResolvedValue({ id_pedido: 5, etapaOperativa: 'En Reparto' });
 
-    const result = await controller.cambiarEstado(5, dto);
+    const result = await controller.cambiarEstado(5, dto, 2);
 
-    expect(service.cambiarEstado).toHaveBeenCalledWith(5, dto);
+    expect(service.cambiarEstado).toHaveBeenCalledWith(5, dto, 2);
     expect(result).toEqual({ id_pedido: 5, etapaOperativa: 'En Reparto' });
   });
 

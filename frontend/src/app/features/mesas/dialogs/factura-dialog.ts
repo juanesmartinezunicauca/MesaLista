@@ -38,11 +38,11 @@ export class FacturaDialogComponent {
   folioId = Math.floor(1000 + Math.random() * 9000);
 
   // Estados de Pago y Propinas
+  esDomicilio = computed(() => Boolean(this.data?.pedido));
+
   metodoPago = signal<MetodoPagoTipo>(
     this.data?.pedido?.metodo_pago?.toLowerCase().includes('transf')
       ? 'transferencia'
-      : this.data?.pedido?.metodo_pago?.toLowerCase().includes('tarj')
-      ? 'tarjeta'
       : 'efectivo'
   );
   tipoPropina = signal<'cero' | 'diez' | 'personalizada'>(this.data?.pedido ? 'cero' : 'diez');
@@ -53,6 +53,15 @@ export class FacturaDialogComponent {
   montoEfectivo = signal<number>(0);
   montoTarjeta = signal<number>(0);
   montoTransferencia = signal<number>(0);
+
+  constructor() {
+    // Si es domicilio o efectivo, precargar el valor total en efectivoRecibido
+    setTimeout(() => {
+      if (this.metodoPago() === 'efectivo') {
+        this.efectivoRecibido.set(this.totalFinal());
+      }
+    });
+  }
 
   // Consolidación de todos los ítems de todos los pedidos de la mesa o domicilio
   itemsConsolidados = computed<ItemConsolidado[]>(() => {

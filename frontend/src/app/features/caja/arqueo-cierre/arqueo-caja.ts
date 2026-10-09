@@ -51,6 +51,9 @@ export class CierreDeCaja {
   fondoInicial = signal<number>(0);
   ventasEfectivo = signal<number>(0);
   retirosGastos = signal<number>(0);
+  ventasTransferencia = signal<number>(0);
+  ventasTarjeta = signal<number>(0);
+  totalVentas = signal<number>(0);
 
   // Valor Esperado = Fondo Inicial + Ventas Efectivo - Retiros/Gastos
   valorEsperado = computed(() => {
@@ -94,6 +97,9 @@ export class CierreDeCaja {
       this.fondoInicial.set(this.data.resumen.valor_base ?? 0);
       this.ventasEfectivo.set(this.data.resumen.ventas_efectivo ?? 0);
       this.retirosGastos.set(this.data.resumen.gastos_efectivo ?? 0);
+      this.ventasTransferencia.set(this.data.resumen.ventas_transferencia ?? 0);
+      this.ventasTarjeta.set(this.data.resumen.ventas_tarjeta ?? 0);
+      this.totalVentas.set(this.data.resumen.total_ventas ?? 0);
     } else if (this.data?.caja) {
       this.fondoInicial.set(this.data.caja.valor_inicial ?? 0);
     }

@@ -99,4 +99,18 @@ export class DomiciliosApiService {
       motivo,
     });
   }
+
+  /**
+   * Limpia todos los domicilios cerrados (entregados) y cancelados del historial.
+   */
+  limpiarHistorial(): Observable<{ eliminados: number; mensaje: string }> {
+    return this.http.delete<{ eliminados: number; mensaje: string }>(`${this.apiUrl}/historial`);
+  }
+
+  /**
+   * Elimina un pedido cerrado o cancelado específico del historial.
+   */
+  eliminar(id: number): Observable<{ exito: boolean; mensaje: string }> {
+    return this.http.delete<{ exito: boolean; mensaje: string }>(`${this.apiUrl}/${id}`);
+  }
 }

@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -17,6 +18,7 @@ import {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger('SecurityAudit');
   private googleClient: OAuth2Client;
 
   constructor(
@@ -40,16 +42,19 @@ export class AuthService {
       await this.usuariosService.obtenerPorUsernameParaAuth(username);
 
     if (!usuario) {
+      this.logger.warn(`[SECURITY_AUDIT] Intento fallido de autenticación: usuario '${username}' no encontrado.`);
       throw new UnauthorizedException('Credenciales inválidas.');
     }
 
     if (usuario.estado !== EstadoUsuario.activo) {
+      this.logger.warn(`[SECURITY_AUDIT] Intento de acceso denegado: cuenta inactiva '${username}'.`);
       throw new UnauthorizedException(
         'El usuario se encuentra inactivo en el sistema. Contacte a la administración.',
       );
     }
 
     if (!usuario.passwordHash) {
+      this.logger.warn(`[SECURITY_AUDIT] Intento de inicio por contraseña en cuenta Google: '${username}'.`);
       throw new UnauthorizedException(
         'Esta cuenta está vinculada con Google OAuth 2.0. Por favor inicia sesión usando el botón de Google.',
       );
@@ -61,6 +66,7 @@ export class AuthService {
     );
 
     if (!esPasswordValido) {
+      this.logger.warn(`[SECURITY_AUDIT] Intento fallido de autenticación: contraseña errónea para '${username}'.`);
       throw new UnauthorizedException('Credenciales inválidas.');
     }
 
@@ -82,6 +88,8 @@ export class AuthService {
       loginDto.usuario,
       loginDto.password,
     );
+
+    this.logger.log(`[SECURITY_AUDIT] Inicio de sesión exitoso: '${usuario.usuario}' (Rol: ${usuario.rol}, ID: ${usuario.id_usuario})`);
 
     const payload: JwtPayload = {
       sub: usuario.id_usuario,
@@ -112,6 +120,7 @@ export class AuthService {
         audience: googleClientId || undefined,
       });
     } catch (error) {
+      this.logger.warn('[SECURITY_AUDIT] Intento fallido de login Google: Token inválido o expirado.');
       throw new UnauthorizedException(
         'Token de Google inválido o expirado. Por favor intenta iniciar sesión de nuevo.',
       );
@@ -119,12 +128,14 @@ export class AuthService {
 
     const payload = ticket.getPayload();
     if (!payload || !payload.email) {
+      this.logger.warn('[SECURITY_AUDIT] Intento fallido de login Google: Perfil sin correo.');
       throw new UnauthorizedException(
         'No se pudo obtener la información de perfil o el correo desde Google.',
       );
     }
 
     if (payload.email_verified === false) {
+      this.logger.warn(`[SECURITY_AUDIT] Intento fallido de login Google: Correo no verificado '${payload.email}'.`);
       throw new UnauthorizedException(
         'El correo electrónico de tu cuenta Google no se encuentra verificado por Google.',
       );
@@ -137,10 +148,13 @@ export class AuthService {
     });
 
     if (usuario.estado !== EstadoUsuario.activo) {
+      this.logger.warn(`[SECURITY_AUDIT] Acceso denegado con Google: cuenta inactiva '${usuario.email}'.`);
       throw new UnauthorizedException(
         'El usuario se encuentra inactivo en el sistema. Contacte a la administración.',
       );
     }
+
+    this.logger.log(`[SECURITY_AUDIT] Inicio de sesión exitoso con Google: '${usuario.email}' (Rol: ${usuario.rol}, ID: ${usuario.id_usuario})`);
 
     const jwtPayload: JwtPayload = {
       sub: usuario.id_usuario,

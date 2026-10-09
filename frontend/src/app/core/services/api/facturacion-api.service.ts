@@ -69,5 +69,12 @@ export class FacturacionApiService {
   actualizarFactura(id: number, payload: UpdateFacturaPayload): Observable<any> {
     return this.http.patch<any>(`${this.apiUrl}/${id}`, payload);
   }
+
+  /**
+   * Elimina / anula una factura registrada y ajusta el saldo de caja
+   */
+  eliminarFactura(id: number): Observable<{ exito: boolean; mensaje: string }> {
+    return this.http.delete<{ exito: boolean; mensaje: string }>(`${this.apiUrl}/${id}`);
+  }
 }
 

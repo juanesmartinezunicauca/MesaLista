@@ -116,6 +116,14 @@
             </button>
             }
         </div>
+
+        @if (filtroEstado() === 'Historial' && kpis().historial > 0) {
+        <button type="button" mat-stroked-button color="warn" class="btn-clear-history"
+            (click)="limpiarHistorial()" matTooltip="Limpiar todos los pedidos entregados y cancelados del historial">
+            <mat-icon>delete_sweep</mat-icon>
+            <span>Limpiar Historial ({{ kpis().historial }})</span>
+        </button>
+        }
     </div>
 
     <!-- Contenido Principal: Spinner o Tarjetas -->
@@ -180,6 +188,16 @@
                         <button mat-menu-item class="menu-danger" (click)="cancelar(pedido)">
                             <mat-icon color="warn">cancel</mat-icon>
                             <span>Anular Pedido</span>
+                        </button>
+                    </mat-menu>
+                    } @else {
+                    <button mat-icon-button [matMenuTriggerFor]="menuHistorial" (click)="$event.stopPropagation()" class="btn-more" matTooltip="Opciones de historial">
+                        <mat-icon>more_vert</mat-icon>
+                    </button>
+                    <mat-menu #menuHistorial="matMenu">
+                        <button mat-menu-item class="menu-danger" (click)="eliminarDelHistorial(pedido)">
+                            <mat-icon color="warn">delete</mat-icon>
+                            <span>Eliminar del Historial</span>
                         </button>
                     </mat-menu>
                     }

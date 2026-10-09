@@ -332,6 +332,26 @@
               background: #EFF6FF;
             }
           }
+
+          .btn-delete-invoice {
+            height: 32px !important;
+            padding: 0 10px !important;
+            font-size: 0.75rem !important;
+            border-color: #FECACA;
+            color: #DC2626;
+
+            mat-icon {
+              font-size: 16px;
+              width: 16px;
+              height: 16px;
+              margin-right: 2px;
+            }
+
+            &:hover {
+              border-color: #DC2626;
+              background: #FEF2F2;
+            }
+          }
         }
       }
 

@@ -37,13 +37,29 @@
             </div>
         </div>
 
+        @if (ventasTransferencia() > 0 || ventasTarjeta() > 0) {
+        <div class="electronic-sales-banner">
+            <mat-icon>account_balance</mat-icon>
+            <div class="banner-text">
+                <span>Ventas Bancarias / Electrónicas: </span>
+                @if (ventasTransferencia() > 0) {
+                    <strong>Transferencia: $ {{ ventasTransferencia() | number:'1.2-2' }}</strong>
+                }
+                @if (ventasTarjeta() > 0) {
+                    <span> | </span><strong>Tarjeta: $ {{ ventasTarjeta() | number:'1.2-2' }}</strong>
+                }
+                <span class="electronic-hint">(En bancos / no suman al cajón físico. Total ventas turno: $ {{ totalVentas() | number:'1.2-2' }})</span>
+            </div>
+        </div>
+        }
+
         <!-- Sección Central: Valor Esperado vs Conteo Físico -->
         <div class="calculation-section">
             <div class="esperado-box">
                 <div class="label-with-tooltip">
-                    <span>Valor Esperado</span>
+                    <span>Valor Esperado en Efectivo</span>
                     <mat-icon
-                        matTooltip="Suma del fondo inicial más ventas en efectivo menos retiros">info_outline</mat-icon>
+                        matTooltip="Dinero físico que debe haber en el cajón: Fondo inicial más ventas en efectivo menos retiros">info_outline</mat-icon>
                 </div>
                 <div class="amount-esperado">$ {{ valorEsperado() | number:'1.2-2' }}</div>
             </div>

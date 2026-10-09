@@ -78,10 +78,17 @@
               </div>
             </header>
 
-            <div class="ticket-mesero">
-              <mat-icon>person</mat-icon>
-              <span>Atendido por: <strong>{{ comanda.nombre_mesero }}</strong></span>
-            </div>
+            @if (comanda.tipo === 'salon') {
+              <div class="ticket-mesero">
+                <mat-icon>person</mat-icon>
+                <span>Atendido por: <strong>{{ comanda.nombre_mesero }}</strong></span>
+              </div>
+            } @else if (comanda.rol_usuario === 'cajero' || comanda.rol_usuario === 'administrador') {
+              <div class="ticket-mesero">
+                <mat-icon>point_of_sale</mat-icon>
+                <span>Caja: <strong>{{ comanda.nombre_mesero }}</strong></span>
+              </div>
+            }
 
             <mat-divider></mat-divider>
 

@@ -1,6 +1,6 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { EstadoPedido, TipoPedido } from '@prisma/client';
+import { EstadoPedido, RolUsuario, TipoPedido } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { DomiciliosService } from './domicilios.service';
 
@@ -393,6 +393,59 @@ describe('DomiciliosService', () => {
 
       // Restaurar para otros tests
       await service.cambiarRecepcionDomicilios(true);
+    });
+  });
+
+  describe('obtenerPorId (OWASP A01 - Prevención IDOR)', () => {
+    it('debe arrojar NotFoundException si el pedido no existe o no es de tipo domicilio', async () => {
+      prisma.pedido.findUnique.mockResolvedValue(null);
+
+      await expect(service.obtenerPorId(999)).rejects.toThrow(NotFoundException);
+    });
+
+    it('debe arrojar ForbiddenException si un cliente intenta acceder a un pedido ajeno (IDOR)', async () => {
+      prisma.pedido.findUnique.mockResolvedValue({
+        id_pedido: 50,
+        id_usuario: 1, // Pertenece a usuario 1
+        tipo: TipoPedido.domicilio,
+        estado: EstadoPedido.enviada,
+        items: [],
+      });
+
+      const usuarioAjeno = { id_usuario: 99, rol: RolUsuario.cliente };
+
+      await expect(service.obtenerPorId(50, usuarioAjeno)).rejects.toThrow(ForbiddenException);
+    });
+
+    it('debe permitir la consulta si el cliente es el dueño legítimo del pedido', async () => {
+      prisma.pedido.findUnique.mockResolvedValue({
+        id_pedido: 50,
+        id_usuario: 99,
+        tipo: TipoPedido.domicilio,
+        estado: EstadoPedido.enviada,
+        items: [],
+      });
+
+      const usuarioDuenio = { id_usuario: 99, rol: RolUsuario.cliente };
+      const resultado = await service.obtenerPorId(50, usuarioDuenio);
+
+      expect(resultado.id_pedido).toBe(50);
+      expect(resultado.etapaOperativa).toBe('En Preparación');
+    });
+
+    it('debe permitir la consulta a usuarios del personal (administrador/cajero)', async () => {
+      prisma.pedido.findUnique.mockResolvedValue({
+        id_pedido: 50,
+        id_usuario: 99,
+        tipo: TipoPedido.domicilio,
+        estado: EstadoPedido.enviada,
+        items: [],
+      });
+
+      const usuarioStaff = { id_usuario: 2, rol: RolUsuario.cajero };
+      const resultado = await service.obtenerPorId(50, usuarioStaff);
+
+      expect(resultado.id_pedido).toBe(50);
     });
   });
 });

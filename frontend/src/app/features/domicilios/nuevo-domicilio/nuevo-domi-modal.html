@@ -195,6 +195,23 @@
                             <input type="text" placeholder="Nota: Ej. Sin cebolla, extra salsa..."
                                 [(ngModel)]="item.observacion">
                         </div>
+
+                        <!-- Ingredientes removibles -->
+                        @if (item.ingredientes_removibles_disponibles && item.ingredientes_removibles_disponibles.length > 0) {
+                            <div class="removable-ingredients-bar">
+                                <span class="removable-label">Quitar:</span>
+                                <div class="removable-chips">
+                                    @for (ing of item.ingredientes_removibles_disponibles; track ing) {
+                                        <button type="button" class="btn-chip-removable"
+                                            [class.is-removed]="isIngredienteRemovido(item, ing)"
+                                            (click)="toggleIngredienteItem(item, ing)">
+                                            <mat-icon>{{ isIngredienteRemovido(item, ing) ? 'remove_circle' : 'add_circle_outline' }}</mat-icon>
+                                            <span>{{ isIngredienteRemovido(item, ing) ? 'Sin ' + ing : ing }}</span>
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        }
                     </div>
                     } @empty {
                     <div class="empty-cart">

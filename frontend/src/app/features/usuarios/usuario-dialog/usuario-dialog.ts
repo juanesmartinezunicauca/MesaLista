@@ -90,7 +90,9 @@ export class UsuarioDialogComponent {
       email: [u?.email || '', [Validators.email]],
       password: [
         '',
-        isEdit ? [Validators.minLength(6), Validators.maxLength(100)] : [Validators.required, Validators.minLength(6), Validators.maxLength(100)],
+        isEdit
+          ? [Validators.minLength(8), Validators.maxLength(100), Validators.pattern(/^(?=.*[a-zA-Z])(?=.*\d)/)]
+          : [Validators.required, Validators.minLength(8), Validators.maxLength(100), Validators.pattern(/^(?=.*[a-zA-Z])(?=.*\d)/)],
       ],
       rol: [u?.rol || 'mesero', [Validators.required]],
       estado: [u?.estado ? u.estado === 'activo' : true],

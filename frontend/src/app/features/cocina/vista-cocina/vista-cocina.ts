@@ -26,6 +26,7 @@ export interface TarjetaComanda {
   id_mesa?: number;
   numero_mesa?: number;
   nombre_mesero: string;
+  rol_usuario?: string;
   fecha_hora: Date;
   observacion_general?: string | null;
   items: ItemComanda[];
@@ -117,6 +118,7 @@ export class VistaCocinaComponent implements OnInit, OnDestroy {
         id_mesa: p.id_mesa,
         numero_mesa: p.mesa?.numero,
         nombre_mesero: p.usuario?.nombre || 'Mesero',
+        rol_usuario: p.usuario?.rol,
         fecha_hora: fecha,
         observacion_general: p.observacion,
         items,
