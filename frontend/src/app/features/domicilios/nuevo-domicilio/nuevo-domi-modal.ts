@@ -111,6 +111,7 @@ export class NewDeliveryDialogComponent implements OnInit {
       nombreCompleto: ['', [Validators.required, Validators.minLength(3)]],
       telefono: ['', [Validators.required, Validators.pattern(/^[0-9]{7,15}$/)]],
       direccion: ['', [Validators.required, Validators.minLength(5)]],
+      email: ['', [Validators.email]],
       notas: ['', [Validators.maxLength(255)]],
     });
   }
@@ -166,6 +167,7 @@ export class NewDeliveryDialogComponent implements OnInit {
       nombreCompleto: cliente.nombre,
       telefono: cliente.telefono,
       direccion: cliente.direccion,
+      email: cliente.email || '',
     });
     this.clientesSugeridos.set([]);
   }
@@ -263,6 +265,7 @@ export class NewDeliveryDialogComponent implements OnInit {
         nombre: fv.nombreCompleto.trim(),
         telefono: fv.telefono.trim(),
         direccion: fv.direccion.trim(),
+        email: fv.email?.trim() ? fv.email.trim() : undefined,
       },
       observacion: fv.notas ? fv.notas.trim() : undefined,
       items: this.itemsSeleccionados().map((it) => ({

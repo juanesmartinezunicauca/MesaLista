@@ -78,16 +78,6 @@ export class DomiciliosController {
   }
 
   /**
-   * GET /api/v1/domicilios/clientes
-   * Directorio de clientes con resumen de pedidos para el módulo de Clientes.
-   */
-  @Get('clientes')
-  @Roles(RolUsuario.administrador, RolUsuario.cajero, RolUsuario.mesero)
-  obtenerClientes(@Query('query') query?: string) {
-    return this.domiciliosService.obtenerClientesDirectorio(query);
-  }
-
-  /**
    * GET /api/v1/domicilios
    * Lista todos los pedidos a domicilio con filtros opcionales de estado, fecha o búsqueda.
    */

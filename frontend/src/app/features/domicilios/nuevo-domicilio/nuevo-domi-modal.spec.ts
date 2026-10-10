@@ -96,11 +96,13 @@ describe('NewDeliveryDialogComponent', () => {
       nombre: 'Juan Camilo',
       telefono: '3123456789',
       direccion: 'Calle 10 # 4-50',
+      email: 'juan@correo.com',
     });
 
     expect(component.deliveryForm.get('nombreCompleto')?.value).toBe('Juan Camilo');
     expect(component.deliveryForm.get('telefono')?.value).toBe('3123456789');
     expect(component.deliveryForm.get('direccion')?.value).toBe('Calle 10 # 4-50');
+    expect(component.deliveryForm.get('email')?.value).toBe('juan@correo.com');
   });
 
   it('debe agregar un producto y calcular el total', () => {
@@ -134,6 +136,7 @@ describe('NewDeliveryDialogComponent', () => {
       nombreCompleto: 'Laura Restrepo',
       telefono: '3109876543',
       direccion: 'Carrera 7 # 12-34',
+      email: 'laura@example.com',
       notas: 'Timbre 201',
     });
 
@@ -146,6 +149,7 @@ describe('NewDeliveryDialogComponent', () => {
         nombre: 'Laura Restrepo',
         telefono: '3109876543',
         direccion: 'Carrera 7 # 12-34',
+        email: 'laura@example.com',
       },
       observacion: 'Timbre 201',
       items: [

@@ -285,6 +285,7 @@ export class DomiciliosService {
       where.cliente = {
         OR: [
           { nombre: { contains: q, mode: 'insensitive' } },
+          { email: { contains: q, mode: 'insensitive' } },
           { telefono: { contains: q, mode: 'insensitive' } },
           { direccion: { contains: q, mode: 'insensitive' } },
         ],
@@ -386,52 +387,12 @@ export class DomiciliosService {
         OR: [
           { telefono: { contains: q, mode: 'insensitive' } },
           { nombre: { contains: q, mode: 'insensitive' } },
+          { email: { contains: q, mode: 'insensitive' } },
         ],
       },
       take: 10,
       orderBy: { nombre: 'asc' },
     });
-  }
-
-  /**
-   * Directorio general de clientes con resumen de pedidos y facturas (sin entidades de usuario ni contraseñas).
-   */
-  async obtenerClientesDirectorio(query?: string) {
-    const where: any = {};
-    if (query && query.trim()) {
-      const q = query.trim();
-      where.OR = [
-        { nombre: { contains: q, mode: 'insensitive' } },
-        { telefono: { contains: q, mode: 'insensitive' } },
-        { direccion: { contains: q, mode: 'insensitive' } },
-      ];
-    }
-
-    const clientes = await this.prisma.cliente.findMany({
-      where,
-      orderBy: { id_cliente: 'desc' },
-      take: 100,
-      include: {
-        _count: {
-          select: { pedidos: true, facturas: true },
-        },
-        pedidos: {
-          take: 1,
-          orderBy: { fecha_hora: 'desc' },
-          select: { fecha_hora: true, tipo: true, estado: true },
-        },
-      },
-    });
-
-    return clientes.map((c) => ({
-      id_cliente: c.id_cliente,
-      nombre: c.nombre,
-      telefono: c.telefono,
-      direccion: c.direccion,
-      total_pedidos: c._count.pedidos,
-      total_facturas: c._count.facturas,
-      ultimo_pedido: c.pedidos[0]?.fecha_hora || null,
-    }));
   }
 
   /**

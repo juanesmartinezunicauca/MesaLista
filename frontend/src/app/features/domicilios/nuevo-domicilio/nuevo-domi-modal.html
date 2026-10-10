@@ -49,7 +49,7 @@
                             <mat-option [value]="c.telefono" (onSelectionChange)="seleccionarCliente(c)">
                                 <div class="client-option">
                                     <span class="opt-name">{{ c.nombre }}</span>
-                                    <span class="opt-address">{{ c.direccion }} ({{ c.telefono }})</span>
+                                    <span class="opt-address">{{ c.direccion }} ({{ c.telefono }})@if (c.email) { • {{ c.email }}}</span>
                                 </div>
                             </mat-option>
                             }
@@ -70,6 +70,18 @@
                         <mat-icon matSuffix>person</mat-icon>
                         @if (deliveryForm.get('nombreCompleto')?.hasError('required') && deliveryForm.get('nombreCompleto')?.touched) {
                         <mat-error>El nombre es obligatorio</mat-error>
+                        }
+                    </mat-form-field>
+                </div>
+
+                <!-- Correo Electrónico -->
+                <div class="field-group">
+                    <label>Correo Electrónico (Opcional)</label>
+                    <mat-form-field appearance="outline" class="modern-field">
+                        <input matInput formControlName="email" type="email" placeholder="Ej. andrea@correo.com">
+                        <mat-icon matSuffix>mail</mat-icon>
+                        @if (deliveryForm.get('email')?.hasError('email') && deliveryForm.get('email')?.touched) {
+                        <mat-error>Ingrese un correo válido</mat-error>
                         }
                     </mat-form-field>
                 </div>

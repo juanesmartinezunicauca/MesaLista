@@ -90,11 +90,13 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
         const clienteNom = p.cliente?.nombre?.toLowerCase() || '';
         const clienteTel = p.cliente?.telefono?.toLowerCase() || '';
         const clienteDir = p.cliente?.direccion?.toLowerCase() || '';
+        const clienteEmail = p.cliente?.email?.toLowerCase() || '';
         const consecutivo = `#${p.numero_pedido}`;
         return (
           clienteNom.includes(query) ||
           clienteTel.includes(query) ||
           clienteDir.includes(query) ||
+          clienteEmail.includes(query) ||
           consecutivo.includes(query)
         );
       });

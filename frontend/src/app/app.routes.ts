@@ -126,15 +126,6 @@ export const routes: Routes = [
           ).then((m) => m.DashboardDomisComponent),
       },
       {
-        path: 'clientes',
-        canActivate: [roleGuard],
-        data: { roles: ['administrador', 'cajero', 'mesero'] },
-        loadComponent: () =>
-          import(
-            './features/clientes/vista-clientes/vista-clientes'
-          ).then((m) => m.VistaClientesComponent),
-      },
-      {
         path: 'historial',
         canActivate: [roleGuard],
         data: { roles: ['administrador', 'cajero'] },

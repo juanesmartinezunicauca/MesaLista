@@ -59,25 +59,6 @@ export class DomiciliosApiService {
   }
 
   /**
-   * Directorio general de clientes con resumen de pedidos para el módulo de Clientes.
-   */
-  obtenerClientes(query?: string): Observable<Array<{
-    id_cliente: number;
-    nombre: string;
-    telefono: string;
-    direccion: string;
-    total_pedidos: number;
-    total_facturas: number;
-    ultimo_pedido: string | null;
-  }>> {
-    let params = new HttpParams();
-    if (query && query.trim()) {
-      params = params.set('query', query.trim());
-    }
-    return this.http.get<any[]>(`${this.apiUrl}/clientes`, { params });
-  }
-
-  /**
    * Cambia la etapa operativa de un domicilio ('Aceptar', 'En Preparación', 'En Reparto', 'Entregado', 'Cancelado').
    */
   cambiarEstado(
