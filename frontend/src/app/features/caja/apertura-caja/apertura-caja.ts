@@ -13,6 +13,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 import { CajaApiService } from '../../../core/services/api/caja-api.service';
+import { AuthService } from '../../../core/services/auth/auth.service';
 
 @Component({
   selector: 'app-apertura-caja',
@@ -35,13 +36,17 @@ import { CajaApiService } from '../../../core/services/api/caja-api.service';
 })
 export class AperturaCajaComponent implements OnInit {
   private cajaApi = inject(CajaApiService);
+  private authService = inject(AuthService);
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
 
   valorBase = signal<number | null>(null);
   isLoading = signal<boolean>(true);
   isOpening = signal<boolean>(false);
+  isResetting = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
+
+  esAdmin = this.authService.userRole;
 
   ngOnInit(): void {
     this.verificarEstadoCaja();
@@ -87,6 +92,41 @@ export class AperturaCajaComponent implements OnInit {
         console.error('Error al abrir caja:', err);
         this.errorMessage.set(
           err.error?.message || 'No se pudo abrir la caja. Verifica la conexión con el servidor.'
+        );
+      },
+    });
+  }
+
+  irAlDashboard(): void {
+    this.router.navigate(['/caja', 'dashboard']);
+  }
+
+  reiniciarDatosOperacionales(): void {
+    if (
+      !confirm(
+        '¿Deseas reiniciar los turnos de caja y datos de prueba? Esta acción cerrará turnos huérfanos y liberará mesas sin tocar los productos ni los usuarios.'
+      )
+    ) {
+      return;
+    }
+
+    this.isResetting.set(true);
+    this.cajaApi.resetOperacional().subscribe({
+      next: () => {
+        this.isResetting.set(false);
+        this.errorMessage.set(null);
+        this.snackBar.open('Base de datos operativa reiniciada correctamente.', 'OK', {
+          duration: 4000,
+        });
+        this.verificarEstadoCaja();
+      },
+      error: (err) => {
+        this.isResetting.set(false);
+        console.error('Error al reiniciar datos operativos:', err);
+        this.snackBar.open(
+          err.error?.message || 'Error al reiniciar datos operativos.',
+          'Cerrar',
+          { duration: 4500 }
         );
       },
     });

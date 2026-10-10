@@ -102,6 +102,7 @@ export class CajaApiService {
    */
   cerrarCaja(cierre: {
     valor_final_fisico: number;
+    valor_transferencias_reportado?: number;
     observacion?: string;
   }): Observable<CierreCajaResult> {
     return this.http.post<CierreCajaResult>(`${this.apiUrl}/cerrar`, cierre);
@@ -112,5 +113,13 @@ export class CajaApiService {
    */
   obtenerHistorial(limite = 15): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/historial?limite=${limite}`);
+  }
+
+  /**
+   * Reinicia parcialmente los datos operativos (cajas, pedidos, facturas, gastos)
+   * preservando íntegramente catálogo y usuarios. Exclusivo para administradores.
+   */
+  resetOperacional(): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/reset-operacional`, {});
   }
 }

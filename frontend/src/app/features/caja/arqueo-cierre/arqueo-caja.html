@@ -17,6 +17,7 @@
 
     <mat-divider></mat-divider>
 
+    <!-- Cuerpo con barra de desplazamiento (deslizador) -->
     <div class="dialog-body">
         <!-- Tarjetas de Resumen Superior -->
         <div class="summary-cards-grid">
@@ -32,32 +33,65 @@
             </div>
             <!-- Retiros / Gastos -->
             <div class="mini-card">
-                <span class="mini-label">RETIROS/GASTOS</span>
+                <span class="mini-label">RETIROS / GASTOS</span>
                 <span class="mini-value text-danger">- $ {{ retirosGastos() | number:'1.2-2' }}</span>
             </div>
         </div>
 
+        <!-- Conciliación de Transferencias (Simple, directo y con registro manual) -->
         @if (ventasTransferencia() > 0 || ventasTarjeta() > 0) {
-        <div class="electronic-sales-banner">
-            <mat-icon>account_balance</mat-icon>
-            <div class="banner-text">
-                <div>
-                    <span>Ventas Bancarias / Electrónicas: </span>
-                    @if (ventasTransferencia() > 0) {
-                        <strong>Transferencia: $ {{ ventasTransferencia() | number:'1.2-2' }}</strong>
-                    }
-                    @if (ventasTarjeta() > 0) {
-                        <span> | </span><strong>Tarjeta: $ {{ ventasTarjeta() | number:'1.2-2' }}</strong>
-                    }
+        <div class="electronic-reconciliation-card">
+            <div class="card-top-header">
+                <div class="header-left">
+                    <mat-icon class="icon-bank">account_balance</mat-icon>
+                    <strong>Ventas Bancarias / Electrónicas</strong>
                 </div>
-                <span class="electronic-hint">(En cuentas bancarias / billeteras digitales. No suman al cajón físico de efectivo).</span>
-                @if (ventasTransferencia() > 0) {
-                    <label class="conciliacion-check-label" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; cursor: pointer; font-size: 0.85rem; font-weight: 500;">
-                        <input type="checkbox" [ngModel]="transferenciasVerificadas()" (ngModelChange)="transferenciasVerificadas.set($event)" [disabled]="isClosing()">
-                        <span>Comprobantes de transferencia verificados en app bancaria / Nequi / Daviplata</span>
-                    </label>
+                @if (ventasTarjeta() > 0) {
+                    <span class="card-badge">💳 Datáfono/Tarjetas: $ {{ ventasTarjeta() | number:'1.2-2' }}</span>
                 }
             </div>
+
+            @if (ventasTransferencia() > 0) {
+            <div class="transfer-inputs-grid">
+                <div class="info-metric">
+                    <span class="metric-label">Transferencias en Sistema</span>
+                    <strong class="metric-value">$ {{ ventasTransferencia() | number:'1.2-2' }}</strong>
+                </div>
+
+                <div class="input-metric">
+                    <div class="metric-label-row">
+                        <span class="metric-label">Monto real en App Bancaria *</span>
+                        <button type="button" class="btn-copy-val" (click)="igualarTransferencias()" [disabled]="isClosing()" matTooltip="Copiar valor del sistema">
+                            Mismo valor
+                        </button>
+                    </div>
+                    <mat-form-field appearance="outline" class="compact-input">
+                        <input type="number" matInput placeholder="0.00" [ngModel]="conteoTransferencias()"
+                            (ngModelChange)="conteoTransferencias.set($event)" min="0" step="any" [disabled]="isClosing()">
+                    </mat-form-field>
+                </div>
+            </div>
+
+            <!-- Descuadre en transferencias bancarias -->
+            @if (diferenciaTransferencias() !== null && diferenciaTransferencias() !== 0) {
+            <div class="transfer-diff-alert" [ngClass]="{'diff-warning': diferenciaTransferencias()! < 0, 'diff-info': diferenciaTransferencias()! > 0}">
+                <mat-icon>info</mat-icon>
+                <span>
+                    Diferencia Bancaria: 
+                    <strong>{{ diferenciaTransferencias()! > 0 ? '+$ ' : '-$ ' }}{{ abs(diferenciaTransferencias()!) | number:'1.2-2' }}</strong>
+                    ({{ diferenciaTransferencias()! > 0 ? 'Sobrante en cuenta bancaria' : 'Faltante en cuenta bancaria' }})
+                </span>
+            </div>
+            }
+
+            <!-- Checkbox obligatorio de verificación -->
+            <label class="conciliacion-check-label">
+                <input type="checkbox" [ngModel]="transferenciasVerificadas()" (ngModelChange)="transferenciasVerificadas.set($event)" [disabled]="isClosing()">
+                <span [class.required-highlight]="!transferenciasVerificadas()">
+                    Confirmo haber verificado los movimientos en la app bancaria / Nequi / Daviplata *
+                </span>
+            </label>
+            }
         </div>
         }
 
@@ -65,9 +99,8 @@
         <div class="calculation-section">
             <div class="esperado-box">
                 <div class="label-with-tooltip">
-                    <span>Valor Esperado en Efectivo</span>
-                    <mat-icon
-                        matTooltip="Dinero físico que debe haber en el cajón: Fondo inicial más ventas en efectivo menos retiros">info_outline</mat-icon>
+                    <span>Efectivo Esperado en Cajón</span>
+                    <mat-icon matTooltip="Fondo inicial + Ventas en efectivo - Gastos">info_outline</mat-icon>
                 </div>
                 <div class="amount-esperado">$ {{ valorEsperado() | number:'1.2-2' }}</div>
             </div>
@@ -78,8 +111,8 @@
 
             <div class="conteo-box">
                 <div class="label-with-tooltip">
-                    <span>Conteo Físico Real</span>
-                    <mat-icon matTooltip="Ingrese el dinero físico contado en caja">account_balance_wallet</mat-icon>
+                    <span>Conteo Físico Real *</span>
+                    <mat-icon matTooltip="Dinero físico en billetes y monedas contado en el cajón">account_balance_wallet</mat-icon>
                 </div>
                 <mat-form-field appearance="outline" class="modern-input">
                     <input type="number" matInput placeholder="0.00" [ngModel]="conteoFisico()"
@@ -88,29 +121,39 @@
             </div>
         </div>
 
-        <!-- Caja de Diferencia -->
+        <!-- Caja de Diferencia en Efectivo -->
         <div class="difference-card" [ngClass]="{
             'diff-zero': diferencia() === 0,
             'diff-positive': diferencia() !== null && diferencia()! > 0,
             'diff-negative': diferencia() !== null && diferencia()! < 0
         }">
             <div class="diff-header-info">
-                <span class="diff-title">DIFERENCIA</span>
+                <span class="diff-title">DIFERENCIA EN EFECTIVO</span>
                 @if (diferencia() === null) {
-                <span class="diff-hint">— Ingresa el conteo físico</span>
+                    <span class="diff-hint">— Ingresa el conteo físico</span>
                 } @else if (diferencia() === 0) {
-                <span class="diff-hint text-success">¡Cuadre perfecto! Sin diferencias</span>
+                    <span class="diff-hint text-success">¡Cuadre exacto en efectivo!</span>
                 } @else if (diferencia()! > 0) {
-                <span class="diff-hint text-success">Sobrante en caja</span>
+                    <span class="diff-hint text-success">Sobrante en cajón físico</span>
                 } @else {
-                <span class="diff-hint text-danger">Faltante en caja</span>
+                    <span class="diff-hint text-danger">Faltante en cajón físico</span>
                 }
             </div>
             <div class="diff-amount">
-                {{ diferencia() === null ? '$ 0.00' : ((diferencia()! >= 0 ? '$ ' : '-$ ') + (abs(diferencia()!) |
-                number:'1.2-2')) }}
+                {{ diferencia() === null ? '$ 0.00' : ((diferencia()! >= 0 ? '$ ' : '-$ ') + (abs(diferencia()!) | number:'1.2-2')) }}
             </div>
         </div>
+
+        <!-- Alerta si hay descuadre y faltan observaciones -->
+        @if (hayDescuadre()) {
+        <div class="descuadre-warning-banner">
+            <mat-icon>warning_amber</mat-icon>
+            <div>
+                <strong>Descuadre detectado en el turno:</strong>
+                <p>Es obligatorio ingresar una observación explicando la diferencia encontrada antes de cerrar.</p>
+            </div>
+        </div>
+        }
 
         <!-- Mensaje de Error de Validación o Servidor -->
         @if (errorMessage()) {
@@ -120,11 +163,21 @@
         </div>
         }
 
-        <!-- Observaciones -->
+        <!-- Caja de Observaciones -->
         <div class="observations-container">
-            <label class="obs-label">Observaciones (Opcional)</label>
+            <div class="obs-header-row">
+                <label class="obs-label">
+                    Observaciones del Cierre
+                    @if (hayDescuadre()) {
+                        <span class="required-badge">* Requerido por descuadre</span>
+                    } @else {
+                        <span class="optional-badge">(Opcional)</span>
+                    }
+                </label>
+                <span class="char-count">{{ observaciones().length }}/255</span>
+            </div>
             <mat-form-field appearance="outline" class="modern-textarea">
-                <textarea matInput rows="3" maxlength="255" placeholder="Añade notas sobre el cierre, sobrantes o faltantes..."
+                <textarea matInput rows="3" maxlength="255" placeholder="Explica aquí sobrantes, faltantes, transferencias pendientes o notas del turno..."
                     [ngModel]="observaciones()" (ngModelChange)="observaciones.set($event)" [disabled]="isClosing()"></textarea>
             </mat-form-field>
         </div>
@@ -132,22 +185,35 @@
 
     <mat-divider></mat-divider>
 
-    <!-- Acciones del Modal -->
+    <!-- Acciones del Modal (Pie fijo) -->
     <div class="dialog-actions">
-        <button mat-stroked-button class="btn-cancel" (click)="onCancel()" [disabled]="isClosing()">
-            Cancelar
-        </button>
-        <button mat-flat-button color="primary" class="btn-confirm" (click)="onConfirm()"
-            [disabled]="isClosing() || diferencia() === null || conteoFisico()! < 0">
-            @if (isClosing()) {
-                <mat-progress-spinner diameter="18" mode="indeterminate" class="spinner-btn"></mat-progress-spinner>
-                <span>Cerrando...</span>
-            } @else {
-                <ng-container>
-                    <mat-icon>lock</mat-icon>
-                    <span>Confirmar Cierre</span>
-                </ng-container>
+        <div class="action-help-hint">
+            @if (!puedeCerrar()) {
+                @if (conteoFisico() === null) {
+                    <span>⚠️ Ingresa el conteo físico de dinero.</span>
+                } @else if (ventasTransferencia() > 0 && !transferenciasVerificadas()) {
+                    <span>⚠️ Marca la casilla de verificación de transferencias.</span>
+                } @else if (hayDescuadre() && (!observaciones().trim() || observaciones().trim().length < 4)) {
+                    <span>⚠️ Escribe una observación justificando el descuadre.</span>
+                }
             }
-        </button>
+        </div>
+        <div class="action-buttons-group">
+            <button mat-stroked-button class="btn-cancel" (click)="onCancel()" [disabled]="isClosing()">
+                Cancelar
+            </button>
+            <button mat-flat-button color="primary" class="btn-confirm" (click)="onConfirm()"
+                [disabled]="!puedeCerrar()">
+                @if (isClosing()) {
+                    <mat-progress-spinner diameter="18" mode="indeterminate" class="spinner-btn"></mat-progress-spinner>
+                    <span>Cerrando...</span>
+                } @else {
+                    <ng-container>
+                        <mat-icon>lock</mat-icon>
+                        <span>Confirmar Cierre</span>
+                    </ng-container>
+                }
+            </button>
+        </div>
     </div>
 </div>

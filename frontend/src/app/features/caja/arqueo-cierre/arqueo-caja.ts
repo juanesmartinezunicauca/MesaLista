@@ -55,20 +55,23 @@ export class CierreDeCaja {
   ventasTarjeta = signal<number>(0);
   totalVentas = signal<number>(0);
 
-  // Valor Esperado = Fondo Inicial + Ventas Efectivo - Retiros/Gastos
+  // Valor Esperado en Efectivo = Fondo Inicial + Ventas Efectivo - Retiros/Gastos
   valorEsperado = computed(() => {
     return this.fondoInicial() + this.ventasEfectivo() - this.retirosGastos();
   });
 
-  // Entrada del conteo físico real
+  // Entrada de conteo físico real de efectivo
   conteoFisico = signal<number | null>(null);
-  observaciones = signal<string>('');
+
+  // Entrada manual de transferencias bancarias verificadas en app (Nequi/Daviplata/Bancos)
+  conteoTransferencias = signal<number | null>(null);
   transferenciasVerificadas = signal<boolean>(false);
 
+  observaciones = signal<string>('');
   isClosing = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
 
-  // Diferencia = Conteo Físico Real - Valor Esperado
+  // Diferencia Efectivo = Conteo Físico Real - Valor Esperado
   diferencia = computed(() => {
     const real = this.conteoFisico();
     if (
@@ -80,6 +83,62 @@ export class CierreDeCaja {
       return null;
     }
     return Number(real) - this.valorEsperado();
+  });
+
+  // Diferencia en Transferencias = Conteo Manual App - Ventas Transferencia Sistema
+  diferenciaTransferencias = computed(() => {
+    if (this.ventasTransferencia() === 0) return 0;
+    const realTransf = this.conteoTransferencias();
+    if (
+      realTransf === null ||
+      realTransf === undefined ||
+      (typeof realTransf === 'string' && (realTransf as string).trim() === '') ||
+      isNaN(Number(realTransf))
+    ) {
+      return null;
+    }
+    return Number(realTransf) - this.ventasTransferencia();
+  });
+
+  hayDescuadreEfectivo = computed(() => {
+    const diff = this.diferencia();
+    return diff !== null && Math.abs(diff) >= 0.01;
+  });
+
+  hayDescuadreTransferencias = computed(() => {
+    const diffT = this.diferenciaTransferencias();
+    return diffT !== null && Math.abs(diffT) >= 0.01;
+  });
+
+  hayDescuadre = computed(() => {
+    return this.hayDescuadreEfectivo() || this.hayDescuadreTransferencias();
+  });
+
+  // Bloqueo del botón de cierre según validaciones estrictas
+  puedeCerrar = computed(() => {
+    if (this.isClosing()) return false;
+
+    // 1. Debe haber conteo físico válido
+    const fisico = this.conteoFisico();
+    if (fisico === null || isNaN(Number(fisico)) || Number(fisico) < 0) {
+      return false;
+    }
+
+    // 2. Si hay transferencias registradas en el turno, debe confirmarlas explícitamente y tener monto
+    if (this.ventasTransferencia() > 0) {
+      if (!this.transferenciasVerificadas()) return false;
+      const t = this.conteoTransferencias();
+      if (t === null || isNaN(Number(t)) || Number(t) < 0) return false;
+    }
+
+    // 3. Si hay descuadre en efectivo o transferencias, es OBLIGATORIO ingresar observaciones
+    if (this.hayDescuadre()) {
+      if (!this.observaciones()?.trim() || this.observaciones().trim().length < 4) {
+        return false;
+      }
+    }
+
+    return true;
   });
 
   turnoInfo = computed(() => {
@@ -98,7 +157,9 @@ export class CierreDeCaja {
       this.fondoInicial.set(this.data.resumen.valor_base ?? 0);
       this.ventasEfectivo.set(this.data.resumen.ventas_efectivo ?? 0);
       this.retirosGastos.set(this.data.resumen.gastos_efectivo ?? 0);
-      this.ventasTransferencia.set(this.data.resumen.ventas_transferencia ?? 0);
+      const transf = this.data.resumen.ventas_transferencia ?? 0;
+      this.ventasTransferencia.set(transf);
+      this.conteoTransferencias.set(transf);
       this.ventasTarjeta.set(this.data.resumen.ventas_tarjeta ?? 0);
       this.totalVentas.set(this.data.resumen.total_ventas ?? 0);
     } else if (this.data?.caja) {
@@ -116,23 +177,33 @@ export class CierreDeCaja {
     return Math.abs(val);
   }
 
+  igualarTransferencias(): void {
+    this.conteoTransferencias.set(this.ventasTransferencia());
+  }
+
   onConfirm(): void {
-    const real = this.conteoFisico();
-    if (
-      real === null ||
-      real === undefined ||
-      (typeof real === 'string' && (real as string).trim() === '') ||
-      isNaN(Number(real)) ||
-      Number(real) < 0
-    ) {
-      this.errorMessage.set('Por favor, ingresa un valor de conteo físico válido (0 o superior).');
+    if (!this.puedeCerrar()) {
+      if (this.hayDescuadre() && (!this.observaciones()?.trim() || this.observaciones().trim().length < 4)) {
+        this.errorMessage.set('Se detectó un descuadre. Por favor escribe una observación explicando el motivo.');
+        return;
+      }
+      this.errorMessage.set('Por favor completa todos los campos requeridos antes de cerrar la caja.');
       return;
     }
 
+    const real = this.conteoFisico();
     this.isClosing.set(true);
+    this.errorMessage.set(null);
+
     const notas: string[] = [];
-    if (this.transferenciasVerificadas()) {
-      notas.push('[Transferencias bancarias verificadas]');
+    if (this.ventasTransferencia() > 0) {
+      const realT = Number(this.conteoTransferencias());
+      const difT = this.diferenciaTransferencias() ?? 0;
+      if (difT !== 0) {
+        notas.push(`[Transf. Banco: $${realT.toLocaleString()} vs Sistema: $${this.ventasTransferencia().toLocaleString()} (Dif: ${difT > 0 ? '+' : ''}$${difT.toLocaleString()})]`);
+      } else {
+        notas.push('[Transferencias conciliadas exactas]');
+      }
     }
     if (this.observaciones()?.trim()) {
       notas.push(this.observaciones().trim());
@@ -142,6 +213,8 @@ export class CierreDeCaja {
     this.cajaApi
       .cerrarCaja({
         valor_final_fisico: Number(real),
+        valor_transferencias_reportado:
+          this.conteoTransferencias() !== null ? Number(this.conteoTransferencias()) : undefined,
         observacion: obsFinal,
       })
       .subscribe({

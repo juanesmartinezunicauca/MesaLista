@@ -223,6 +223,7 @@ model Caja {
   valor_final_teorico Decimal?   @db.Decimal(10, 2)
   valor_final_fisico  Decimal?   @db.Decimal(10, 2)
   diferencia          Decimal?   @db.Decimal(10, 2)
+  observacion         String?    @db.VarChar(255)
   estado              EstadoCaja @default(abierta)
 
   usuarioApertura Usuario   @relation("UsuarioApertura", fields: [id_usuario_apertura], references: [id_usuario])
