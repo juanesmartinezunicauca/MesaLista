@@ -102,6 +102,7 @@ export class CajaApiService {
    */
   cerrarCaja(cierre: {
     valor_final_fisico: number;
+    valor_transferencias_reportado?: number;
     observacion?: string;
   }): Observable<CierreCajaResult> {
     return this.http.post<CierreCajaResult>(`${this.apiUrl}/cerrar`, cierre);

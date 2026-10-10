@@ -355,6 +355,22 @@ export class CajaService {
       diferencia = 0;
     }
 
+    // Consolidar observaciones y conciliación de transferencias bancarias
+    const notas: string[] = [];
+    if (dto.valor_transferencias_reportado !== undefined && dto.valor_transferencias_reportado !== null) {
+      const reporteTransf = redondearMoneda(dto.valor_transferencias_reportado);
+      const difTransf = redondearMoneda(reporteTransf - estadoActual.resumen.ventas_transferencia);
+      if (difTransf !== 0) {
+        notas.push(`[Transf. Banco: $${reporteTransf} vs Sistema: $${estadoActual.resumen.ventas_transferencia} (Dif: ${difTransf > 0 ? '+' : ''}$${difTransf})]`);
+      } else {
+        notas.push(`[Transf. Banco conciliada exacta: $${reporteTransf}]`);
+      }
+    }
+    if (dto.observacion?.trim()) {
+      notas.push(dto.observacion.trim());
+    }
+    const observacionFinal = notas.length > 0 ? notas.join(' | ').substring(0, 255) : null;
+
     const cajaCerrada = await this.prisma.caja.update({
       where: { id_caja: estadoActual.caja.id_caja },
       data: {
@@ -363,6 +379,7 @@ export class CajaService {
         valor_final_teorico: new Prisma.Decimal(valorTeorico),
         valor_final_fisico: new Prisma.Decimal(valorFisico),
         diferencia: new Prisma.Decimal(diferencia),
+        observacion: observacionFinal,
         estado: EstadoCaja.cerrada,
       },
       include: {
@@ -387,6 +404,7 @@ export class CajaService {
       valor_final_teorico: valorTeorico,
       valor_final_fisico: valorFisico,
       diferencia,
+      observacion: cajaCerrada.observacion || undefined,
       tipo_cuadre: diferencia === 0 ? 'exacto' : diferencia > 0 ? 'sobrante' : 'faltante',
       cajero_cierre: cajaCerrada.usuarioCierre?.nombre || 'Cajero',
     };
@@ -513,6 +531,7 @@ export class CajaService {
         gastos_efectivo: redondearMoneda(gastosEfectivo),
         facturas_validas: facturasValidas,
         facturas_anuladas: facturasAnuladas,
+        observacion: t.observacion || undefined,
         _count: t._count,
       };
     });
