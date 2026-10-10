@@ -517,4 +517,33 @@ export class CajaService {
       };
     });
   }
+
+  /**
+   * Reinicia parcialmente los datos operativos (turnos de caja, facturas, pagos, pedidos y gastos)
+   * preservando intactos los usuarios y el catálogo completo de productos/categorías.
+   */
+  async resetOperacional() {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.pago.deleteMany({});
+      await tx.gasto.deleteMany({});
+      await tx.itemPedido.deleteMany({});
+      await tx.pedido.deleteMany({});
+      await tx.factura.deleteMany({});
+      await tx.caja.deleteMany({});
+      await tx.mesa.updateMany({
+        data: {
+          estado: 'libre',
+          total_acumulado: 0,
+          fecha_apertura: null,
+          id_cliente_actual: null,
+        },
+      });
+      await tx.cliente.deleteMany({});
+
+      return {
+        success: true,
+        message: 'Datos operativos reiniciados correctamente. Catálogo y usuarios preservados.',
+      };
+    });
+  }
 }

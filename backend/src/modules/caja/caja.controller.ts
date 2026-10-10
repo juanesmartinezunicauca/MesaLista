@@ -92,4 +92,15 @@ export class CajaController {
     const lim = limite ? parseInt(limite, 10) : 15;
     return this.cajaService.obtenerHistorial(lim);
   }
+
+  /**
+   * POST /api/v1/caja/reset-operacional
+   * Reinicia los datos operativos preservando catálogo y usuarios. Exclusivo para administradores.
+   */
+  @Post('reset-operacional')
+  @HttpCode(HttpStatus.OK)
+  @Roles(RolUsuario.administrador)
+  resetOperacional() {
+    return this.cajaService.resetOperacional();
+  }
 }

@@ -23,6 +23,29 @@
             <mat-icon>error_outline</mat-icon>
             <span>{{ err }}</span>
           </div>
+
+          <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center;">
+            <button mat-stroked-button color="primary" type="button" (click)="irAlDashboard()">
+              <mat-icon>dashboard</mat-icon>
+              <span>Ir al Turno Activo</span>
+            </button>
+            @if (esAdmin() === 'administrador') {
+              <button
+                mat-stroked-button
+                color="warn"
+                type="button"
+                [disabled]="isResetting()"
+                (click)="reiniciarDatosOperacionales()"
+              >
+                @if (isResetting()) {
+                  <mat-spinner diameter="16"></mat-spinner>
+                } @else {
+                  <mat-icon>restart_alt</mat-icon>
+                }
+                <span>Reiniciar Turnos Operativos</span>
+              </button>
+            }
+          </div>
         }
 
         <!-- Campo de Entrada (Input Base) -->
