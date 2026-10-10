@@ -40,7 +40,6 @@ describe('NewDeliveryDialogComponent', () => {
   };
 
   let fakeDomiciliosApi: {
-    buscarClientes: (query: string) => any;
     crear: (payload: any) => any;
   };
 
@@ -54,16 +53,6 @@ describe('NewDeliveryDialogComponent', () => {
     };
 
     fakeDomiciliosApi = {
-      buscarClientes: vi.fn().mockReturnValue(
-        of([
-          {
-            id_cliente: 1,
-            nombre: 'Juan Camilo',
-            telefono: '3123456789',
-            direccion: 'Calle 10 # 4-50',
-          },
-        ]),
-      ),
       crear: vi.fn().mockReturnValue(of({ id_pedido: 99 })),
     };
 
@@ -90,19 +79,8 @@ describe('NewDeliveryDialogComponent', () => {
     expect(component.productosCatalogo().length).toBe(2);
   });
 
-  it('debe autocompletar los datos del cliente al seleccionarlo', () => {
-    component.seleccionarCliente({
-      id_cliente: 1,
-      nombre: 'Juan Camilo',
-      telefono: '3123456789',
-      direccion: 'Calle 10 # 4-50',
-      email: 'juan@correo.com',
-    });
-
-    expect(component.deliveryForm.get('nombreCompleto')?.value).toBe('Juan Camilo');
-    expect(component.deliveryForm.get('telefono')?.value).toBe('3123456789');
-    expect(component.deliveryForm.get('direccion')?.value).toBe('Calle 10 # 4-50');
-    expect(component.deliveryForm.get('email')?.value).toBe('juan@correo.com');
+  it('debe inicializar el formulario con método de pago Efectivo por defecto', () => {
+    expect(component.deliveryForm.get('metodoPago')?.value).toBe('Efectivo');
   });
 
   it('debe agregar un producto y calcular el total', () => {
@@ -137,6 +115,7 @@ describe('NewDeliveryDialogComponent', () => {
       telefono: '3109876543',
       direccion: 'Carrera 7 # 12-34',
       email: 'laura@example.com',
+      metodoPago: 'Transferencia',
       notas: 'Timbre 201',
     });
 
@@ -151,6 +130,7 @@ describe('NewDeliveryDialogComponent', () => {
         direccion: 'Carrera 7 # 12-34',
         email: 'laura@example.com',
       },
+      metodo_pago: 'Transferencia',
       observacion: 'Timbre 201',
       items: [
         {

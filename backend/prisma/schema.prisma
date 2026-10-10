@@ -88,19 +88,6 @@ model Mesa {
   @@map("mesa")
 }
 
-model Cliente {
-  id_cliente Int     @id @default(autoincrement())
-  nombre     String  @db.VarChar(100)
-  email      String? @unique @db.VarChar(100)
-  telefono   String? @db.VarChar(20)
-  direccion  String? @db.VarChar(255)
-
-  pedidos  Pedido[]
-  facturas Factura[]
-
-  @@map("cliente")
-}
-
 model Producto {
   id_producto             Int     @id @default(autoincrement())
   nombre                  String  @db.VarChar(100)
@@ -138,7 +125,6 @@ model Pedido {
   id_pedido     Int          @id @default(autoincrement())
   id_factura    Int?
   id_mesa       Int?
-  id_cliente    Int?
   id_usuario    Int
   numero_pedido Int
   tipo          TipoPedido
@@ -146,9 +132,13 @@ model Pedido {
   fecha_hora    DateTime     @default(now())
   observacion   String?      @db.VarChar(255)
 
+  cliente_nombre    String? @db.VarChar(100)
+  cliente_email     String? @db.VarChar(100)
+  cliente_telefono  String? @db.VarChar(20)
+  cliente_direccion String? @db.VarChar(255)
+
   factura Factura?     @relation(fields: [id_factura], references: [id_venta])
   mesa    Mesa?        @relation(fields: [id_mesa], references: [id_mesa])
-  cliente Cliente?     @relation(fields: [id_cliente], references: [id_cliente])
   usuario Usuario      @relation(fields: [id_usuario], references: [id_usuario])
   items   ItemPedido[]
 
@@ -176,7 +166,6 @@ model ItemPedido {
 model Factura {
   id_venta    Int      @id @default(autoincrement())
   id_mesa     Int?
-  id_cliente  Int?
   id_usuario  Int
   id_caja     Int
   valor       Decimal  @db.Decimal(10, 2)
@@ -188,8 +177,10 @@ model Factura {
   fecha_anulacion  DateTime?
   motivo_anulacion String?       @db.VarChar(255)
 
+  cliente_nombre String? @db.VarChar(100)
+  cliente_email  String? @db.VarChar(100)
+
   mesa    Mesa?    @relation(fields: [id_mesa], references: [id_mesa])
-  cliente Cliente? @relation(fields: [id_cliente], references: [id_cliente])
   usuario Usuario  @relation(fields: [id_usuario], references: [id_usuario])
   caja    Caja     @relation(fields: [id_caja], references: [id_caja])
   pedidos Pedido[]

@@ -86,17 +86,6 @@ describe('PedidosService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('debe lanzar BadRequestException si el tipo es domicilio y no se envia id_cliente', async () => {
-      await expect(
-        service.crear(
-          {
-            tipo: TipoPedido.domicilio,
-            items: [{ id_producto: 1, cantidad: 1 }],
-          },
-          1,
-        ),
-      ).rejects.toThrow(BadRequestException);
-    });
 
     it('debe lanzar NotFoundException si la mesa indicada no existe', async () => {
       prisma.mesa.findUnique.mockResolvedValue(null);

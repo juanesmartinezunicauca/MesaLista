@@ -37,23 +37,12 @@
             </h3>
 
             <div class="form-grid">
-                <!-- Teléfono con Autocompletado -->
+                <!-- Teléfono de Contacto -->
                 <div class="field-group">
                     <label>Teléfono de Contacto *</label>
                     <mat-form-field appearance="outline" class="modern-field">
-                        <input matInput formControlName="telefono" placeholder="Ej. 3101234567"
-                            [matAutocomplete]="autoCliente">
+                        <input matInput formControlName="telefono" placeholder="Ej. 3101234567">
                         <mat-icon matSuffix>phone</mat-icon>
-                        <mat-autocomplete #autoCliente="matAutocomplete">
-                            @for (c of clientesSugeridos(); track c.id_cliente) {
-                            <mat-option [value]="c.telefono" (onSelectionChange)="seleccionarCliente(c)">
-                                <div class="client-option">
-                                    <span class="opt-name">{{ c.nombre }}</span>
-                                    <span class="opt-address">{{ c.direccion }} ({{ c.telefono }})@if (c.email) { • {{ c.email }}}</span>
-                                </div>
-                            </mat-option>
-                            }
-                        </mat-autocomplete>
                         @if (deliveryForm.get('telefono')?.hasError('required') && deliveryForm.get('telefono')?.touched) {
                         <mat-error>El teléfono es obligatorio</mat-error>
                         } @else if (deliveryForm.get('telefono')?.hasError('pattern') && deliveryForm.get('telefono')?.touched) {
@@ -83,6 +72,19 @@
                         @if (deliveryForm.get('email')?.hasError('email') && deliveryForm.get('email')?.touched) {
                         <mat-error>Ingrese un correo válido</mat-error>
                         }
+                    </mat-form-field>
+                </div>
+
+                <!-- Método de Pago Acordado -->
+                <div class="field-group">
+                    <label>Forma de Pago Acordada *</label>
+                    <mat-form-field appearance="outline" class="modern-field">
+                        <mat-select formControlName="metodoPago">
+                            <mat-option value="Efectivo">💵 Efectivo</mat-option>
+                            <mat-option value="Transferencia">📱 Transferencia (Nequi / Daviplata / Bancolombia)</mat-option>
+                            <mat-option value="Tarjeta">💳 Tarjeta (Datáfono)</mat-option>
+                        </mat-select>
+                        <mat-icon matSuffix>payments</mat-icon>
                     </mat-form-field>
                 </div>
 

@@ -22,7 +22,7 @@ export interface PedidoDomicilioItem {
 export interface Domicilio {
   id_pedido: number;
   id_factura?: number | null;
-  id_cliente: number;
+  id_cliente?: number | null;
   id_usuario: number;
   numero_pedido: number;
   tipo: TipoPedido;

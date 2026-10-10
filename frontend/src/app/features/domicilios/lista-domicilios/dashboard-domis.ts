@@ -399,7 +399,8 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
         this.facturacionApi
           .crearFactura({
             id_pedido: pedido.id_pedido,
-            id_cliente: pedido.id_cliente,
+            cliente_nombre: pedido.cliente?.nombre,
+            cliente_email: pedido.cliente?.email,
             propina: resultado.propina,
             observacion: `Domicilio #${pedido.numero_pedido} - Cliente: ${pedido.cliente?.nombre}`,
             pagos: pagosPayload,
@@ -484,7 +485,8 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
 
     const payload = {
       id_pedido: pedido.id_pedido,
-      id_cliente: pedido.id_cliente,
+      cliente_nombre: pedido.cliente?.nombre,
+      cliente_email: pedido.cliente?.email,
       propina: 0,
       observacion: `Cobro domicilio #${pedido.numero_pedido} - Cliente: ${pedido.cliente?.nombre}`,
       pagos: [

@@ -107,7 +107,6 @@ export class CajaService {
         facturas: {
           include: {
             mesa: true,
-            cliente: { select: { id_cliente: true, nombre: true } },
             usuario: { select: { id_usuario: true, nombre: true } },
             pagos: {
               include: { medioPago: true },
@@ -557,7 +556,6 @@ export class CajaService {
           id_cliente_actual: null,
         },
       });
-      await tx.cliente.deleteMany({});
 
       return {
         success: true,

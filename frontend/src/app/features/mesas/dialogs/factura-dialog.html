@@ -89,17 +89,15 @@
           <span>Efectivo</span>
         </button>
 
-        @if (!esDomicilio()) {
-          <button
-            type="button"
-            class="pago-btn"
-            [class.activo]="metodoPago() === 'tarjeta'"
-            (click)="seleccionarMetodo('tarjeta')"
-          >
-            <mat-icon>credit_card</mat-icon>
-            <span>Tarjeta</span>
-          </button>
-        }
+        <button
+          type="button"
+          class="pago-btn"
+          [class.activo]="metodoPago() === 'tarjeta'"
+          (click)="seleccionarMetodo('tarjeta')"
+        >
+          <mat-icon>credit_card</mat-icon>
+          <span>Tarjeta</span>
+        </button>
 
         <button
           type="button"

@@ -43,6 +43,8 @@ export class FacturaDialogComponent {
   metodoPago = signal<MetodoPagoTipo>(
     this.data?.pedido?.metodo_pago?.toLowerCase().includes('transf')
       ? 'transferencia'
+      : this.data?.pedido?.metodo_pago?.toLowerCase().includes('tarj')
+      ? 'tarjeta'
       : 'efectivo'
   );
   tipoPropina = signal<'cero' | 'diez' | 'personalizada'>(this.data?.pedido ? 'cero' : 'diez');
@@ -186,6 +188,9 @@ export class FacturaDialogComponent {
     }
 
     if (this.metodoPago() === 'efectivo') {
+      if (this.esDomicilio() && this.efectivoRecibido() === 0) {
+        return true;
+      }
       return this.efectivoRecibido() >= this.totalFinal();
     }
 
@@ -248,6 +253,10 @@ export class FacturaDialogComponent {
 
   confirmarCobro(): void {
     if (!this.puedeCobrar()) return;
+
+    if (this.metodoPago() === 'efectivo' && this.efectivoRecibido() < this.totalFinal()) {
+      this.efectivoRecibido.set(this.totalFinal());
+    }
 
     const pagos: PagoDetalle[] = [];
 

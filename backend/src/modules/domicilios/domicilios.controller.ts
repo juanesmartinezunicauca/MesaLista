@@ -67,15 +67,6 @@ export class DomiciliosController {
     return this.domiciliosService.crear(createDto, id_usuario);
   }
 
-  /**
-   * GET /api/v1/domicilios/clientes/buscar
-   * Busca clientes registrados por teléfono o nombre para autocompletar en el formulario.
-   */
-  @Get('clientes/buscar')
-  @Roles(RolUsuario.administrador, RolUsuario.cajero, RolUsuario.mesero)
-  buscarClientes(@Query('query') query?: string) {
-    return this.domiciliosService.buscarClientes(query || '');
-  }
 
   /**
    * GET /api/v1/domicilios

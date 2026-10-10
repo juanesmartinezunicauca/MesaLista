@@ -6,7 +6,6 @@ describe('DomiciliosController', () => {
   let controller: DomiciliosController;
   let service: {
     crear: jest.Mock;
-    buscarClientes: jest.Mock;
     obtenerTodos: jest.Mock;
     obtenerPorId: jest.Mock;
     cambiarEstado: jest.Mock;
@@ -16,7 +15,6 @@ describe('DomiciliosController', () => {
   beforeEach(async () => {
     service = {
       crear: jest.fn(),
-      buscarClientes: jest.fn(),
       obtenerTodos: jest.fn(),
       obtenerPorId: jest.fn(),
       cambiarEstado: jest.fn(),
@@ -51,15 +49,6 @@ describe('DomiciliosController', () => {
 
     expect(service.crear).toHaveBeenCalledWith(dto, 2);
     expect(result).toEqual({ id_pedido: 10 });
-  });
-
-  it('debe delegar la búsqueda de clientes al servicio', async () => {
-    service.buscarClientes.mockResolvedValue([{ nombre: 'Juan' }]);
-
-    const result = await controller.buscarClientes('300');
-
-    expect(service.buscarClientes).toHaveBeenCalledWith('300');
-    expect(result).toEqual([{ nombre: 'Juan' }]);
   });
 
   it('debe delegar el listado de domicilios al servicio', async () => {

@@ -20,9 +20,12 @@ export class CreateFacturaDto {
   id_mesa?: number;
 
   @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  id_cliente?: number;
+  @IsString()
+  cliente_nombre?: string;
+
+  @IsOptional()
+  @IsString()
+  cliente_email?: string;
 
   @IsOptional()
   @Type(() => Number)

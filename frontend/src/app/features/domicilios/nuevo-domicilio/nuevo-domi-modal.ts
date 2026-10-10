@@ -10,12 +10,10 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatSelectModule } from '@angular/material/select';
-import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { CatalogoApiService } from '../../../core/services/api/catalogo-api.service';
 import { DomiciliosApiService } from '../../../core/services/api/domicilios-api.service';
-import { Cliente, Producto } from '../../../core/models';
+import { Producto } from '../../../core/models';
 
 export interface ItemSeleccionado {
   id_producto: number;
@@ -44,7 +42,6 @@ export interface ItemSeleccionado {
     MatChipsModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
-    MatAutocompleteModule,
   ],
   templateUrl: './nuevo-domi-modal.html',
   styleUrls: ['./nuevo-domi-modal.scss'],
@@ -67,9 +64,7 @@ export class NewDeliveryDialogComponent implements OnInit {
   filtroCategoria = signal<string>('Todas');
   busquedaProducto = signal<string>('');
 
-  // Autocompletado de clientes
-  clientesSugeridos = signal<Cliente[]>([]);
-  buscandoCliente = signal<boolean>(false);
+
 
   // Ítems agregados
   itemsSeleccionados = signal<ItemSeleccionado[]>([]);
@@ -112,13 +107,13 @@ export class NewDeliveryDialogComponent implements OnInit {
       telefono: ['', [Validators.required, Validators.pattern(/^[0-9]{7,15}$/)]],
       direccion: ['', [Validators.required, Validators.minLength(5)]],
       email: ['', [Validators.email]],
+      metodoPago: ['Efectivo', [Validators.required]],
       notas: ['', [Validators.maxLength(255)]],
     });
   }
 
   ngOnInit(): void {
     this.cargarCatalogo();
-    this.suscribirBusquedaCliente();
   }
 
   cargarCatalogo(): void {
@@ -134,43 +129,7 @@ export class NewDeliveryDialogComponent implements OnInit {
     });
   }
 
-  suscribirBusquedaCliente(): void {
-    const telControl = this.deliveryForm.get('telefono');
-    if (!telControl) return;
 
-    telControl.valueChanges
-      .pipe(
-        debounceTime(300),
-        distinctUntilChanged(),
-      )
-      .subscribe((query: string) => {
-        if (!query || query.trim().length < 3) {
-          this.clientesSugeridos.set([]);
-          return;
-        }
-
-        this.buscandoCliente.set(true);
-        this.domiciliosApi.buscarClientes(query.trim()).subscribe({
-          next: (clientes) => {
-            this.clientesSugeridos.set(clientes);
-            this.buscandoCliente.set(false);
-          },
-          error: () => {
-            this.buscandoCliente.set(false);
-          },
-        });
-      });
-  }
-
-  seleccionarCliente(cliente: Cliente): void {
-    this.deliveryForm.patchValue({
-      nombreCompleto: cliente.nombre,
-      telefono: cliente.telefono,
-      direccion: cliente.direccion,
-      email: cliente.email || '',
-    });
-    this.clientesSugeridos.set([]);
-  }
 
   agregarProducto(prod: Producto): void {
     this.itemsSeleccionados.update((items) => {
@@ -267,6 +226,7 @@ export class NewDeliveryDialogComponent implements OnInit {
         direccion: fv.direccion.trim(),
         email: fv.email?.trim() ? fv.email.trim() : undefined,
       },
+      metodo_pago: fv.metodoPago || 'Efectivo',
       observacion: fv.notas ? fv.notas.trim() : undefined,
       items: this.itemsSeleccionados().map((it) => ({
         id_producto: it.id_producto,
