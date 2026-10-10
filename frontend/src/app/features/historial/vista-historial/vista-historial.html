@@ -512,4 +512,323 @@
       }
     }
   }
+
+  <!-- ============================================================== -->
+  <!-- MODAL DE EDICIÓN: CAJA, FACTURAS, PEDIDOS Y DOMICILIOS         -->
+  <!-- ============================================================== -->
+  @if (modalEdicion(); as m) {
+    <div class="modal-backdrop" (click)="cerrarModal()">
+      <div class="modal-dialog" (click)="$event.stopPropagation()">
+        <!-- Encabezado del Modal -->
+        <div class="modal-header" [attr.data-tipo]="m.tipo">
+          <div class="modal-header-icon">
+            <mat-icon>{{ m.icono }}</mat-icon>
+          </div>
+          <div class="modal-header-info">
+            <h2 class="modal-title">{{ m.titulo }}</h2>
+            <p class="modal-subtitle">{{ m.subtitulo }}</p>
+          </div>
+          <button type="button" class="btn-close-modal" (click)="cerrarModal()" [disabled]="guardandoModal()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <!-- Cuerpo del Modal -->
+        <div class="modal-body">
+          <!-- CASO 1: TURNO DE CAJA -->
+          @if (m.tipo === 'caja') {
+            <div class="form-group">
+              <label class="form-label">
+                <mat-icon>notes</mat-icon>
+                <span>Observaciones del Turno y Auditoría</span>
+              </label>
+              <textarea
+                class="form-control form-textarea"
+                rows="4"
+                maxlength="255"
+                placeholder="Ingresa notas de arqueo, descuadre o incidentes del turno..."
+                [(ngModel)]="m.cajaObservacion"
+              ></textarea>
+              <span class="field-hint">Máximo 255 caracteres para registro contable.</span>
+            </div>
+          }
+
+          <!-- CASO 2: FACTURA -->
+          @if (m.tipo === 'factura') {
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">
+                  <mat-icon>volunteer_activism</mat-icon>
+                  <span>Propina Voluntaria ($ COP)</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1000"
+                  class="form-control"
+                  placeholder="0"
+                  [(ngModel)]="m.facturaPropina"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">
+                  <mat-icon>payments</mat-icon>
+                  <span>Método de Pago</span>
+                </label>
+                <select class="form-control form-select" [(ngModel)]="m.facturaMetodoPago">
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Transferencia">Transferencia</option>
+                  <option value="Tarjeta">Tarjeta de Crédito / Débito</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                <mat-icon>edit_note</mat-icon>
+                <span>Observación de Factura</span>
+              </label>
+              <textarea
+                class="form-control form-textarea"
+                rows="3"
+                maxlength="255"
+                placeholder="Observaciones de cobro, correcciones o justificaciones..."
+                [(ngModel)]="m.facturaObservacion"
+              ></textarea>
+            </div>
+          }
+
+          <!-- CASO 3: PEDIDO DE SALÓN -->
+          @if (m.tipo === 'pedido') {
+            <div class="form-group">
+              <label class="form-label">
+                <mat-icon>flag</mat-icon>
+                <span>Estado del Pedido</span>
+              </label>
+              <select class="form-control form-select" [(ngModel)]="m.pedidoEstado">
+                <option value="enviada">En curso / Enviado a cocina</option>
+                <option value="cerrada">Cerrado / Completado</option>
+                <option value="cancelada">Cancelado / Anulado</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                <mat-icon>restaurant_menu</mat-icon>
+                <span>Observaciones de Comanda</span>
+              </label>
+              <textarea
+                class="form-control form-textarea"
+                rows="3"
+                maxlength="255"
+                placeholder="Especificaciones de la orden, platos o notas de atención..."
+                [(ngModel)]="m.pedidoObservacion"
+              ></textarea>
+            </div>
+          }
+
+          <!-- CASO 4: DOMICILIO -->
+          @if (m.tipo === 'domicilio') {
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">
+                  <mat-icon>person</mat-icon>
+                  <span>Nombre del Cliente</span>
+                </label>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Nombre completo..."
+                  [(ngModel)]="m.domicilioNombre"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">
+                  <mat-icon>phone</mat-icon>
+                  <span>Teléfono</span>
+                </label>
+                <input
+                  type="tel"
+                  class="form-control"
+                  placeholder="Ej. 3101234567"
+                  [(ngModel)]="m.domicilioTelefono"
+                />
+              </div>
+            </div>
+
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">
+                  <mat-icon>email</mat-icon>
+                  <span>Correo Electrónico (Opcional)</span>
+                </label>
+                <input
+                  type="email"
+                  class="form-control"
+                  placeholder="cliente@ejemplo.com"
+                  [(ngModel)]="m.domicilioEmail"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">
+                  <mat-icon>payments</mat-icon>
+                  <span>Método de Pago</span>
+                </label>
+                <select class="form-control form-select" [(ngModel)]="m.domicilioMetodoPago">
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Transferencia">Transferencia</option>
+                  <option value="Tarjeta">Tarjeta</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                <mat-icon>location_on</mat-icon>
+                <span>Dirección de Entrega</span>
+              </label>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Dirección, apto, conjunto o indicaciones..."
+                [(ngModel)]="m.domicilioDireccion"
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                <mat-icon>notes</mat-icon>
+                <span>Observaciones o Indicaciones</span>
+              </label>
+              <textarea
+                class="form-control form-textarea"
+                rows="2"
+                maxlength="255"
+                placeholder="Instrucciones para el domiciliario..."
+                [(ngModel)]="m.domicilioObservacion"
+              ></textarea>
+            </div>
+          }
+        </div>
+
+        <!-- Pie del Modal -->
+        <div class="modal-footer">
+          <button
+            type="button"
+            mat-stroked-button
+            class="btn-modal-cancel"
+            (click)="cerrarModal()"
+            [disabled]="guardandoModal()"
+          >
+            <span>Cancelar</span>
+          </button>
+
+          <button
+            type="button"
+            mat-flat-button
+            color="primary"
+            class="btn-modal-save"
+            (click)="guardarModalEdicion()"
+            [disabled]="guardandoModal()"
+          >
+            @if (guardandoModal()) {
+              <ng-container>
+                <mat-spinner diameter="18"></mat-spinner>
+                <span>Guardando...</span>
+              </ng-container>
+            } @else {
+              <ng-container>
+                <mat-icon>check_circle</mat-icon>
+                <span>Guardar Cambios</span>
+              </ng-container>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ============================================================== -->
+  <!-- MODAL DE ACCIONES PELIGROSAS: ANULACIÓN O ELIMINACIÓN         -->
+  <!-- ============================================================== -->
+  @if (modalPeligro(); as melim) {
+    <div class="modal-backdrop" (click)="cerrarModal()">
+      <div class="modal-dialog modal-danger-dialog" (click)="$event.stopPropagation()">
+        <div class="modal-header modal-header-danger">
+          <div class="modal-header-icon danger">
+            <mat-icon>warning</mat-icon>
+          </div>
+          <div class="modal-header-info">
+            <h2 class="modal-title text-danger">{{ melim.titulo }}</h2>
+            <p class="modal-subtitle">{{ melim.subtitulo }}</p>
+          </div>
+          <button type="button" class="btn-close-modal" (click)="cerrarModal()" [disabled]="guardandoModal()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="danger-alert-box">
+            <mat-icon class="alert-icon">info</mat-icon>
+            <div class="alert-text">
+              <p>{{ melim.mensaje }}</p>
+            </div>
+          </div>
+
+          @if (melim.tipo === 'anular_factura') {
+            <div class="form-group" style="margin-top: 14px;">
+              <label class="form-label">
+                <mat-icon>edit_note</mat-icon>
+                <span>Motivo justificado de anulación:</span>
+              </label>
+              <input
+                type="text"
+                class="form-control"
+                maxlength="255"
+                placeholder="Ej. Error en digitación, servicio cancelado..."
+                [(ngModel)]="melim.motivo"
+              />
+              <span class="field-hint">Obligatorio para la auditoría contable.</span>
+            </div>
+          }
+        </div>
+
+        <div class="modal-footer">
+          <button
+            type="button"
+            mat-stroked-button
+            class="btn-modal-cancel"
+            (click)="cerrarModal()"
+            [disabled]="guardandoModal()"
+          >
+            <span>Cancelar</span>
+          </button>
+
+          <button
+            type="button"
+            mat-flat-button
+            color="warn"
+            class="btn-modal-danger"
+            (click)="confirmarModalEliminacion()"
+            [disabled]="guardandoModal() || (melim.tipo === 'anular_factura' && !melim.motivo?.trim())"
+          >
+            @if (guardandoModal()) {
+              <ng-container>
+                <mat-spinner diameter="18"></mat-spinner>
+                <span>Procesando...</span>
+              </ng-container>
+            } @else {
+              <ng-container>
+                <mat-icon>delete</mat-icon>
+                <span>{{ melim.tipo === 'anular_factura' ? 'Confirmar Anulación' : 'Confirmar Eliminación' }}</span>
+              </ng-container>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 </div>
