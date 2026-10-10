@@ -17,7 +17,46 @@ import { PedidosApiService } from '../../../core/services/api/pedidos-api.servic
 import { DomiciliosApiService } from '../../../core/services/api/domicilios-api.service';
 import { AuthService } from '../../../core/services/auth/auth.service';
 
-export type HistorialTab = 'caja' | 'facturas' | 'pedidos' | 'domicilios';
+export type HistorialTab = 'caja' | 'facturas' | 'pedidos' | 'domicilios' | 'gastos';
+
+export interface ModalEdicionData {
+  tipo: 'caja' | 'factura' | 'pedido' | 'domicilio' | 'gasto';
+  titulo: string;
+  subtitulo: string;
+  icono: string;
+  itemOriginal: any;
+  // Campos Turno de Caja
+  cajaObservacion?: string;
+  // Campos Factura
+  facturaPropina?: number;
+  facturaMetodoPago?: string;
+  facturaObservacion?: string;
+  // Campos Pedido Salón
+  pedidoEstado?: string;
+  pedidoObservacion?: string;
+  // Campos Domicilio
+  domicilioNombre?: string;
+  domicilioEmail?: string;
+  domicilioTelefono?: string;
+  domicilioDireccion?: string;
+  domicilioMetodoPago?: string;
+  domicilioObservacion?: string;
+  // Campos Gasto
+  gastoDescripcion?: string;
+  gastoTotal?: number;
+  gastoTipo?: string;
+  gastoMedioPago?: string;
+  gastoObservacion?: string;
+}
+
+export interface ModalPeligroData {
+  tipo: 'anular_factura' | 'eliminar_factura' | 'eliminar_pedido' | 'eliminar_domicilio' | 'eliminar_gasto';
+  titulo: string;
+  subtitulo: string;
+  mensaje: string;
+  item: any;
+  motivo?: string;
+}
 
 @Component({
   selector: 'app-vista-historial',
@@ -60,16 +99,22 @@ export class VistaHistorialComponent implements OnInit {
   facturas = signal<any[]>([]);
   pedidosSalon = signal<any[]>([]);
   domicilios = signal<any[]>([]);
+  gastos = signal<any[]>([]);
 
   // Filtros de fecha opcionales
   fechaFiltro = signal<string>('');
 
+  // Modales de Edición y Eliminación
+  modalEdicion = signal<ModalEdicionData | null>(null);
+  modalPeligro = signal<ModalPeligroData | null>(null);
+  guardandoModal = signal<boolean>(false);
+
   ngOnInit(): void {
-    // Si viene parametro query tab=domicilios
+    // Si viene parametro query tab=domicilios o tab=gastos
     this.route.queryParams.subscribe((params) => {
       if (params['tab']) {
         const t = params['tab'] as HistorialTab;
-        if (['caja', 'facturas', 'pedidos', 'domicilios'].includes(t)) {
+        if (['caja', 'facturas', 'pedidos', 'domicilios', 'gastos'].includes(t)) {
           this.tabActiva.set(t);
         }
       }
@@ -125,6 +170,16 @@ export class VistaHistorialComponent implements OnInit {
             this.cargando.set(false);
           },
           error: () => this.handleError('domicilios'),
+        });
+        break;
+
+      case 'gastos':
+        this.cajaApi.obtenerGastos(50).subscribe({
+          next: (data) => {
+            this.gastos.set(data || []);
+            this.cargando.set(false);
+          },
+          error: () => this.handleError('gastos'),
         });
         break;
     }
@@ -187,172 +242,144 @@ export class VistaHistorialComponent implements OnInit {
     );
   });
 
-  anularFactura(fac: any): void {
-    if (fac.estado === 'anulada') {
-      this.snackBar.open(`La factura #FAC-${fac.id_venta} ya está anulada.`, 'Entendido', { duration: 3000 });
-      return;
-    }
-
-    const motivo = prompt(
-      `Ingresa el motivo justificado de anulación para la factura #FAC-${fac.id_venta}:`,
-      'Error en método de pago o cancelación del servicio',
+  gastosFiltrados = computed(() => {
+    const q = this.busqueda().trim().toLowerCase();
+    if (!q) return this.gastos();
+    return this.gastos().filter(
+      (g) =>
+        String(g.id_gasto).includes(q) ||
+        (g.descripcion && g.descripcion.toLowerCase().includes(q)) ||
+        (g.observacion && g.observacion.toLowerCase().includes(q)) ||
+        (g.tipoGasto?.nombre && g.tipoGasto.nombre.toLowerCase().includes(q)) ||
+        (g.medioPago?.nombre && g.medioPago.nombre.toLowerCase().includes(q)) ||
+        (g.usuario?.nombre && g.usuario.nombre.toLowerCase().includes(q)) ||
+        String(g.id_caja).includes(q)
     );
+  });
 
-    if (motivo === null) return;
+  // --- MÉTODOS DE APERTURA DE MODAL DE EDICIÓN ---
 
-    if (!motivo.trim()) {
-      this.snackBar.open('El motivo de anulación es obligatorio por auditoría.', 'Cerrar', { duration: 3500 });
-      return;
-    }
-
-    this.cargando.set(true);
-    this.facturacionApi.anularFactura(fac.id_venta, motivo.trim()).subscribe({
-      next: (res) => {
-        this.cargando.set(false);
-        this.snackBar.open(
-          res.mensaje || `Factura #FAC-${fac.id_venta} anulada exitosamente.`,
-          'OK',
-          { duration: 4000 },
-        );
-        this.cargarDatosTab('facturas');
-      },
-      error: (err) => {
-        this.cargando.set(false);
-        const msg = err.error?.message || 'Error al anular la factura.';
-        this.snackBar.open(msg, 'Cerrar', { duration: 4500 });
-      },
-    });
-  }
-
-  // --- MÉTODOS DE EDICIÓN Y ELIMINACIÓN SEGÚN ROLES ---
-
-  // 1. Turnos de Caja (Solo Admin puede editar observación. La caja NO se puede eliminar)
+  // 1. Turno de Caja (Admin)
   editarObservacionCaja(turno: any): void {
     if (!this.esAdmin()) {
       this.snackBar.open('Solo el super administrador puede editar observaciones de turnos de caja.', 'Entendido', { duration: 3000 });
       return;
     }
-
-    const nuevaObs = prompt(
-      `Editar observación del Turno #CJA-${turno.id_caja}:`,
-      turno.observacion || ''
-    );
-    if (nuevaObs === null) return;
-
-    this.cargando.set(true);
-    this.cajaApi.actualizarObservacionTurno(turno.id_caja, nuevaObs.trim()).subscribe({
-      next: () => {
-        this.cargando.set(false);
-        this.snackBar.open(`Observación del Turno #CJA-${turno.id_caja} actualizada.`, 'OK', { duration: 3000 });
-        this.cargarDatosTab('caja');
-      },
-      error: (err) => {
-        this.cargando.set(false);
-        const msg = err.error?.message || 'Error al actualizar observación de caja.';
-        this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
-      },
+    this.modalEdicion.set({
+      tipo: 'caja',
+      titulo: `Editar Turno #CJA-${turno.id_caja}`,
+      subtitulo: `Cajero: ${turno.usuario?.nombre || 'Usuario'} • Estado: ${turno.estado}`,
+      icono: 'point_of_sale',
+      itemOriginal: turno,
+      cajaObservacion: turno.observaciones || turno.observacion || '',
     });
   }
 
-  // 2. Facturas (Cajero y Admin pueden editar; solo Admin puede eliminar)
+  // 2. Factura (Cajero y Admin)
   editarFactura(fac: any): void {
     if (!this.puedeEditar()) {
       this.snackBar.open('No tienes permisos para editar facturas.', 'Entendido', { duration: 3000 });
       return;
     }
-
-    const nuevaObs = prompt(
-      `Editar observación de la Factura #FAC-${fac.id_venta}:`,
-      fac.observacion || ''
-    );
-    if (nuevaObs === null) return;
-
-    const propinaStr = prompt(
-      `Propina registrada (actual: $${fac.propina || 0}):`,
-      String(fac.propina || 0)
-    );
-    if (propinaStr === null) return;
-
-    const propinaNum = Number(propinaStr) >= 0 ? Number(propinaStr) : (fac.propina || 0);
-
-    this.cargando.set(true);
-    this.facturacionApi.actualizarFactura(fac.id_venta, {
-      observacion: nuevaObs.trim(),
-      propina: propinaNum,
-    }).subscribe({
-      next: () => {
-        this.cargando.set(false);
-        this.snackBar.open(`Factura #FAC-${fac.id_venta} editada exitosamente.`, 'OK', { duration: 3000 });
-        this.cargarDatosTab('facturas');
-      },
-      error: (err) => {
-        this.cargando.set(false);
-        const msg = err.error?.message || 'Error al editar factura.';
-        this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
-      },
+    const primerMedio = fac.pagos?.[0]?.medioPago?.nombre || 'Efectivo';
+    this.modalEdicion.set({
+      tipo: 'factura',
+      titulo: `Editar Factura #FAC-${fac.id_venta}`,
+      subtitulo: `${fac.mesa ? 'Mesa ' + fac.mesa.numero : 'Domicilio'} • Total: $${(fac.total || fac.valor_total || 0).toLocaleString()}`,
+      icono: 'receipt_long',
+      itemOriginal: fac,
+      facturaPropina: fac.propina || 0,
+      facturaMetodoPago: primerMedio,
+      facturaObservacion: fac.observacion || '',
     });
   }
 
-  eliminarFactura(fac: any): void {
-    if (!this.puedeEliminar()) {
-      this.snackBar.open('Solo el super administrador puede eliminar registros de facturas.', 'Entendido', { duration: 3000 });
-      return;
-    }
-
-    const confirmar = confirm(
-      `¿Estás seguro de eliminar permanentemente la Factura #FAC-${fac.id_venta}?`
-    );
-    if (!confirmar) return;
-
-    this.cargando.set(true);
-    this.facturacionApi.eliminarFactura(fac.id_venta).subscribe({
-      next: () => {
-        this.cargando.set(false);
-        this.snackBar.open(`Factura #FAC-${fac.id_venta} eliminada exitosamente.`, 'OK', { duration: 3000 });
-        this.cargarDatosTab('facturas');
-      },
-      error: (err) => {
-        this.cargando.set(false);
-        const msg = err.error?.message || 'Error al eliminar factura.';
-        this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
-      },
-    });
-  }
-
-  // 3. Pedidos de Salón (Cajero y Admin pueden editar; solo Admin puede eliminar)
+  // 3. Pedido de Salón (Cajero y Admin)
   editarPedidoSalon(ped: any): void {
     if (!this.puedeEditar()) {
       this.snackBar.open('No tienes permisos para editar pedidos.', 'Entendido', { duration: 3000 });
       return;
     }
+    this.modalEdicion.set({
+      tipo: 'pedido',
+      titulo: `Editar Pedido de Salón #${ped.numero_pedido}`,
+      subtitulo: `Mesa ${ped.mesa?.numero || 'N/A'} • Atendido por: ${ped.usuario?.nombre || 'Mesero'}`,
+      icono: 'table_restaurant',
+      itemOriginal: ped,
+      pedidoEstado: ped.estado || 'enviada',
+      pedidoObservacion: ped.observacion || '',
+    });
+  }
 
-    const nuevaObs = prompt(
-      `Editar observación del Pedido #${ped.numero_pedido}:`,
-      ped.observacion || ''
-    );
-    if (nuevaObs === null) return;
+  // 4. Domicilio (Cajero y Admin)
+  editarDomicilio(dom: any): void {
+    if (!this.puedeEditar()) {
+      this.snackBar.open('No tienes permisos para editar domicilios.', 'Entendido', { duration: 3000 });
+      return;
+    }
+    this.modalEdicion.set({
+      tipo: 'domicilio',
+      titulo: `Editar Domicilio #${dom.numero_pedido}`,
+      subtitulo: `Cliente: ${dom.cliente?.nombre || 'Cliente'} • Total: $${(dom.totalCalculado || dom.factura?.total || 0).toLocaleString()}`,
+      icono: 'delivery_dining',
+      itemOriginal: dom,
+      domicilioNombre: dom.cliente?.nombre || '',
+      domicilioEmail: dom.cliente?.email || '',
+      domicilioTelefono: dom.cliente?.telefono || '',
+      domicilioDireccion: dom.cliente?.direccion || '',
+      domicilioMetodoPago: dom.metodo_pago || 'Efectivo',
+      domicilioObservacion: dom.observacion || '',
+    });
+  }
 
-    const nuevoEstado = prompt(
-      `Estado del pedido (enviada / cerrada / cancelada):`,
-      ped.estado || 'enviada'
-    );
-    if (nuevoEstado === null) return;
+  // 5. Gasto (Cajero y Admin)
+  editarGasto(gasto: any): void {
+    if (!this.puedeEditar()) {
+      this.snackBar.open('No tienes permisos para editar gastos.', 'Entendido', { duration: 3000 });
+      return;
+    }
+    this.modalEdicion.set({
+      tipo: 'gasto',
+      titulo: `Editar Gasto #${gasto.id_gasto}`,
+      subtitulo: `Registrado por: ${gasto.usuario?.nombre || 'Usuario'} • Turno #CJA-${gasto.id_caja}`,
+      icono: 'receipt',
+      itemOriginal: gasto,
+      gastoDescripcion: gasto.descripcion || '',
+      gastoTotal: Number(gasto.total) || 0,
+      gastoTipo: gasto.tipoGasto?.nombre || 'Insumos',
+      gastoMedioPago: gasto.medioPago?.nombre || 'Efectivo',
+      gastoObservacion: gasto.observacion || '',
+    });
+  }
 
-    this.cargando.set(true);
-    this.pedidosApi.actualizarPedido(ped.id_pedido, {
-      observacion: nuevaObs.trim(),
-      estado: nuevoEstado.trim().toLowerCase(),
-    }).subscribe({
-      next: () => {
-        this.cargando.set(false);
-        this.snackBar.open(`Pedido #${ped.numero_pedido} actualizado exitosamente.`, 'OK', { duration: 3000 });
-        this.cargarDatosTab('pedidos');
-      },
-      error: (err) => {
-        this.cargando.set(false);
-        const msg = err.error?.message || 'Error al actualizar el pedido.';
-        this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
-      },
+  // --- MÉTODOS DE APERTURA DE MODAL DE ACCIONES PELIGROSAS (ANULACIÓN/ELIMINACIÓN) ---
+
+  anularFactura(fac: any): void {
+    if (fac.estado === 'anulada') {
+      this.snackBar.open(`La factura #FAC-${fac.id_venta} ya está anulada.`, 'Entendido', { duration: 3000 });
+      return;
+    }
+    this.modalPeligro.set({
+      tipo: 'anular_factura',
+      titulo: `¿Anular Factura #FAC-${fac.id_venta}?`,
+      subtitulo: `Total: $${(fac.total || fac.valor_total || 0).toLocaleString()} • Registrada por: ${fac.usuario?.nombre || 'Caja'}`,
+      mensaje: 'Esta acción anulará la factura contablemente (sin alterar el consecutivo numérico), la descontará del arqueo del turno de caja activo y devolverá los ingredientes o productos al inventario.',
+      item: fac,
+      motivo: 'Error en digitación o anulación del servicio',
+    });
+  }
+
+  eliminarFactura(fac: any): void {
+    if (!this.puedeEliminar()) {
+      this.snackBar.open('Solo el super administrador puede anular o eliminar registros de facturas.', 'Entendido', { duration: 3000 });
+      return;
+    }
+    this.modalPeligro.set({
+      tipo: 'eliminar_factura',
+      titulo: `¿Eliminar Registro #FAC-${fac.id_venta}?`,
+      subtitulo: `Total: $${(fac.total || fac.valor_total || 0).toLocaleString()} • Estado actual: ${fac.estado}`,
+      mensaje: 'Se anulará la factura en el sistema y se ajustará el saldo contable correspondiente en caja.',
+      item: fac,
     });
   }
 
@@ -361,67 +388,12 @@ export class VistaHistorialComponent implements OnInit {
       this.snackBar.open('Solo el super administrador puede eliminar pedidos del historial.', 'Entendido', { duration: 3000 });
       return;
     }
-
-    const confirmar = confirm(
-      `¿Estás seguro de eliminar el Pedido #${ped.numero_pedido} de mesa ${ped.mesa?.numero || ''}? Se removerán todos sus productos asociados.`
-    );
-    if (!confirmar) return;
-
-    this.cargando.set(true);
-    this.pedidosApi.eliminarPedido(ped.id_pedido).subscribe({
-      next: () => {
-        this.cargando.set(false);
-        this.snackBar.open(`Pedido #${ped.numero_pedido} eliminado exitosamente.`, 'OK', { duration: 3000 });
-        this.cargarDatosTab('pedidos');
-      },
-      error: (err) => {
-        this.cargando.set(false);
-        const msg = err.error?.message || 'Error al eliminar el pedido.';
-        this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
-      },
-    });
-  }
-
-  // 4. Domicilios (Cajero y Admin pueden editar; solo Admin puede eliminar)
-  editarDomicilio(dom: any): void {
-    if (!this.puedeEditar()) {
-      this.snackBar.open('No tienes permisos para editar domicilios.', 'Entendido', { duration: 3000 });
-      return;
-    }
-
-    const nombre = prompt('Nombre del cliente:', dom.cliente?.nombre || '');
-    if (nombre === null) return;
-
-    const telefono = prompt('Teléfono del cliente:', dom.cliente?.telefono || '');
-    if (telefono === null) return;
-
-    const direccion = prompt('Dirección de entrega:', dom.cliente?.direccion || '');
-    if (direccion === null) return;
-
-    const metodo = prompt('Método de pago (Efectivo / Transferencia):', dom.metodo_pago || 'Efectivo');
-    if (metodo === null) return;
-
-    const obs = prompt('Observación / nota:', dom.observacion || '');
-    if (obs === null) return;
-
-    this.cargando.set(true);
-    this.domiciliosApi.actualizarDomicilio(dom.id_pedido, {
-      cliente_nombre: nombre.trim(),
-      cliente_telefono: telefono.trim(),
-      cliente_direccion: direccion.trim(),
-      metodo_pago: metodo.trim(),
-      observacion: obs.trim(),
-    }).subscribe({
-      next: () => {
-        this.cargando.set(false);
-        this.snackBar.open(`Domicilio #${dom.numero_pedido} actualizado exitosamente.`, 'OK', { duration: 3000 });
-        this.cargarDatosTab('domicilios');
-      },
-      error: (err) => {
-        this.cargando.set(false);
-        const msg = err.error?.message || 'Error al actualizar domicilio.';
-        this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
-      },
+    this.modalPeligro.set({
+      tipo: 'eliminar_pedido',
+      titulo: `¿Eliminar Pedido #${ped.numero_pedido}?`,
+      subtitulo: `Mesa ${ped.mesa?.numero || 'N/A'} • ${ped.items?.length || 0} ítems registrados`,
+      mensaje: 'Se removerán permanentemente el pedido y todos sus productos del historial operativo. Si la mesa estaba ocupada por esta comanda, quedará liberada.',
+      item: ped,
     });
   }
 
@@ -430,24 +402,230 @@ export class VistaHistorialComponent implements OnInit {
       this.snackBar.open('Solo el super administrador puede eliminar domicilios del historial.', 'Entendido', { duration: 3000 });
       return;
     }
-
-    const confirmar = confirm(
-      `¿Estás seguro de eliminar el Domicilio #${dom.numero_pedido} (${dom.cliente?.nombre || 'Cliente'}) del historial?`
-    );
-    if (!confirmar) return;
-
-    this.cargando.set(true);
-    this.domiciliosApi.eliminar(dom.id_pedido).subscribe({
-      next: () => {
-        this.cargando.set(false);
-        this.snackBar.open(`Domicilio #${dom.numero_pedido} eliminado exitosamente.`, 'OK', { duration: 3000 });
-        this.cargarDatosTab('domicilios');
-      },
-      error: (err) => {
-        this.cargando.set(false);
-        const msg = err.error?.message || 'Error al eliminar domicilio.';
-        this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
-      },
+    this.modalPeligro.set({
+      tipo: 'eliminar_domicilio',
+      titulo: `¿Eliminar Domicilio #${dom.numero_pedido}?`,
+      subtitulo: `Cliente: ${dom.cliente?.nombre || 'Cliente'} • Dirección: ${dom.cliente?.direccion || 'N/A'}`,
+      mensaje: 'El registro de entrega de este domicilio se removerá permanentemente del historial. Los comprobantes y facturas de caja permanecerán intactos.',
+      item: dom,
     });
+  }
+
+  eliminarGasto(gasto: any): void {
+    if (!this.puedeEliminar()) {
+      this.snackBar.open('Solo el super administrador puede eliminar registros de gastos.', 'Entendido', { duration: 3000 });
+      return;
+    }
+    this.modalPeligro.set({
+      tipo: 'eliminar_gasto',
+      titulo: `¿Eliminar Gasto #${gasto.id_gasto}?`,
+      subtitulo: `Monto: $${Number(gasto.total).toLocaleString()} • ${gasto.descripcion}`,
+      mensaje: 'Esta acción removerá permanentemente el registro de gasto del sistema.',
+      item: gasto,
+    });
+  }
+
+  // --- ACCIONES DE GUARDADO Y CIERRE DE MODALES ---
+
+  guardarModalEdicion(): void {
+    const m = this.modalEdicion();
+    if (!m) return;
+
+    this.guardandoModal.set(true);
+
+    if (m.tipo === 'caja') {
+      this.cajaApi.actualizarObservacionTurno(m.itemOriginal.id_caja, m.cajaObservacion?.trim() || '').subscribe({
+        next: () => {
+          this.guardandoModal.set(false);
+          this.cerrarModal();
+          this.snackBar.open(`Observación del Turno #CJA-${m.itemOriginal.id_caja} actualizada exitosamente.`, 'OK', { duration: 3000 });
+          this.cargarDatosTab('caja');
+        },
+        error: (err) => {
+          this.guardandoModal.set(false);
+          const msg = err.error?.message || 'Error al actualizar observación de caja.';
+          this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
+        },
+      });
+    } else if (m.tipo === 'factura') {
+      const fac = m.itemOriginal;
+      const valorBase = (fac.total || fac.valor_total || 0) - (fac.propina || 0);
+      const propinaNum = Number(m.facturaPropina) >= 0 ? Number(m.facturaPropina) : 0;
+      const nuevoTotal = valorBase + propinaNum;
+
+      const payload: any = {
+        observacion: m.facturaObservacion?.trim() || undefined,
+        propina: propinaNum,
+      };
+      if (m.facturaMetodoPago) {
+        payload.pagos = [
+          {
+            medio_pago: m.facturaMetodoPago,
+            monto: nuevoTotal,
+          },
+        ];
+      }
+
+      this.facturacionApi.actualizarFactura(fac.id_venta, payload).subscribe({
+        next: () => {
+          this.guardandoModal.set(false);
+          this.cerrarModal();
+          this.snackBar.open(`Factura #FAC-${fac.id_venta} actualizada exitosamente.`, 'OK', { duration: 3000 });
+          this.cargarDatosTab('facturas');
+        },
+        error: (err) => {
+          this.guardandoModal.set(false);
+          const msg = err.error?.message || 'Error al editar factura.';
+          this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
+        },
+      });
+    } else if (m.tipo === 'pedido') {
+      const ped = m.itemOriginal;
+      this.pedidosApi.actualizarPedido(ped.id_pedido, {
+        observacion: m.pedidoObservacion?.trim() || undefined,
+        estado: m.pedidoEstado,
+      }).subscribe({
+        next: () => {
+          this.guardandoModal.set(false);
+          this.cerrarModal();
+          this.snackBar.open(`Pedido #${ped.numero_pedido} actualizado exitosamente.`, 'OK', { duration: 3000 });
+          this.cargarDatosTab('pedidos');
+        },
+        error: (err) => {
+          this.guardandoModal.set(false);
+          const msg = err.error?.message || 'Error al actualizar el pedido.';
+          this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
+        },
+      });
+    } else if (m.tipo === 'domicilio') {
+      const dom = m.itemOriginal;
+      this.domiciliosApi.actualizarDomicilio(dom.id_pedido, {
+        cliente_nombre: m.domicilioNombre?.trim(),
+        cliente_email: m.domicilioEmail?.trim() || undefined,
+        cliente_telefono: m.domicilioTelefono?.trim(),
+        cliente_direccion: m.domicilioDireccion?.trim(),
+        metodo_pago: m.domicilioMetodoPago,
+        observacion: m.domicilioObservacion?.trim(),
+      }).subscribe({
+        next: () => {
+          this.guardandoModal.set(false);
+          this.cerrarModal();
+          this.snackBar.open(`Domicilio #${dom.numero_pedido} actualizado exitosamente.`, 'OK', { duration: 3000 });
+          this.cargarDatosTab('domicilios');
+        },
+        error: (err) => {
+          this.guardandoModal.set(false);
+          const msg = err.error?.message || 'Error al actualizar domicilio.';
+          this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
+        },
+      });
+    } else if (m.tipo === 'gasto') {
+      const g = m.itemOriginal;
+      this.cajaApi.actualizarGasto(g.id_gasto, {
+        descripcion: m.gastoDescripcion?.trim(),
+        total: Number(m.gastoTotal),
+        tipo_gasto: m.gastoTipo?.trim(),
+        medio_pago: m.gastoMedioPago?.trim(),
+        observacion: m.gastoObservacion?.trim(),
+      }).subscribe({
+        next: () => {
+          this.guardandoModal.set(false);
+          this.cerrarModal();
+          this.snackBar.open(`Gasto #${g.id_gasto} actualizado exitosamente.`, 'OK', { duration: 3000 });
+          this.cargarDatosTab('gastos');
+        },
+        error: (err) => {
+          this.guardandoModal.set(false);
+          const msg = err.error?.message || 'Error al actualizar gasto.';
+          this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
+        },
+      });
+    }
+  }
+
+  confirmarModalEliminacion(): void {
+    const p = this.modalPeligro();
+    if (!p) return;
+
+    this.guardandoModal.set(true);
+
+    if (p.tipo === 'anular_factura') {
+      const motivo = p.motivo?.trim() || 'Anulación solicitada desde terminal';
+      this.facturacionApi.anularFactura(p.item.id_venta, motivo).subscribe({
+        next: (res) => {
+          this.guardandoModal.set(false);
+          this.cerrarModal();
+          this.snackBar.open(res.mensaje || `Factura #FAC-${p.item.id_venta} anulada exitosamente.`, 'OK', { duration: 4000 });
+          this.cargarDatosTab('facturas');
+        },
+        error: (err) => {
+          this.guardandoModal.set(false);
+          const msg = err.error?.message || 'Error al anular la factura.';
+          this.snackBar.open(msg, 'Cerrar', { duration: 4000 });
+        },
+      });
+    } else if (p.tipo === 'eliminar_factura') {
+      this.facturacionApi.eliminarFactura(p.item.id_venta).subscribe({
+        next: () => {
+          this.guardandoModal.set(false);
+          this.cerrarModal();
+          this.snackBar.open(`Factura #FAC-${p.item.id_venta} eliminada exitosamente.`, 'OK', { duration: 3000 });
+          this.cargarDatosTab('facturas');
+        },
+        error: (err) => {
+          this.guardandoModal.set(false);
+          const msg = err.error?.message || 'Error al eliminar factura.';
+          this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
+        },
+      });
+    } else if (p.tipo === 'eliminar_pedido') {
+      this.pedidosApi.eliminarPedido(p.item.id_pedido).subscribe({
+        next: () => {
+          this.guardandoModal.set(false);
+          this.cerrarModal();
+          this.snackBar.open(`Pedido #${p.item.numero_pedido} eliminado exitosamente.`, 'OK', { duration: 3000 });
+          this.cargarDatosTab('pedidos');
+        },
+        error: (err) => {
+          this.guardandoModal.set(false);
+          const msg = err.error?.message || 'Error al eliminar el pedido.';
+          this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
+        },
+      });
+    } else if (p.tipo === 'eliminar_domicilio') {
+      this.domiciliosApi.eliminar(p.item.id_pedido).subscribe({
+        next: () => {
+          this.guardandoModal.set(false);
+          this.cerrarModal();
+          this.snackBar.open(`Domicilio #${p.item.numero_pedido} eliminado exitosamente.`, 'OK', { duration: 3000 });
+          this.cargarDatosTab('domicilios');
+        },
+        error: (err) => {
+          this.guardandoModal.set(false);
+          const msg = err.error?.message || 'Error al eliminar domicilio.';
+          this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
+        },
+      });
+    } else if (p.tipo === 'eliminar_gasto') {
+      this.cajaApi.eliminarGasto(p.item.id_gasto).subscribe({
+        next: () => {
+          this.guardandoModal.set(false);
+          this.cerrarModal();
+          this.snackBar.open(`Gasto #${p.item.id_gasto} eliminado exitosamente.`, 'OK', { duration: 3000 });
+          this.cargarDatosTab('gastos');
+        },
+        error: (err) => {
+          this.guardandoModal.set(false);
+          const msg = err.error?.message || 'Error al eliminar gasto.';
+          this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
+        },
+      });
+    }
+  }
+
+  cerrarModal(): void {
+    if (this.guardandoModal()) return;
+    this.modalEdicion.set(null);
+    this.modalPeligro.set(null);
   }
 }

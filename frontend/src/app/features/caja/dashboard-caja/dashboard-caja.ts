@@ -22,7 +22,6 @@ import {
 } from '../../../core/services/api/caja-api.service';
 import { ModalGastoDialogComponent } from '../modal-gasto/modal-gasto-dialog';
 import { CierreDeCaja } from '../arqueo-cierre/arqueo-caja';
-import { HistorialFacturasDialogComponent } from '../../../shared/components/historial-facturas/historial-facturas-dialog';
 
 @Component({
   selector: 'app-dashboard-caja',
@@ -137,19 +136,6 @@ export class DashboardCajaComponent implements OnInit {
   get desgloseGastosArray(): Array<{ tipo: string; monto: number }> {
     const desglose = this.resumen()?.desglose_gastos || {};
     return Object.entries(desglose).map(([tipo, monto]) => ({ tipo, monto }));
-  }
-
-  abrirHistorialFacturas(): void {
-    const dialogRef = this.dialog.open(HistorialFacturasDialogComponent, {
-      width: '950px',
-      maxWidth: '95vw',
-      maxHeight: '90vh',
-      panelClass: 'modal-historial-facturas',
-    });
-
-    dialogRef.afterClosed().subscribe(() => {
-      this.cargarDatos(false);
-    });
   }
 
   registrarGasto(): void {

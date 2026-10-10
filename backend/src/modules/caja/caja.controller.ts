@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -15,7 +16,7 @@ import { RolUsuario } from '@prisma/client';
 import { CurrentUser, Roles } from '../../common/decorators';
 import { JwtAuthGuard, RolesGuard } from '../../common/guards';
 import { CajaService } from './caja.service';
-import { AbrirCajaDto, ActualizarBaseDto, CerrarCajaDto, CreateGastoDto } from './dto';
+import { AbrirCajaDto, ActualizarBaseDto, CerrarCajaDto, CreateGastoDto, UpdateGastoDto } from './dto';
 
 @Controller('caja')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -68,6 +69,40 @@ export class CajaController {
     @CurrentUser('id_usuario') id_usuario: number,
   ) {
     return this.cajaService.registrarGasto(createGastoDto, id_usuario);
+  }
+
+  /**
+   * GET /api/v1/caja/gastos
+   * Consulta el histórico de gastos registrados en caja.
+   */
+  @Get('gastos')
+  @Roles(RolUsuario.administrador, RolUsuario.cajero)
+  obtenerGastos(@Query('limite') limite?: string) {
+    const lim = limite ? parseInt(limite, 10) : 50;
+    return this.cajaService.obtenerGastos(lim);
+  }
+
+  /**
+   * PATCH /api/v1/caja/gastos/:id
+   * Actualiza los datos de un gasto. Permitido para Cajero y Super Admin.
+   */
+  @Patch('gastos/:id')
+  @Roles(RolUsuario.administrador, RolUsuario.cajero)
+  actualizarGasto(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateGastoDto,
+  ) {
+    return this.cajaService.actualizarGasto(id, dto);
+  }
+
+  /**
+   * DELETE /api/v1/caja/gastos/:id
+   * Elimina un gasto del sistema. Exclusivo para Super Administrador.
+   */
+  @Delete('gastos/:id')
+  @Roles(RolUsuario.administrador)
+  eliminarGasto(@Param('id', ParseIntPipe) id: number) {
+    return this.cajaService.eliminarGasto(id);
   }
 
   /**

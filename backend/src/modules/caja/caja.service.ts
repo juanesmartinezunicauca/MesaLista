@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { EstadoCaja, EstadoFactura, EstadoPedido, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { AbrirCajaDto, CerrarCajaDto, CreateGastoDto, ActualizarBaseDto } from './dto';
+import { AbrirCajaDto, CerrarCajaDto, CreateGastoDto, ActualizarBaseDto, UpdateGastoDto } from './dto';
 
 /**
  * Normaliza y categoriza un medio de pago para evitar inconsistencias contables por diferencias de mayúsculas o nombres extendidos.
@@ -580,5 +580,108 @@ export class CajaService {
         message: 'Datos operativos reiniciados correctamente. Catálogo y usuarios preservados.',
       };
     });
+  }
+
+  /**
+   * Obtiene la lista histórica de gastos registrados en caja.
+   */
+  async obtenerGastos(limite = 50) {
+    return this.prisma.gasto.findMany({
+      take: limite,
+      orderBy: { fecha_hora: 'desc' },
+      include: {
+        tipoGasto: true,
+        medioPago: true,
+        caja: {
+          select: {
+            id_caja: true,
+            estado: true,
+            fecha_apertura: true,
+          },
+        },
+        usuario: {
+          select: {
+            id_usuario: true,
+            nombre: true,
+            rol: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Actualiza los datos de un gasto registrado.
+   */
+  async actualizarGasto(id: number, dto: UpdateGastoDto) {
+    const gasto = await this.prisma.gasto.findUnique({
+      where: { id_gasto: id },
+    });
+
+    if (!gasto) {
+      throw new NotFoundException(`El gasto #${id} no fue encontrado.`);
+    }
+
+    const data: any = {};
+    if (dto.descripcion !== undefined) data.descripcion = dto.descripcion.trim().slice(0, 255);
+    if (dto.observacion !== undefined) data.observacion = dto.observacion ? dto.observacion.trim().slice(0, 255) : null;
+    if (dto.total !== undefined) data.total = new Prisma.Decimal(dto.total);
+
+    if (dto.tipo_gasto) {
+      let tipoGasto = await this.prisma.tipoGasto.findUnique({
+        where: { nombre: dto.tipo_gasto.trim() },
+      });
+      if (!tipoGasto) {
+        tipoGasto = await this.prisma.tipoGasto.create({
+          data: { nombre: dto.tipo_gasto.trim() },
+        });
+      }
+      data.id_tipo_gasto = tipoGasto.id_tipo_gasto;
+    }
+
+    if (dto.medio_pago) {
+      let medioPago = await this.prisma.medioPago.findUnique({
+        where: { nombre: dto.medio_pago.trim() },
+      });
+      if (!medioPago) {
+        medioPago = await this.prisma.medioPago.create({
+          data: { nombre: dto.medio_pago.trim() },
+        });
+      }
+      data.id_medio_pago = medioPago.id_medio_pago;
+    }
+
+    return this.prisma.gasto.update({
+      where: { id_gasto: id },
+      data,
+      include: {
+        tipoGasto: true,
+        medioPago: true,
+        caja: { select: { id_caja: true, estado: true, fecha_apertura: true } },
+        usuario: { select: { id_usuario: true, nombre: true, rol: true } },
+      },
+    });
+  }
+
+  /**
+   * Elimina un gasto del sistema. Exclusivo para Super Administrador.
+   */
+  async eliminarGasto(id: number) {
+    const gasto = await this.prisma.gasto.findUnique({
+      where: { id_gasto: id },
+    });
+
+    if (!gasto) {
+      throw new NotFoundException(`El gasto #${id} no fue encontrado.`);
+    }
+
+    await this.prisma.gasto.delete({
+      where: { id_gasto: id },
+    });
+
+    return {
+      success: true,
+      mensaje: `Gasto #${id} eliminado exitosamente.`,
+    };
   }
 }
