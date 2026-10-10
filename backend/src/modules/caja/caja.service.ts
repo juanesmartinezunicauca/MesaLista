@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EstadoCaja, EstadoFactura, EstadoPedido, Prisma } from '@prisma/client';
+import { EstadoCaja, EstadoFactura, EstadoPedido, Prisma, RolUsuario } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AbrirCajaDto, CerrarCajaDto, CreateGastoDto, ActualizarBaseDto, UpdateGastoDto } from './dto';
 
@@ -613,13 +613,20 @@ export class CajaService {
   /**
    * Actualiza los datos de un gasto registrado.
    */
-  async actualizarGasto(id: number, dto: UpdateGastoDto) {
+  async actualizarGasto(id: number, dto: UpdateGastoDto, usuarioAuth?: any) {
     const gasto = await this.prisma.gasto.findUnique({
       where: { id_gasto: id },
+      include: { caja: true },
     });
 
     if (!gasto) {
       throw new NotFoundException(`El gasto #${id} no fue encontrado.`);
+    }
+
+    if (gasto.caja.estado === EstadoCaja.cerrada && usuarioAuth?.rol !== RolUsuario.administrador) {
+      throw new BadRequestException(
+        'Este gasto pertenece a un turno de caja que ya fue cerrado y arqueado. Solo un Administrador puede realizar correcciones retroactivas.',
+      );
     }
 
     const data: any = {};

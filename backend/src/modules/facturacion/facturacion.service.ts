@@ -4,7 +4,15 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { EstadoCaja, EstadoFactura, EstadoMesa, EstadoPedido, Prisma } from '@prisma/client';
+import {
+  EstadoCaja,
+  EstadoFactura,
+  EstadoMesa,
+  EstadoPedido,
+  Prisma,
+  RolUsuario,
+  TipoPedido,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFacturaDto, UpdateFacturaDto } from './dto';
 
@@ -269,37 +277,163 @@ export class FacturacionService {
   }
 
   /**
-   * Modifica una facturación existente (desglose de pagos, método de pago, propina u observación).
-   * Al actualizar los pagos, el arqueo de caja se actualiza automáticamente.
+   * Modifica una facturación existente (ítems/productos, propina, medios de pago, observaciones).
+   * Si se editan los ítems:
+   *  1. Ajusta automáticamente las existencias de inventario de los productos modificados/agregados/removidos.
+   *  2. Recalcula el subtotal y el total exacto de la factura.
+   *  3. Reasigna los pagos para que sumen el nuevo total (o redistribuye el pago).
+   *  4. El arqueo de la caja activa se recalcula dinámicamente con total consistencia contable.
+   *  5. Deja sello de trazabilidad y auditoría.
    */
-  async actualizarFactura(id: number, dto: UpdateFacturaDto) {
+  async actualizarFactura(id: number, dto: UpdateFacturaDto, usuarioAuth?: any) {
     const facturaExistente = await this.prisma.factura.findUnique({
       where: { id_venta: id },
-      include: { pagos: true },
+      include: {
+        caja: true,
+        pagos: { include: { medioPago: true } },
+        pedidos: {
+          include: {
+            items: { include: { producto: true } },
+          },
+        },
+      },
     });
 
     if (!facturaExistente) {
       throw new NotFoundException(`La factura #${id} no existe.`);
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      // 1. Si se actualizan los pagos, reasignar los medios de pago
-      if (dto.pagos && dto.pagos.length > 0) {
-        // Eliminar pagos antiguos
-        await tx.pago.deleteMany({
-          where: { id_venta: id },
-        });
+    if (facturaExistente.estado === EstadoFactura.anulada) {
+      throw new BadRequestException('No es posible modificar una factura que ya ha sido anulada.');
+    }
 
-        // Crear los nuevos pagos
+    // Si la caja ya fue cerrada, solo un administrador con privilegios puede ajustar
+    if (facturaExistente.caja.estado === EstadoCaja.cerrada && usuarioAuth?.rol !== RolUsuario.administrador) {
+      throw new BadRequestException(
+        'Esta factura pertenece a un turno de caja que ya fue cerrado y arqueado. Solo un Administrador puede realizar correcciones retroactivas.',
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      let nuevoSubtotal = Number(facturaExistente.valor);
+      const itemsActualizados = dto.items !== undefined;
+
+      // 1. Si se actualizan los ítems/productos
+      if (itemsActualizados) {
+        // Encontrar el pedido primario o el primer pedido asociado
+        let pedidoDestino: any = facturaExistente.pedidos[0];
+        if (!pedidoDestino) {
+          pedidoDestino = await tx.pedido.create({
+            data: {
+              numero_pedido: id,
+              tipo: facturaExistente.id_mesa ? TipoPedido.salon : TipoPedido.domicilio,
+              estado: EstadoPedido.cerrada,
+              id_usuario: facturaExistente.id_usuario,
+              id_factura: id,
+              id_mesa: facturaExistente.id_mesa,
+            },
+          });
+        }
+
+        // Obtener inventario actual de los items de la factura
+        const itemsAnteriores = facturaExistente.pedidos.flatMap((p) => p.items || []);
+        const stockPrevioMap = new Map<number, number>();
+        for (const it of itemsAnteriores) {
+          stockPrevioMap.set(it.id_producto, (stockPrevioMap.get(it.id_producto) || 0) + it.cantidad);
+        }
+
+        const stockNuevoMap = new Map<number, number>();
+        for (const it of dto.items || []) {
+          stockNuevoMap.set(it.id_producto, (stockNuevoMap.get(it.id_producto) || 0) + it.cantidad);
+        }
+
+        // Determinar todos los productos involucrados
+        const todosProductosIds = Array.from(
+          new Set([...Array.from(stockPrevioMap.keys()), ...Array.from(stockNuevoMap.keys())]),
+        );
+
+        const productosDb = await tx.producto.findMany({
+          where: { id_producto: { in: todosProductosIds } },
+        });
+        const productoMap = new Map(productosDb.map((p) => [p.id_producto, p]));
+
+        // Ajustar existencias en inventario
+        for (const prodId of todosProductosIds) {
+          const prod = productoMap.get(prodId);
+          if (prod && prod.controla_inventario) {
+            const cantPrevia = stockPrevioMap.get(prodId) || 0;
+            const cantNueva = stockNuevoMap.get(prodId) || 0;
+            const delta = cantNueva - cantPrevia; // Si delta > 0 se consumieron más; si delta < 0 se devuelven
+
+            if (delta > 0) {
+              if (prod.cantidad_inventario < delta) {
+                throw new BadRequestException(
+                  `Stock insuficiente para '${prod.nombre}'. Disponible: ${prod.cantidad_inventario}, requerido adicional: ${delta}.`,
+                );
+              }
+              await tx.producto.update({
+                where: { id_producto: prodId },
+                data: { cantidad_inventario: { decrement: delta } },
+              });
+            } else if (delta < 0) {
+              await tx.producto.update({
+                where: { id_producto: prodId },
+                data: { cantidad_inventario: { increment: Math.abs(delta) } },
+              });
+            }
+          }
+        }
+
+        // Eliminar los items anteriores de los pedidos de esta factura
+        const pedidosIds = facturaExistente.pedidos.map((p) => p.id_pedido);
+        if (pedidosIds.length > 0) {
+          await tx.itemPedido.deleteMany({
+            where: { id_pedido: { in: pedidosIds } },
+          });
+        }
+
+        // Insertar los nuevos items calculando subtotales
+        nuevoSubtotal = 0;
+        for (const it of dto.items || []) {
+          const prod = productoMap.get(it.id_producto);
+          if (!prod) {
+            throw new NotFoundException(`El producto #${it.id_producto} no fue encontrado.`);
+          }
+          const precioUnit = it.precio_unitario !== undefined ? Number(it.precio_unitario) : Number(prod.precio_venta);
+          nuevoSubtotal += it.cantidad * precioUnit;
+
+          await tx.itemPedido.create({
+            data: {
+              id_pedido: pedidoDestino.id_pedido,
+              id_producto: it.id_producto,
+              cantidad: it.cantidad,
+              precio_unitario: new Prisma.Decimal(precioUnit),
+              observacion: it.observacion ? it.observacion.trim().slice(0, 255) : null,
+            },
+          });
+        }
+      }
+
+      // 2. Calcular propina y valor total
+      const propinaFinal = dto.propina !== undefined ? Number(dto.propina) : Number(facturaExistente.propina);
+      const nuevoTotal = Math.max(0, nuevoSubtotal + propinaFinal);
+
+      // 3. Reasignar medios de pago
+      if (dto.pagos && dto.pagos.length > 0) {
+        await tx.pago.deleteMany({ where: { id_venta: id } });
+
+        let totalPagosDto = dto.pagos.reduce((acc, p) => acc + Number(p.monto), 0);
+        if (dto.pagos.length === 1 && Math.abs(totalPagosDto - nuevoTotal) > 0.01) {
+          dto.pagos[0].monto = nuevoTotal;
+          totalPagosDto = nuevoTotal;
+        }
+
         for (const p of dto.pagos) {
           let medio = await tx.medioPago.findUnique({
             where: { nombre: p.medio_pago },
           });
-
           if (!medio) {
-            medio = await tx.medioPago.create({
-              data: { nombre: p.medio_pago },
-            });
+            medio = await tx.medioPago.create({ data: { nombre: p.medio_pago } });
           }
 
           await tx.pago.create({
@@ -310,26 +444,57 @@ export class FacturacionService {
             },
           });
         }
+      } else if (itemsActualizados || dto.propina !== undefined) {
+        const pagosExistentes = facturaExistente.pagos || [];
+        if (pagosExistentes.length === 1) {
+          await tx.pago.update({
+            where: { id_pago: pagosExistentes[0].id_pago },
+            data: { monto: new Prisma.Decimal(nuevoTotal) },
+          });
+        } else if (pagosExistentes.length > 1) {
+          const totalOtros = pagosExistentes.slice(1).reduce((acc, p) => acc + Number(p.monto), 0);
+          const primerPagoMonto = Math.max(0, nuevoTotal - totalOtros);
+          await tx.pago.update({
+            where: { id_pago: pagosExistentes[0].id_pago },
+            data: { monto: new Prisma.Decimal(primerPagoMonto) },
+          });
+        }
       }
 
-      // 2. Si se actualiza propina u observación
-      const updateData: any = {};
-      if (dto.observacion !== undefined) {
-        updateData.observacion = dto.observacion ? dto.observacion.trim().slice(0, 255) : null;
-      }
-      if (dto.propina !== undefined) {
-        updateData.propina = new Prisma.Decimal(dto.propina);
-        updateData.valor_total = new Prisma.Decimal(
-          Number(facturaExistente.valor) + Number(dto.propina),
-        );
+      // 4. Registro de auditoría
+      const diffTotal = nuevoTotal - Number(facturaExistente.valor_total);
+      const diffSigno = diffTotal >= 0 ? `+$${diffTotal.toLocaleString('es-CO')}` : `-$${Math.abs(diffTotal).toLocaleString('es-CO')}`;
+      const usuarioNombre = usuarioAuth?.nombre || 'Personal';
+      const motivoTexto = dto.motivo_edicion ? ` | Motivo: ${dto.motivo_edicion.trim()}` : '';
+
+      const fechaHoraAudit = new Date().toLocaleDateString('es-CO', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      const notaAuditoria = `[EDITADA por ${usuarioNombre} ${fechaHoraAudit}: Total previo $${Number(facturaExistente.valor_total).toLocaleString('es-CO')} -> $${nuevoTotal.toLocaleString('es-CO')} (${diffSigno})${motivoTexto}]`;
+
+      const obsBase = dto.observacion !== undefined
+        ? (dto.observacion ? dto.observacion.trim() : '')
+        : (facturaExistente.observacion || '');
+
+      let observacionFinal = [obsBase, notaAuditoria].filter(Boolean).join(' ').trim();
+      if (observacionFinal.length > 255) {
+        observacionFinal = observacionFinal.slice(0, 255);
       }
 
-      if (Object.keys(updateData).length > 0) {
-        await tx.factura.update({
-          where: { id_venta: id },
-          data: updateData,
-        });
-      }
+      // 5. Actualizar la Factura en base de datos
+      await tx.factura.update({
+        where: { id_venta: id },
+        data: {
+          valor: new Prisma.Decimal(nuevoSubtotal),
+          propina: new Prisma.Decimal(propinaFinal),
+          valor_total: new Prisma.Decimal(nuevoTotal),
+          observacion: observacionFinal || null,
+        },
+      });
 
       return tx.factura.findUnique({
         where: { id_venta: id },

@@ -665,6 +665,10 @@
   &.modal-danger-dialog {
     max-width: 500px;
   }
+
+  &.modal-wide-dialog {
+    max-width: 740px;
+  }
 }
 
 .modal-header {
@@ -894,6 +898,350 @@
       line-height: 1.4;
     }
   }
+}
+
+// Banner de Balance Contable y Diferencia
+.factura-balance-banner {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+
+  &.balance-positivo {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+  }
+
+  &.balance-negativo {
+    background: #fffbeb;
+    border-color: #fde68a;
+  }
+
+  .balance-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    .metric-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: #64748b;
+      letter-spacing: 0.5px;
+    }
+
+    .metric-value {
+      font-size: 1.15rem;
+      color: #1e293b;
+    }
+
+    .text-primary {
+      color: #0284c7;
+    }
+  }
+
+  .balance-arrow {
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+  }
+
+  .balance-diff-badge {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 0.4rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    .diff-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #475569;
+    }
+
+    .diff-amount {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    &.diff-plus {
+      background: #dcfce7;
+      border-color: #86efac;
+      .diff-title { color: #166534; }
+      .diff-amount { color: #15803d; }
+    }
+
+    &.diff-minus {
+      background: #fef3c7;
+      border-color: #fcd34d;
+      .diff-title { color: #92400e; }
+      .diff-amount { color: #b45309; }
+    }
+  }
+}
+
+.balance-sync-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #64748b;
+  margin: -0.4rem 0 0.2rem 0;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: #0284c7;
+  }
+}
+
+// Sección de Ítems / Productos de la Factura
+.factura-editor-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: #fdfdfd;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem;
+
+  .section-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #1e293b;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: #0284c7;
+      }
+    }
+
+    .section-count {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #64748b;
+      background: #f1f5f9;
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+  }
+
+  .items-editor-table {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #ffffff;
+
+    .items-editor-thead {
+      display: grid;
+      grid-template-columns: 2.2fr 1fr 1.2fr 1.1fr 38px;
+      padding: 0.5rem 0.75rem;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      align-items: center;
+    }
+
+    .items-editor-tbody {
+      max-height: 220px;
+      overflow-y: auto;
+
+      .item-editor-row {
+        display: grid;
+        grid-template-columns: 2.2fr 1fr 1.2fr 1.1fr 38px;
+        padding: 0.55rem 0.75rem;
+        border-bottom: 1px solid #f1f5f9;
+        align-items: center;
+        font-size: 0.85rem;
+        transition: background 0.15s;
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        &:hover {
+          background: #f8fafc;
+        }
+
+        .col-name {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          strong {
+            color: #1e293b;
+          }
+          .text-muted {
+            font-size: 0.72rem;
+            color: #94a3b8;
+          }
+        }
+
+        .col-price {
+          color: #64748b;
+        }
+
+        .col-total {
+          color: #0f172a;
+        }
+
+        .qty-stepper {
+          display: inline-flex;
+          align-items: center;
+          border: 1px solid #cbd5e1;
+          border-radius: 6px;
+          overflow: hidden;
+          background: #ffffff;
+
+          .btn-step {
+            border: none;
+            background: #f1f5f9;
+            width: 26px;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #475569;
+            transition: all 0.15s;
+
+            mat-icon {
+              font-size: 14px;
+              width: 14px;
+              height: 14px;
+            }
+
+            &:hover {
+              background: #0284c7;
+              color: #ffffff;
+            }
+          }
+
+          .qty-number {
+            min-width: 26px;
+            text-align: center;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #0f172a;
+          }
+        }
+
+        .btn-item-delete {
+          border: none;
+          background: transparent;
+          color: #94a3b8;
+          cursor: pointer;
+          padding: 4px;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.15s;
+
+          mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+          }
+
+          &:hover {
+            color: #ef4444;
+            background: #fee2e2;
+          }
+        }
+      }
+    }
+  }
+
+  .agregar-producto-box {
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 0.75rem;
+
+    .agregar-label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 0.5rem;
+
+      mat-icon {
+        font-size: 15px;
+        width: 15px;
+        height: 15px;
+        color: #0284c7;
+      }
+    }
+
+    .agregar-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+
+      .select-producto-catalogo {
+        flex: 1;
+        font-size: 0.82rem;
+        height: 38px;
+      }
+
+      .agregar-cant-box {
+        width: 75px;
+
+        .input-cant-add {
+          height: 38px;
+          font-size: 0.85rem;
+          text-align: center;
+        }
+      }
+
+      .btn-add-item {
+        height: 38px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        gap: 4px;
+        white-space: nowrap;
+
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+        }
+      }
+    }
+  }
+}
+
+.text-muted-cell {
+  color: #94a3b8;
+  font-weight: 600;
+  display: inline-block;
+  text-align: center;
+  width: 100%;
 }
 
 

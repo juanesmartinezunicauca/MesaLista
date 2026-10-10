@@ -71,8 +71,9 @@ export class FacturacionController {
   actualizar(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateFacturaDto,
+    @CurrentUser() usuarioAuth?: any,
   ) {
-    return this.facturacionService.actualizarFactura(id, dto);
+    return this.facturacionService.actualizarFactura(id, dto, usuarioAuth);
   }
 
   /**

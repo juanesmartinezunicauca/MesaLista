@@ -12,15 +12,27 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 import { CajaApiService } from '../../../core/services/api/caja-api.service';
-import { FacturacionApiService } from '../../../core/services/api/facturacion-api.service';
+import { FacturacionApiService, UpdateFacturaPayload } from '../../../core/services/api/facturacion-api.service';
 import { PedidosApiService } from '../../../core/services/api/pedidos-api.service';
 import { DomiciliosApiService } from '../../../core/services/api/domicilios-api.service';
+import { CatalogoApiService } from '../../../core/services/api/catalogo-api.service';
+import { Producto } from '../../../core/models/producto.model';
 import { AuthService } from '../../../core/services/auth/auth.service';
 
 export type HistorialTab = 'caja' | 'facturas' | 'pedidos' | 'domicilios' | 'gastos';
 
+export interface ItemFacturaEditando {
+  id_item?: number;
+  id_producto: number;
+  nombre: string;
+  categoria?: string;
+  precio_unitario: number;
+  cantidad: number;
+  observacion?: string;
+}
+
 export interface ModalEdicionData {
-  tipo: 'caja' | 'factura' | 'pedido' | 'domicilio' | 'gasto';
+  tipo: 'caja' | 'factura' | 'gasto';
   titulo: string;
   subtitulo: string;
   icono: string;
@@ -31,16 +43,7 @@ export interface ModalEdicionData {
   facturaPropina?: number;
   facturaMetodoPago?: string;
   facturaObservacion?: string;
-  // Campos Pedido Salón
-  pedidoEstado?: string;
-  pedidoObservacion?: string;
-  // Campos Domicilio
-  domicilioNombre?: string;
-  domicilioEmail?: string;
-  domicilioTelefono?: string;
-  domicilioDireccion?: string;
-  domicilioMetodoPago?: string;
-  domicilioObservacion?: string;
+  facturaMotivoEdicion?: string;
   // Campos Gasto
   gastoDescripcion?: string;
   gastoTotal?: number;
@@ -81,6 +84,7 @@ export class VistaHistorialComponent implements OnInit {
   private facturacionApi = inject(FacturacionApiService);
   private pedidosApi = inject(PedidosApiService);
   private domiciliosApi = inject(DomiciliosApiService);
+  private catalogoApi = inject(CatalogoApiService);
   private authService = inject(AuthService);
   private snackBar = inject(MatSnackBar);
 
@@ -108,6 +112,27 @@ export class VistaHistorialComponent implements OnInit {
   modalEdicion = signal<ModalEdicionData | null>(null);
   modalPeligro = signal<ModalPeligroData | null>(null);
   guardandoModal = signal<boolean>(false);
+
+  // Estado para Edición Avanzada de Factura
+  productosDisponibles = signal<Producto[]>([]);
+  productoSeleccionadoId = signal<number | null>(null);
+  cantidadNuevoProducto = signal<number>(1);
+  itemsFacturaEditando = signal<ItemFacturaEditando[]>([]);
+  facturaTotalOriginal = signal<number>(0);
+
+  subtotalFacturaCalculado = computed(() => {
+    return this.itemsFacturaEditando().reduce((acc, it) => acc + (it.precio_unitario * it.cantidad), 0);
+  });
+
+  totalFacturaCalculado = computed(() => {
+    const sub = this.subtotalFacturaCalculado();
+    const propina = Number(this.modalEdicion()?.facturaPropina) || 0;
+    return sub + (propina >= 0 ? propina : 0);
+  });
+
+  diferenciaFacturaCalculada = computed(() => {
+    return this.totalFacturaCalculado() - this.facturaTotalOriginal();
+  });
 
   ngOnInit(): void {
     // Si viene parametro query tab=domicilios o tab=gastos
@@ -275,61 +300,120 @@ export class VistaHistorialComponent implements OnInit {
     });
   }
 
-  // 2. Factura (Cajero y Admin)
+  // 2. Factura (Cajero y Admin - Edición Avanzada)
   editarFactura(fac: any): void {
     if (!this.puedeEditar()) {
       this.snackBar.open('No tienes permisos para editar facturas.', 'Entendido', { duration: 3000 });
       return;
     }
+    if (fac.estado === 'anulada') {
+      this.snackBar.open(`La factura #FAC-${fac.id_venta} está anulada y no puede ser modificada.`, 'Entendido', { duration: 3500 });
+      return;
+    }
+
+    // Cargar catálogo si no está en memoria
+    if (this.productosDisponibles().length === 0) {
+      this.catalogoApi.obtenerProductos().subscribe({
+        next: (prods) => this.productosDisponibles.set(prods || []),
+        error: () => console.error('Error al cargar catálogo de productos para edición'),
+      });
+    }
+
+    // Extraer ítems de los pedidos asociados a la factura
+    const items: ItemFacturaEditando[] = [];
+    if (fac.pedidos && Array.isArray(fac.pedidos)) {
+      for (const ped of fac.pedidos) {
+        if (ped.items && Array.isArray(ped.items)) {
+          for (const it of ped.items) {
+            items.push({
+              id_item: it.id_item,
+              id_producto: it.id_producto || it.producto?.id_producto,
+              nombre: it.producto?.nombre || 'Producto',
+              categoria: it.producto?.categoria?.nombre || it.producto?.categoria,
+              precio_unitario: Number(it.precio_unitario) || Number((it.producto as any)?.precio_venta) || Number((it.producto as any)?.precio) || 0,
+              cantidad: Number(it.cantidad) || 1,
+              observacion: it.observacion || '',
+            });
+          }
+        }
+      }
+    }
+
+    this.itemsFacturaEditando.set(items);
+    const totalOrig = Number(fac.total || fac.valor_total || 0);
+    this.facturaTotalOriginal.set(totalOrig);
+
     const primerMedio = fac.pagos?.[0]?.medioPago?.nombre || 'Efectivo';
     this.modalEdicion.set({
       tipo: 'factura',
-      titulo: `Editar Factura #FAC-${fac.id_venta}`,
-      subtitulo: `${fac.mesa ? 'Mesa ' + fac.mesa.numero : 'Domicilio'} • Total: $${(fac.total || fac.valor_total || 0).toLocaleString()}`,
+      titulo: `Edición Avanzada de Factura #FAC-${fac.id_venta}`,
+      subtitulo: `${fac.mesa ? 'Mesa ' + fac.mesa.numero : 'Domicilio'} • Total Registrado: $${totalOrig.toLocaleString()}`,
       icono: 'receipt_long',
       itemOriginal: fac,
-      facturaPropina: fac.propina || 0,
+      facturaPropina: Number(fac.propina) || 0,
       facturaMetodoPago: primerMedio,
       facturaObservacion: fac.observacion || '',
+      facturaMotivoEdicion: '',
     });
   }
 
-  // 3. Pedido de Salón (Cajero y Admin)
-  editarPedidoSalon(ped: any): void {
-    if (!this.puedeEditar()) {
-      this.snackBar.open('No tienes permisos para editar pedidos.', 'Entendido', { duration: 3000 });
-      return;
-    }
-    this.modalEdicion.set({
-      tipo: 'pedido',
-      titulo: `Editar Pedido de Salón #${ped.numero_pedido}`,
-      subtitulo: `Mesa ${ped.mesa?.numero || 'N/A'} • Atendido por: ${ped.usuario?.nombre || 'Mesero'}`,
-      icono: 'table_restaurant',
-      itemOriginal: ped,
-      pedidoEstado: ped.estado || 'enviada',
-      pedidoObservacion: ped.observacion || '',
-    });
+  incrementarItem(item: ItemFacturaEditando): void {
+    this.itemsFacturaEditando.update((items) =>
+      items.map((it) => (it === item ? { ...it, cantidad: it.cantidad + 1 } : it))
+    );
   }
 
-  // 4. Domicilio (Cajero y Admin)
-  editarDomicilio(dom: any): void {
-    if (!this.puedeEditar()) {
-      this.snackBar.open('No tienes permisos para editar domicilios.', 'Entendido', { duration: 3000 });
+  decrementarItem(item: ItemFacturaEditando): void {
+    if (item.cantidad <= 1) {
+      this.eliminarItemFactura(item);
       return;
     }
-    this.modalEdicion.set({
-      tipo: 'domicilio',
-      titulo: `Editar Domicilio #${dom.numero_pedido}`,
-      subtitulo: `Cliente: ${dom.cliente?.nombre || 'Cliente'} • Total: $${(dom.totalCalculado || dom.factura?.total || 0).toLocaleString()}`,
-      icono: 'delivery_dining',
-      itemOriginal: dom,
-      domicilioNombre: dom.cliente?.nombre || '',
-      domicilioEmail: dom.cliente?.email || '',
-      domicilioTelefono: dom.cliente?.telefono || '',
-      domicilioDireccion: dom.cliente?.direccion || '',
-      domicilioMetodoPago: dom.metodo_pago || 'Efectivo',
-      domicilioObservacion: dom.observacion || '',
-    });
+    this.itemsFacturaEditando.update((items) =>
+      items.map((it) => (it === item ? { ...it, cantidad: it.cantidad - 1 } : it))
+    );
+  }
+
+  eliminarItemFactura(item: ItemFacturaEditando): void {
+    if (this.itemsFacturaEditando().length <= 1) {
+      this.snackBar.open(
+        'La factura debe conservar al menos un producto. Si deseas cancelarla, usa la opción "Anular Factura".',
+        'Entendido',
+        { duration: 3500 }
+      );
+      return;
+    }
+    this.itemsFacturaEditando.update((items) => items.filter((it) => it !== item));
+  }
+
+  agregarProductoAFactura(): void {
+    const prodId = this.productoSeleccionadoId();
+    const cant = this.cantidadNuevoProducto();
+    if (!prodId || cant <= 0) return;
+
+    const prod = this.productosDisponibles().find((p) => p.id_producto === prodId);
+    if (!prod) return;
+
+    const existente = this.itemsFacturaEditando().find((it) => it.id_producto === prodId);
+    if (existente) {
+      this.itemsFacturaEditando.update((items) =>
+        items.map((it) => (it.id_producto === prodId ? { ...it, cantidad: it.cantidad + cant } : it))
+      );
+    } else {
+      this.itemsFacturaEditando.update((items) => [
+        ...items,
+        {
+          id_producto: prod.id_producto,
+          nombre: prod.nombre,
+          categoria: (prod as any).categoria?.nombre || (prod as any).categoria,
+          precio_unitario: Number(prod.precio_venta),
+          cantidad: cant,
+          observacion: '',
+        },
+      ]);
+    }
+
+    this.productoSeleccionadoId.set(null);
+    this.cantidadNuevoProducto.set(1);
   }
 
   // 5. Gasto (Cajero y Admin)
@@ -449,14 +533,24 @@ export class VistaHistorialComponent implements OnInit {
       });
     } else if (m.tipo === 'factura') {
       const fac = m.itemOriginal;
-      const valorBase = (fac.total || fac.valor_total || 0) - (fac.propina || 0);
       const propinaNum = Number(m.facturaPropina) >= 0 ? Number(m.facturaPropina) : 0;
-      const nuevoTotal = valorBase + propinaNum;
+      const nuevoTotal = this.totalFacturaCalculado();
 
-      const payload: any = {
+      const itemsPayload = this.itemsFacturaEditando().map((it) => ({
+        id_item: it.id_item,
+        id_producto: it.id_producto,
+        cantidad: it.cantidad,
+        precio_unitario: it.precio_unitario,
+        observacion: it.observacion?.trim() || undefined,
+      }));
+
+      const payload: UpdateFacturaPayload = {
         observacion: m.facturaObservacion?.trim() || undefined,
+        motivo_edicion: m.facturaMotivoEdicion?.trim() || undefined,
         propina: propinaNum,
+        items: itemsPayload,
       };
+
       if (m.facturaMetodoPago) {
         payload.pagos = [
           {
@@ -470,52 +564,16 @@ export class VistaHistorialComponent implements OnInit {
         next: () => {
           this.guardandoModal.set(false);
           this.cerrarModal();
-          this.snackBar.open(`Factura #FAC-${fac.id_venta} actualizada exitosamente.`, 'OK', { duration: 3000 });
+          this.snackBar.open(
+            `Factura #FAC-${fac.id_venta} actualizada exitosamente. Saldo de caja e inventario sincronizados.`,
+            'OK',
+            { duration: 3500 }
+          );
           this.cargarDatosTab('facturas');
         },
         error: (err) => {
           this.guardandoModal.set(false);
           const msg = err.error?.message || 'Error al editar factura.';
-          this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
-        },
-      });
-    } else if (m.tipo === 'pedido') {
-      const ped = m.itemOriginal;
-      this.pedidosApi.actualizarPedido(ped.id_pedido, {
-        observacion: m.pedidoObservacion?.trim() || undefined,
-        estado: m.pedidoEstado,
-      }).subscribe({
-        next: () => {
-          this.guardandoModal.set(false);
-          this.cerrarModal();
-          this.snackBar.open(`Pedido #${ped.numero_pedido} actualizado exitosamente.`, 'OK', { duration: 3000 });
-          this.cargarDatosTab('pedidos');
-        },
-        error: (err) => {
-          this.guardandoModal.set(false);
-          const msg = err.error?.message || 'Error al actualizar el pedido.';
-          this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
-        },
-      });
-    } else if (m.tipo === 'domicilio') {
-      const dom = m.itemOriginal;
-      this.domiciliosApi.actualizarDomicilio(dom.id_pedido, {
-        cliente_nombre: m.domicilioNombre?.trim(),
-        cliente_email: m.domicilioEmail?.trim() || undefined,
-        cliente_telefono: m.domicilioTelefono?.trim(),
-        cliente_direccion: m.domicilioDireccion?.trim(),
-        metodo_pago: m.domicilioMetodoPago,
-        observacion: m.domicilioObservacion?.trim(),
-      }).subscribe({
-        next: () => {
-          this.guardandoModal.set(false);
-          this.cerrarModal();
-          this.snackBar.open(`Domicilio #${dom.numero_pedido} actualizado exitosamente.`, 'OK', { duration: 3000 });
-          this.cargarDatosTab('domicilios');
-        },
-        error: (err) => {
-          this.guardandoModal.set(false);
-          const msg = err.error?.message || 'Error al actualizar domicilio.';
           this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
         },
       });
