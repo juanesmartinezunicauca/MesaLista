@@ -129,5 +129,27 @@ export class CajaApiService {
   actualizarObservacionTurno(id_caja: number, observacion: string): Observable<any> {
     return this.http.patch<any>(`${this.apiUrl}/historial/${id_caja}`, { observacion });
   }
+
+  /**
+   * Consulta el histórico de gastos
+   */
+  obtenerGastos(limite = 50): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/gastos?limite=${limite}`);
+  }
+
+  /**
+   * Actualiza un gasto existente
+   */
+  actualizarGasto(id: number, payload: any): Observable<any> {
+    return this.http.patch<any>(`${this.apiUrl}/gastos/${id}`, payload);
+  }
+
+  /**
+   * Elimina un gasto del sistema (exclusivo para super administrador)
+   */
+  eliminarGasto(id: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/gastos/${id}`);
+  }
 }
+
 

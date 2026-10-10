@@ -70,6 +70,17 @@
       <span>Domicilios</span>
       <span class="tab-badge">{{ domicilios().length }}</span>
     </button>
+
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="tabActiva() === 'gastos'"
+      (click)="cambiarTab('gastos')"
+    >
+      <mat-icon>receipt</mat-icon>
+      <span>Gastos de Caja</span>
+      <span class="tab-badge">{{ gastos().length }}</span>
+    </button>
   </nav>
 
   <!-- Barra de Filtro y Búsqueda -->
@@ -82,7 +93,8 @@
           tabActiva() === 'caja' ? 'Buscar por Turno # o Cajero...' :
           tabActiva() === 'facturas' ? 'Buscar por Factura #, Mesa, Cliente o Medio de Pago...' :
           tabActiva() === 'pedidos' ? 'Buscar por Pedido #, Mesa, Mesero o Producto...' :
-          'Buscar por Domicilio #, Cliente, Teléfono o Dirección...'
+          tabActiva() === 'domicilios' ? 'Buscar por Domicilio #, Cliente, Teléfono o Dirección...' :
+          'Buscar por Gasto #, Descripción, Categoría o Responsable...'
         "
         [ngModel]="busqueda()"
         (ngModelChange)="busqueda.set($event)"
@@ -511,6 +523,99 @@
         </div>
       }
     }
+
+    <!-- ============================================================== -->
+    <!-- TAB 5: GASTOS Y EGRESOS DE CAJA                                -->
+    <!-- ============================================================== -->
+    @if (tabActiva() === 'gastos') {
+      @if (gastosFiltrados().length === 0) {
+        <div class="empty-state">
+          <mat-icon class="empty-icon">receipt</mat-icon>
+          <h3>No hay egresos o gastos registrados</h3>
+          <p>Los gastos menores de insumos, aseo o servicios registrados en caja aparecerán aquí.</p>
+        </div>
+      } @else {
+        <div class="table-responsive">
+          <table class="historial-table">
+            <thead>
+              <tr>
+                <th>Gasto #</th>
+                <th>Fecha y Hora</th>
+                <th>Categoría / Tipo</th>
+                <th>Descripción</th>
+                <th>Medio de Pago</th>
+                <th>Responsable</th>
+                <th>Turno Caja</th>
+                <th>Total ($ COP)</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (g of gastosFiltrados(); track g.id_gasto) {
+                <tr>
+                  <td>
+                    <span class="badge-code">GST-#{{ g.id_gasto }}</span>
+                  </td>
+                  <td>{{ g.fecha_hora | date:'dd/MM/yyyy hh:mm a' }}</td>
+                  <td>
+                    <span class="categoria-gasto-tag">
+                      <mat-icon>label</mat-icon>
+                      <span>{{ g.tipoGasto?.nombre || 'General' }}</span>
+                    </span>
+                  </td>
+                  <td>
+                    <div class="desc-cell">
+                      <strong>{{ g.descripcion }}</strong>
+                      @if (g.observacion) {
+                        <small class="text-muted" style="display: block; font-size: 0.78rem; color: #64748b;">{{ g.observacion }}</small>
+                      }
+                    </div>
+                  </td>
+                  <td>
+                    <span class="pago-tag" [class.pago-efectivo]="g.medioPago?.nombre === 'Efectivo'" [class.pago-transfer]="g.medioPago?.nombre === 'Transferencia'">
+                      {{ g.medioPago?.nombre || 'Efectivo' }}
+                    </span>
+                  </td>
+                  <td>{{ g.usuario?.nombre || 'Personal' }}</td>
+                  <td>
+                    <span class="badge-turno font-mono">#CJA-{{ g.id_caja }}</span>
+                  </td>
+                  <td class="font-mono font-bold font-lg text-danger">
+                    -${{ g.total | number:'1.0-0' }}
+                  </td>
+                  <td>
+                    <div class="actions-cell">
+                      @if (puedeEditar()) {
+                        <button
+                          mat-button
+                          class="btn-action-edit"
+                          (click)="editarGasto(g)"
+                          matTooltip="Editar descripción, monto o tipo de gasto"
+                        >
+                          <mat-icon>edit</mat-icon>
+                          <span>Editar</span>
+                        </button>
+                      }
+                      @if (puedeEliminar()) {
+                        <button
+                          mat-button
+                          class="btn-action-delete"
+                          (click)="eliminarGasto(g)"
+                          matTooltip="Eliminar registro de gasto del sistema"
+                        >
+                          <mat-icon>delete_forever</mat-icon>
+                          <span>Eliminar</span>
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
   }
 
   <!-- ============================================================== -->
@@ -709,6 +814,79 @@
                 maxlength="255"
                 placeholder="Instrucciones para el domiciliario..."
                 [(ngModel)]="m.domicilioObservacion"
+              ></textarea>
+            </div>
+          }
+
+          <!-- CASO 5: GASTO -->
+          @if (m.tipo === 'gasto') {
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">
+                  <mat-icon>category</mat-icon>
+                  <span>Tipo o Categoría de Gasto</span>
+                </label>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Ej. Insumos, Aseo, Servicios, Mantenimiento..."
+                  [(ngModel)]="m.gastoTipo"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">
+                  <mat-icon>attach_money</mat-icon>
+                  <span>Monto Total ($ COP)</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="500"
+                  class="form-control"
+                  placeholder="0"
+                  [(ngModel)]="m.gastoTotal"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                <mat-icon>payments</mat-icon>
+                <span>Medio de Pago</span>
+              </label>
+              <select class="form-control form-select" [(ngModel)]="m.gastoMedioPago">
+                <option value="Efectivo">Efectivo (Caja)</option>
+                <option value="Transferencia">Transferencia</option>
+                <option value="Tarjeta">Tarjeta</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                <mat-icon>description</mat-icon>
+                <span>Descripción del Gasto</span>
+              </label>
+              <input
+                type="text"
+                class="form-control"
+                maxlength="255"
+                placeholder="Ej. Compra de limones y servilletas..."
+                [(ngModel)]="m.gastoDescripcion"
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                <mat-icon>notes</mat-icon>
+                <span>Observación o Justificación</span>
+              </label>
+              <textarea
+                class="form-control form-textarea"
+                rows="2"
+                maxlength="255"
+                placeholder="Notas de auditoría sobre el egreso..."
+                [(ngModel)]="m.gastoObservacion"
               ></textarea>
             </div>
           }

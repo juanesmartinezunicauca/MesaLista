@@ -17,10 +17,10 @@ import { PedidosApiService } from '../../../core/services/api/pedidos-api.servic
 import { DomiciliosApiService } from '../../../core/services/api/domicilios-api.service';
 import { AuthService } from '../../../core/services/auth/auth.service';
 
-export type HistorialTab = 'caja' | 'facturas' | 'pedidos' | 'domicilios';
+export type HistorialTab = 'caja' | 'facturas' | 'pedidos' | 'domicilios' | 'gastos';
 
 export interface ModalEdicionData {
-  tipo: 'caja' | 'factura' | 'pedido' | 'domicilio';
+  tipo: 'caja' | 'factura' | 'pedido' | 'domicilio' | 'gasto';
   titulo: string;
   subtitulo: string;
   icono: string;
@@ -41,10 +41,16 @@ export interface ModalEdicionData {
   domicilioDireccion?: string;
   domicilioMetodoPago?: string;
   domicilioObservacion?: string;
+  // Campos Gasto
+  gastoDescripcion?: string;
+  gastoTotal?: number;
+  gastoTipo?: string;
+  gastoMedioPago?: string;
+  gastoObservacion?: string;
 }
 
 export interface ModalPeligroData {
-  tipo: 'anular_factura' | 'eliminar_factura' | 'eliminar_pedido' | 'eliminar_domicilio';
+  tipo: 'anular_factura' | 'eliminar_factura' | 'eliminar_pedido' | 'eliminar_domicilio' | 'eliminar_gasto';
   titulo: string;
   subtitulo: string;
   mensaje: string;
@@ -93,6 +99,7 @@ export class VistaHistorialComponent implements OnInit {
   facturas = signal<any[]>([]);
   pedidosSalon = signal<any[]>([]);
   domicilios = signal<any[]>([]);
+  gastos = signal<any[]>([]);
 
   // Filtros de fecha opcionales
   fechaFiltro = signal<string>('');
@@ -103,11 +110,11 @@ export class VistaHistorialComponent implements OnInit {
   guardandoModal = signal<boolean>(false);
 
   ngOnInit(): void {
-    // Si viene parametro query tab=domicilios
+    // Si viene parametro query tab=domicilios o tab=gastos
     this.route.queryParams.subscribe((params) => {
       if (params['tab']) {
         const t = params['tab'] as HistorialTab;
-        if (['caja', 'facturas', 'pedidos', 'domicilios'].includes(t)) {
+        if (['caja', 'facturas', 'pedidos', 'domicilios', 'gastos'].includes(t)) {
           this.tabActiva.set(t);
         }
       }
@@ -163,6 +170,16 @@ export class VistaHistorialComponent implements OnInit {
             this.cargando.set(false);
           },
           error: () => this.handleError('domicilios'),
+        });
+        break;
+
+      case 'gastos':
+        this.cajaApi.obtenerGastos(50).subscribe({
+          next: (data) => {
+            this.gastos.set(data || []);
+            this.cargando.set(false);
+          },
+          error: () => this.handleError('gastos'),
         });
         break;
     }
@@ -222,6 +239,21 @@ export class VistaHistorialComponent implements OnInit {
         (d.cliente?.telefono && d.cliente.telefono.includes(q)) ||
         (d.cliente?.direccion && d.cliente.direccion.toLowerCase().includes(q)) ||
         (d.estado && d.estado.toLowerCase().includes(q))
+    );
+  });
+
+  gastosFiltrados = computed(() => {
+    const q = this.busqueda().trim().toLowerCase();
+    if (!q) return this.gastos();
+    return this.gastos().filter(
+      (g) =>
+        String(g.id_gasto).includes(q) ||
+        (g.descripcion && g.descripcion.toLowerCase().includes(q)) ||
+        (g.observacion && g.observacion.toLowerCase().includes(q)) ||
+        (g.tipoGasto?.nombre && g.tipoGasto.nombre.toLowerCase().includes(q)) ||
+        (g.medioPago?.nombre && g.medioPago.nombre.toLowerCase().includes(q)) ||
+        (g.usuario?.nombre && g.usuario.nombre.toLowerCase().includes(q)) ||
+        String(g.id_caja).includes(q)
     );
   });
 
@@ -300,6 +332,26 @@ export class VistaHistorialComponent implements OnInit {
     });
   }
 
+  // 5. Gasto (Cajero y Admin)
+  editarGasto(gasto: any): void {
+    if (!this.puedeEditar()) {
+      this.snackBar.open('No tienes permisos para editar gastos.', 'Entendido', { duration: 3000 });
+      return;
+    }
+    this.modalEdicion.set({
+      tipo: 'gasto',
+      titulo: `Editar Gasto #${gasto.id_gasto}`,
+      subtitulo: `Registrado por: ${gasto.usuario?.nombre || 'Usuario'} • Turno #CJA-${gasto.id_caja}`,
+      icono: 'receipt',
+      itemOriginal: gasto,
+      gastoDescripcion: gasto.descripcion || '',
+      gastoTotal: Number(gasto.total) || 0,
+      gastoTipo: gasto.tipoGasto?.nombre || 'Insumos',
+      gastoMedioPago: gasto.medioPago?.nombre || 'Efectivo',
+      gastoObservacion: gasto.observacion || '',
+    });
+  }
+
   // --- MÉTODOS DE APERTURA DE MODAL DE ACCIONES PELIGROSAS (ANULACIÓN/ELIMINACIÓN) ---
 
   anularFactura(fac: any): void {
@@ -356,6 +408,20 @@ export class VistaHistorialComponent implements OnInit {
       subtitulo: `Cliente: ${dom.cliente?.nombre || 'Cliente'} • Dirección: ${dom.cliente?.direccion || 'N/A'}`,
       mensaje: 'El registro de entrega de este domicilio se removerá permanentemente del historial. Los comprobantes y facturas de caja permanecerán intactos.',
       item: dom,
+    });
+  }
+
+  eliminarGasto(gasto: any): void {
+    if (!this.puedeEliminar()) {
+      this.snackBar.open('Solo el super administrador puede eliminar registros de gastos.', 'Entendido', { duration: 3000 });
+      return;
+    }
+    this.modalPeligro.set({
+      tipo: 'eliminar_gasto',
+      titulo: `¿Eliminar Gasto #${gasto.id_gasto}?`,
+      subtitulo: `Monto: $${Number(gasto.total).toLocaleString()} • ${gasto.descripcion}`,
+      mensaje: 'Esta acción removerá permanentemente el registro de gasto del sistema.',
+      item: gasto,
     });
   }
 
@@ -453,6 +519,27 @@ export class VistaHistorialComponent implements OnInit {
           this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
         },
       });
+    } else if (m.tipo === 'gasto') {
+      const g = m.itemOriginal;
+      this.cajaApi.actualizarGasto(g.id_gasto, {
+        descripcion: m.gastoDescripcion?.trim(),
+        total: Number(m.gastoTotal),
+        tipo_gasto: m.gastoTipo?.trim(),
+        medio_pago: m.gastoMedioPago?.trim(),
+        observacion: m.gastoObservacion?.trim(),
+      }).subscribe({
+        next: () => {
+          this.guardandoModal.set(false);
+          this.cerrarModal();
+          this.snackBar.open(`Gasto #${g.id_gasto} actualizado exitosamente.`, 'OK', { duration: 3000 });
+          this.cargarDatosTab('gastos');
+        },
+        error: (err) => {
+          this.guardandoModal.set(false);
+          const msg = err.error?.message || 'Error al actualizar gasto.';
+          this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
+        },
+      });
     }
   }
 
@@ -516,6 +603,20 @@ export class VistaHistorialComponent implements OnInit {
         error: (err) => {
           this.guardandoModal.set(false);
           const msg = err.error?.message || 'Error al eliminar domicilio.';
+          this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
+        },
+      });
+    } else if (p.tipo === 'eliminar_gasto') {
+      this.cajaApi.eliminarGasto(p.item.id_gasto).subscribe({
+        next: () => {
+          this.guardandoModal.set(false);
+          this.cerrarModal();
+          this.snackBar.open(`Gasto #${p.item.id_gasto} eliminado exitosamente.`, 'OK', { duration: 3000 });
+          this.cargarDatosTab('gastos');
+        },
+        error: (err) => {
+          this.guardandoModal.set(false);
+          const msg = err.error?.message || 'Error al eliminar gasto.';
           this.snackBar.open(msg, 'Cerrar', { duration: 3500 });
         },
       });
