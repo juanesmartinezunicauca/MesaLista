@@ -9,6 +9,7 @@ import {
   CambiarEstadoPedidoDto,
   CreatePedidoDto,
   QueryPedidoDto,
+  UpdatePedidoDto,
 } from './dto';
 
 @Injectable()
@@ -371,4 +372,86 @@ export class PedidosService {
   async cancelar(id: number) {
     return this.cambiarEstado(id, { estado: EstadoPedido.cancelada });
   }
+
+  /**
+   * Actualiza datos de un pedido desde historial (cajero o administrador).
+   */
+  async actualizar(id: number, dto: UpdatePedidoDto) {
+    const pedido = await this.prisma.pedido.findUnique({
+      where: { id_pedido: id },
+    });
+
+    if (!pedido) {
+      throw new NotFoundException(`El pedido #${id} no fue encontrado.`);
+    }
+
+    const data: any = {};
+    if (dto.observacion !== undefined) {
+      data.observacion = dto.observacion ? dto.observacion.trim().slice(0, 255) : null;
+    }
+    if (dto.id_mesa !== undefined) {
+      data.id_mesa = dto.id_mesa;
+    }
+    if (dto.estado !== undefined) {
+      data.estado = dto.estado;
+    }
+
+    return this.prisma.pedido.update({
+      where: { id_pedido: id },
+      data,
+      include: {
+        mesa: true,
+        usuario: {
+          select: { id_usuario: true, nombre: true, rol: true },
+        },
+        items: {
+          include: {
+            producto: { select: this.productoSelectOperativo },
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Elimina un pedido histórico (exclusivo para super administrador).
+   */
+  async eliminar(id: number) {
+    const pedido = await this.prisma.pedido.findUnique({
+      where: { id_pedido: id },
+      include: { factura: true },
+    });
+
+    if (!pedido) {
+      throw new NotFoundException(`El pedido #${id} no fue encontrado.`);
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.itemPedido.deleteMany({
+        where: { id_pedido: id },
+      });
+
+      await tx.pedido.delete({
+        where: { id_pedido: id },
+      });
+
+      if (pedido.id_mesa) {
+        const activos = await tx.pedido.count({
+          where: { id_mesa: pedido.id_mesa, estado: EstadoPedido.enviada },
+        });
+        if (activos === 0) {
+          await tx.mesa.update({
+            where: { id_mesa: pedido.id_mesa },
+            data: { estado: EstadoMesa.libre },
+          });
+        }
+      }
+
+      return {
+        success: true,
+        mensaje: `Pedido #${pedido.numero_pedido} eliminado exitosamente del historial.`,
+      };
+    });
+  }
 }
+

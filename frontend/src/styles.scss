@@ -78,3 +78,62 @@ button, input, optgroup, select, textarea {
   50% { transform: scale(1.25); opacity: 1; }
   100% { transform: scale(0.9); opacity: 0.7; }
 }
+
+// ─────────────────────────────────────────────────────────────
+// CORRECCIÓN GLOBAL DE BOTONES, ICONOS Y SPINNERS (MDC MATERIAL)
+// Resuelve la sobreposición de iconos (check, +, etc.) y texto
+// ─────────────────────────────────────────────────────────────
+
+.mat-mdc-button,
+.mat-mdc-outlined-button,
+.mat-mdc-unelevated-button,
+.mat-mdc-raised-button {
+  .mdc-button__label {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    vertical-align: middle !important;
+  }
+
+  mat-icon {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 19px !important;
+    width: 19px !important;
+    height: 19px !important;
+    line-height: 19px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    flex-shrink: 0 !important;
+    vertical-align: middle !important;
+  }
+
+  mat-spinner,
+  .mat-mdc-progress-spinner,
+  .inline-spinner,
+  .spinner-btn,
+  .btn-spinner,
+  .order-spinner {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+    vertical-align: middle !important;
+  }
+}
+
+// Animación fluida de rotación para iconos de recarga/sincronización
+mat-icon.spin,
+mat-icon.spinning {
+  animation: icon-spin 1s linear infinite !important;
+  display: inline-block !important;
+}
+
+@keyframes icon-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+

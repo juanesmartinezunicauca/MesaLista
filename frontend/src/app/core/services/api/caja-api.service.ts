@@ -122,4 +122,12 @@ export class CajaApiService {
   resetOperacional(): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/reset-operacional`, {});
   }
+
+  /**
+   * Actualiza la observación de un turno cerrado de caja (super admin)
+   */
+  actualizarObservacionTurno(id_caja: number, observacion: string): Observable<any> {
+    return this.http.patch<any>(`${this.apiUrl}/historial/${id_caja}`, { observacion });
+  }
 }
+

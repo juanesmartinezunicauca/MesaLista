@@ -537,6 +537,27 @@ export class CajaService {
   }
 
   /**
+   * Actualiza la observación de un turno cerrado de caja (exclusivo para super administrador).
+   * La caja NO puede ser eliminada por regulaciones contables y de auditoría.
+   */
+  async actualizarObservacionTurno(id_caja: number, observacion: string) {
+    const caja = await this.prisma.caja.findUnique({
+      where: { id_caja },
+    });
+
+    if (!caja) {
+      throw new NotFoundException(`El turno de caja #${id_caja} no fue encontrado.`);
+    }
+
+    return this.prisma.caja.update({
+      where: { id_caja },
+      data: {
+        observacion: observacion ? observacion.trim().slice(0, 500) : null,
+      },
+    });
+  }
+
+  /**
    * Reinicia parcialmente los datos operativos (turnos de caja, facturas, pagos, pedidos y gastos)
    * preservando intactos los usuarios y el catálogo completo de productos/categorías.
    */

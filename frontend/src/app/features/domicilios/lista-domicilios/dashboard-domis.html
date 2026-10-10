@@ -26,11 +26,6 @@
                 <span class="status-indicator-dot" [class.paused]="!estadoServicio()?.recibiendoDomicilios"></span>
                 <span>{{ estadoServicio()?.recibiendoDomicilios ? 'Recibiendo Domicilios' : 'Domicilios Pausados' }}</span>
             </button>
-
-            <button mat-stroked-button class="btn-invoice-history" (click)="abrirHistorialFacturas()">
-                <mat-icon>receipt_long</mat-icon>
-                <span>Historial de Facturación</span>
-            </button>
             <button mat-flat-button color="primary" class="btn-create" (click)="crearNuevoPedido()">
                 <mat-icon>add_shopping_cart</mat-icon>
                 <span>Crear Nuevo Domicilio</span>
@@ -46,7 +41,7 @@
             </div>
             <div class="kpi-data">
                 <span class="kpi-value">{{ kpis().total }}</span>
-                <span class="kpi-label">Total Pedidos</span>
+                <span class="kpi-label">Total Activos</span>
             </div>
         </div>
 
@@ -81,16 +76,6 @@
                 <span class="kpi-label">En Reparto</span>
             </div>
         </div>
-
-        <div class="kpi-card" (click)="cambiarFiltro('Historial')" [class.active]="filtroEstado() === 'Historial'">
-            <div class="kpi-icon-wrapper history">
-                <mat-icon>history</mat-icon>
-            </div>
-            <div class="kpi-data">
-                <span class="kpi-value">{{ kpis().historial }}</span>
-                <span class="kpi-label">Historial (Cerrados)</span>
-            </div>
-        </div>
     </div>
 
     <!-- Barra de Filtros y Búsqueda -->
@@ -103,7 +88,6 @@
             </mat-button-toggle>
             <mat-button-toggle value="En Preparación">En Cocina ({{ kpis().enPreparacion }})</mat-button-toggle>
             <mat-button-toggle value="En Reparto">En Reparto ({{ kpis().enReparto }})</mat-button-toggle>
-            <mat-button-toggle value="Historial">Historial ({{ kpis().historial }})</mat-button-toggle>
         </mat-button-toggle-group>
 
         <div class="search-input-wrapper">
@@ -116,14 +100,6 @@
             </button>
             }
         </div>
-
-        @if (filtroEstado() === 'Historial' && kpis().historial > 0) {
-        <button type="button" mat-stroked-button color="warn" class="btn-clear-history"
-            (click)="limpiarHistorial()" matTooltip="Limpiar todos los pedidos entregados y cancelados del historial">
-            <mat-icon>delete_sweep</mat-icon>
-            <span>Limpiar Historial ({{ kpis().historial }})</span>
-        </button>
-        }
     </div>
 
     <!-- Contenido Principal: Spinner o Tarjetas -->
@@ -188,16 +164,6 @@
                         <button mat-menu-item class="menu-danger" (click)="cancelar(pedido)">
                             <mat-icon color="warn">cancel</mat-icon>
                             <span>Anular Pedido</span>
-                        </button>
-                    </mat-menu>
-                    } @else {
-                    <button mat-icon-button [matMenuTriggerFor]="menuHistorial" (click)="$event.stopPropagation()" class="btn-more" matTooltip="Opciones de historial">
-                        <mat-icon>more_vert</mat-icon>
-                    </button>
-                    <mat-menu #menuHistorial="matMenu">
-                        <button mat-menu-item class="menu-danger" (click)="eliminarDelHistorial(pedido)">
-                            <mat-icon color="warn">delete</mat-icon>
-                            <span>Eliminar del Historial</span>
                         </button>
                     </mat-menu>
                     }

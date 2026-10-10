@@ -4,6 +4,8 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Param,
+  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -91,6 +93,19 @@ export class CajaController {
   obtenerHistorial(@Query('limite') limite?: string) {
     const lim = limite ? parseInt(limite, 10) : 15;
     return this.cajaService.obtenerHistorial(lim);
+  }
+
+  /**
+   * PATCH /api/v1/caja/historial/:id
+   * Edita la observación de un turno cerrado de caja. Exclusivo para Super Administrador.
+   */
+  @Patch('historial/:id')
+  @Roles(RolUsuario.administrador)
+  actualizarObservacion(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('observacion') observacion: string,
+  ) {
+    return this.cajaService.actualizarObservacionTurno(id, observacion);
   }
 
   /**

@@ -128,6 +128,7 @@
                 <th>Físico Contado</th>
                 <th>Diferencia</th>
                 <th>Movimientos</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -180,6 +181,23 @@
                       }
                       · {{ turno._count?.gastos || 0 }} gastos
                     </span>
+                  </td>
+                  <td>
+                    @if (esAdmin()) {
+                      <button
+                        mat-button
+                        class="btn-action-edit"
+                        (click)="editarObservacionCaja(turno)"
+                        matTooltip="Editar observación de auditoría de este turno"
+                      >
+                        <mat-icon>edit_note</mat-icon>
+                        <span>Editar</span>
+                      </button>
+                    } @else {
+                      <span class="badge-lock" matTooltip="La caja no se puede eliminar ni editar sin permisos de Administrador">
+                        <mat-icon>lock</mat-icon> Protegida
+                      </span>
+                    }
                   </td>
                 </tr>
               }
@@ -264,20 +282,45 @@
                     ${{ (fac.valor_total || fac.total || 0) | number:'1.0-0' }}
                   </td>
                   <td>
-                    @if (fac.estado === 'anulada') {
-                      <span class="motivo-anulacion-hint" [matTooltip]="fac.motivo_anulacion">
-                        {{ fac.motivo_anulacion || 'Anulada' }}
-                      </span>
-                    } @else {
-                      <button
-                        mat-button
-                        class="btn-anular-mini"
-                        (click)="anularFactura(fac)"
-                        matTooltip="Anular formalmente esta factura y corregir el saldo de caja"
-                      >
-                        <mat-icon>block</mat-icon> Anular
-                      </button>
-                    }
+                    <div class="actions-cell">
+                      @if (puedeEditar()) {
+                        <button
+                          mat-button
+                          class="btn-action-edit"
+                          (click)="editarFactura(fac)"
+                          matTooltip="Editar observación y propina de esta factura"
+                        >
+                          <mat-icon>edit</mat-icon>
+                          <span>Editar</span>
+                        </button>
+                      }
+                      @if (fac.estado === 'anulada') {
+                        <span class="motivo-anulacion-hint" [matTooltip]="fac.motivo_anulacion">
+                          {{ fac.motivo_anulacion || 'Anulada' }}
+                        </span>
+                      } @else {
+                        <button
+                          mat-button
+                          class="btn-anular-mini"
+                          (click)="anularFactura(fac)"
+                          matTooltip="Anular formalmente esta factura y corregir el saldo de caja"
+                        >
+                          <mat-icon>block</mat-icon>
+                          <span>Anular</span>
+                        </button>
+                      }
+                      @if (puedeEliminar()) {
+                        <button
+                          mat-button
+                          class="btn-action-delete"
+                          (click)="eliminarFactura(fac)"
+                          matTooltip="Eliminar factura permanentemente del sistema"
+                        >
+                          <mat-icon>delete_forever</mat-icon>
+                          <span>Eliminar</span>
+                        </button>
+                      }
+                    </div>
                   </td>
                 </tr>
               }
@@ -308,6 +351,7 @@
                 <th>Fecha y Hora</th>
                 <th>Productos / Comanda</th>
                 <th>Estado</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -343,6 +387,32 @@
                       {{ ped.estado | uppercase }}
                     </span>
                   </td>
+                  <td>
+                    <div class="actions-cell">
+                      @if (puedeEditar()) {
+                        <button
+                          mat-button
+                          class="btn-action-edit"
+                          (click)="editarPedidoSalon(ped)"
+                          matTooltip="Editar observación o estado del pedido"
+                        >
+                          <mat-icon>edit</mat-icon>
+                          <span>Editar</span>
+                        </button>
+                      }
+                      @if (puedeEliminar()) {
+                        <button
+                          mat-button
+                          class="btn-action-delete"
+                          (click)="eliminarPedidoSalon(ped)"
+                          matTooltip="Eliminar pedido permanentemente del historial"
+                        >
+                          <mat-icon>delete_forever</mat-icon>
+                          <span>Eliminar</span>
+                        </button>
+                      }
+                    </div>
+                  </td>
                 </tr>
               }
             </tbody>
@@ -374,6 +444,7 @@
                 <th>Total</th>
                 <th>Método de Pago</th>
                 <th>Estado</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -406,6 +477,32 @@
                     <span class="status-badge status-domicilio" [attr.data-estado]="dom.estado">
                       {{ dom.estado | uppercase }}
                     </span>
+                  </td>
+                  <td>
+                    <div class="actions-cell">
+                      @if (puedeEditar()) {
+                        <button
+                          mat-button
+                          class="btn-action-edit"
+                          (click)="editarDomicilio(dom)"
+                          matTooltip="Editar datos de entrega, cliente o pago"
+                        >
+                          <mat-icon>edit</mat-icon>
+                          <span>Editar</span>
+                        </button>
+                      }
+                      @if (puedeEliminar()) {
+                        <button
+                          mat-button
+                          class="btn-action-delete"
+                          (click)="eliminarDomicilio(dom)"
+                          matTooltip="Eliminar domicilio permanentemente del historial"
+                        >
+                          <mat-icon>delete_forever</mat-icon>
+                          <span>Eliminar</span>
+                        </button>
+                      }
+                    </div>
                   </td>
                 </tr>
               }
