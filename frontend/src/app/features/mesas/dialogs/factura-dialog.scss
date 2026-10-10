@@ -198,12 +198,154 @@
   padding: 10px 0 14px;
   border-top: 1px dashed $border-color;
 
+  .pago-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2px;
+  }
+
   .pago-lbl {
     font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: $text-muted;
+  }
+
+  .badge-fijado {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #475569;
+    background: #F1F5F9;
+    border: 1px solid #CBD5E1;
+    border-radius: 20px;
+    padding: 2px 8px;
+
+    mat-icon {
+      font-size: 13px;
+      width: 13px;
+      height: 13px;
+      color: #64748B;
+    }
+  }
+
+  .domicilio-metodo-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-radius: $radius-md;
+    border: 1px solid $border-color;
+    background: #ffffff;
+    transition: all 0.2s ease;
+
+    .metodo-card-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .metodo-icon-wrapper {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      mat-icon {
+        font-size: 22px;
+        width: 22px;
+        height: 22px;
+      }
+    }
+
+    .metodo-card-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .metodo-card-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: $text-primary;
+    }
+
+    .metodo-card-desc {
+      font-size: 0.78rem;
+      color: #64748B;
+      line-height: 1.3;
+    }
+
+    &.pago-transfer {
+      background: #EFF6FF;
+      border-color: #BFDBFE;
+
+      .metodo-icon-wrapper {
+        background: #DBEAFE;
+        color: #1D4ED8;
+      }
+
+      .metodo-card-title {
+        color: #1E40AF;
+      }
+    }
+
+    &.pago-efectivo {
+      background: #F0FDF4;
+      border-color: #BBF7D0;
+
+      .metodo-icon-wrapper {
+        background: #DCFCE7;
+        color: #15803D;
+      }
+
+      .metodo-card-title {
+        color: #166534;
+      }
+    }
+
+    &.pago-tarjeta {
+      background: #FAF5FF;
+      border-color: #E9D5FF;
+
+      .metodo-icon-wrapper {
+        background: #F3E8FF;
+        color: #7E22CE;
+      }
+
+      .metodo-card-title {
+        color: #6B21A8;
+      }
+    }
+  }
+
+  .transferencia-aviso {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: $radius-md;
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    color: #1E40AF;
+    font-size: 0.78rem;
+    font-weight: 500;
+    margin-top: 4px;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: #2563EB;
+      flex-shrink: 0;
+    }
   }
 
   .pago-botones {

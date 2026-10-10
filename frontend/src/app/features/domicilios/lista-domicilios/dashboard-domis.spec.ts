@@ -137,17 +137,17 @@ describe('DashboardDomisComponent', () => {
     fixture.detectChanges();
   });
 
-  it('debe crearse y cargar domicilios en el inicio', () => {
+  it('debe crearse y cargar domicilios activos en el inicio', () => {
     expect(component).toBeTruthy();
-    expect(component.pedidos().length).toBe(3);
+    expect(component.pedidos().length).toBe(2);
   });
 
-  it('debe calcular KPIs correctamente', () => {
+  it('debe calcular KPIs correctamente para pedidos activos', () => {
     const kpis = component.kpis();
-    expect(kpis.total).toBe(3);
+    expect(kpis.total).toBe(2);
     expect(kpis.enPreparacion).toBe(1);
     expect(kpis.enReparto).toBe(1);
-    expect(kpis.entregados).toBe(1);
+    expect(kpis.pendientes).toBe(0);
   });
 
   it('debe filtrar pedidos por estado', () => {
@@ -164,7 +164,7 @@ describe('DashboardDomisComponent', () => {
     component.busqueda.set('311222');
     expect(component.pedidosFiltrados().length).toBe(1);
 
-    component.busqueda.set('#103');
+    component.busqueda.set('#102');
     expect(component.pedidosFiltrados().length).toBe(1);
   });
 

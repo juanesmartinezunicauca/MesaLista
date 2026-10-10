@@ -200,7 +200,13 @@ export class DomiciliosService {
       const numero_pedido = (ultimoPedido?.numero_pedido ?? 0) + 1;
 
       // 2.4 Crear pedido de tipo domicilio con marca [PENDIENTE] y forma de pago
-      const etiquetaPago = metodo_pago ? `[PAGO: ${metodo_pago.trim()}]` : '';
+      const metodoLimpio = metodo_pago ? metodo_pago.trim() : 'Efectivo';
+      const metodoNormalizado = metodoLimpio.toLowerCase().includes('transf')
+        ? 'Transferencia'
+        : metodoLimpio.toLowerCase().includes('tarj')
+        ? 'Tarjeta'
+        : 'Efectivo';
+      const etiquetaPago = `[PAGO: ${metodoNormalizado}]`;
       const obsLimpia = observacion ? observacion.trim() : '';
       let observacionConPendiente = ['[PENDIENTE]', etiquetaPago, obsLimpia]
         .filter(Boolean)
@@ -393,24 +399,37 @@ export class DomiciliosService {
       return this.mapearEtapaOperativa(cerrado);
     }
 
-    let observacionActualizada = pedido.observacion || '';
-
-    // Limpiar tags previos
-    observacionActualizada = observacionActualizada
+    // Limpiar texto libre del usuario
+    const observacionLimpia = (pedido.observacion || '')
       .replace(/\[PENDIENTE\]/gi, '')
       .replace(/\[EN REPARTO\]/gi, '')
       .replace(/\[REPARTIDOR:[^\]]+\]/gi, '')
+      .replace(/\[PAGO:[^\]]+\]/gi, '')
       .trim();
 
+    // Preservar la forma de pago original del cliente
+    const rawObs = (pedido as any).observacion_raw || pedido.observacion || '';
+    const matchPagoRaw = rawObs.match(/\[PAGO:\s*([^\]]+)\]/i);
+    const tagPago = matchPagoRaw ? `[PAGO: ${matchPagoRaw[1].trim()}]` : '';
+
+    const tags: string[] = [];
+
     if (dto.estado === 'En Reparto') {
-      const tagRepartidor = dto.repartidor_nombre
-        ? `[REPARTIDOR: ${dto.repartidor_nombre.trim()} | TEL: ${dto.repartidor_telefono?.trim() || 'N/A'}] `
-        : '';
-      observacionActualizada = `[EN REPARTO] ${tagRepartidor}${observacionActualizada}`.trim();
-    } else if (dto.estado === 'En Preparación' || dto.estado === 'Aceptar') {
-      // Al aceptar, se remueve [PENDIENTE] y queda limpio para preparación y cocina
-      observacionActualizada = observacionActualizada.trim();
+      tags.push('[EN REPARTO]');
+      if (dto.repartidor_nombre) {
+        tags.push(
+          `[REPARTIDOR: ${dto.repartidor_nombre.trim()} | TEL: ${dto.repartidor_telefono?.trim() || 'N/A'}]`,
+        );
+      }
+    } else if (dto.estado === 'Pendiente') {
+      tags.push('[PENDIENTE]');
     }
+
+    if (tagPago) {
+      tags.push(tagPago);
+    }
+
+    let observacionActualizada = [...tags, observacionLimpia].filter(Boolean).join(' ').trim();
 
     if (observacionActualizada.length > 255) {
       observacionActualizada = observacionActualizada.slice(0, 255);
@@ -471,8 +490,14 @@ export class DomiciliosService {
       const observacionLimpia = (pedido.observacion || '')
         .replace(/\[PENDIENTE\]/gi, '')
         .replace(/\[EN REPARTO\]/gi, '')
+        .replace(/\[REPARTIDOR:[^\]]+\]/gi, '')
+        .replace(/\[PAGO:[^\]]+\]/gi, '')
         .trim();
-      let observacionFinal = `${notaCancelado} ${observacionLimpia}`.trim();
+      const rawObs = (pedido as any).observacion_raw || pedido.observacion || '';
+      const matchPagoRaw = rawObs.match(/\[PAGO:\s*([^\]]+)\]/i);
+      const tagPago = matchPagoRaw ? `[PAGO: ${matchPagoRaw[1].trim()}]` : '';
+
+      let observacionFinal = [notaCancelado, tagPago, observacionLimpia].filter(Boolean).join(' ').trim();
       if (observacionFinal.length > 255) {
         observacionFinal = observacionFinal.slice(0, 255);
       }
@@ -542,11 +567,22 @@ export class DomiciliosService {
       }
     }
 
+    const mpLower = metodo_pago.toLowerCase();
+    if (mpLower.includes('transf')) {
+      metodo_pago = 'Transferencia';
+    } else if (mpLower.includes('tarj')) {
+      metodo_pago = 'Tarjeta';
+    } else {
+      metodo_pago = 'Efectivo';
+    }
+
     const observacionLimpia = (pedido.observacion || '')
       .replace(/\[PENDIENTE\]/gi, '')
       .replace(/\[EN REPARTO\]/gi, '')
       .replace(/\[REPARTIDOR:[^\]]*\]/gi, '')
       .replace(/\[PAGO:[^\]]*\]/gi, '')
+      .replace(/\[CANCELADO:[^\]]*\]/gi, '')
+      .replace(/\[CANCELADO\]/gi, '')
       .trim();
 
     const totalCalculado = (pedido.items || []).reduce(
@@ -626,16 +662,26 @@ export class DomiciliosService {
     if (dto.estado !== undefined) data.estado = dto.estado;
 
     if (dto.observacion !== undefined || dto.metodo_pago !== undefined) {
-      let obsActual = pedido.observacion || '';
-      if (dto.metodo_pago) {
-        obsActual = obsActual.replace(/\[PAGO:[^\]]*\]/g, '').trim();
-        obsActual = `[PAGO: ${dto.metodo_pago.trim()}] ${obsActual}`.trim();
-      }
-      if (dto.observacion !== undefined) {
-        const etiquetas = (pedido.observacion || '').match(/\[(PENDIENTE|EN REPARTO|REPARTIDOR:[^\]]+|PAGO:[^\]]+)\]/g) || [];
-        const textoLimpio = dto.observacion.trim();
-        obsActual = [...etiquetas, textoLimpio].filter(Boolean).join(' ');
-      }
+      const rawObs = pedido.observacion || '';
+      const matchPago = rawObs.match(/\[PAGO:\s*([^\]]+)\]/i);
+      const metodoFinal = dto.metodo_pago
+        ? dto.metodo_pago.trim()
+        : matchPago
+        ? matchPago[1].trim()
+        : 'Efectivo';
+      const tagPago = `[PAGO: ${metodoFinal}]`;
+
+      const etiquetasOperativas =
+        rawObs.match(/\[(PENDIENTE|EN REPARTO|REPARTIDOR:[^\]]+|CANCELADO:[^\]]+|CANCELADO)\]/g) || [];
+
+      const textoLimpio =
+        dto.observacion !== undefined
+          ? dto.observacion.trim()
+          : rawObs
+              .replace(/\[(PENDIENTE|EN REPARTO|REPARTIDOR:[^\]]+|PAGO:[^\]]+|CANCELADO:[^\]]+|CANCELADO)\]/g, '')
+              .trim();
+
+      const obsActual = [...etiquetasOperativas, tagPago, textoLimpio].filter(Boolean).join(' ');
       data.observacion = obsActual.slice(0, 255);
     }
 

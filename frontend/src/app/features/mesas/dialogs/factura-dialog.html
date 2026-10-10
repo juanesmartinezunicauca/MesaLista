@@ -75,41 +75,50 @@
       </div>
     </div>
 
-    <!-- 4. Medio de Pago (Simple o Mixto) -->
+    <!-- 4. Medio de Pago (Simple, Mixto o Fijado para Domicilio) -->
     <div class="pago-seccion">
-      <span class="pago-lbl">Medio de Pago</span>
-      <div class="pago-botones">
-        <button
-          type="button"
-          class="pago-btn"
-          [class.activo]="metodoPago() === 'efectivo'"
-          (click)="seleccionarMetodo('efectivo')"
-        >
-          <mat-icon>payments</mat-icon>
-          <span>Efectivo</span>
-        </button>
+      <div class="pago-header-row">
+        <span class="pago-lbl">{{ esDomicilio() ? 'Forma de Pago del Cliente' : 'Medio de Pago' }}</span>
+        @if (esDomicilio()) {
+          <span class="badge-fijado">
+            <mat-icon>lock</mat-icon>
+            <span>Fijado por el cliente</span>
+          </span>
+        }
+      </div>
 
-        <button
-          type="button"
-          class="pago-btn"
-          [class.activo]="metodoPago() === 'tarjeta'"
-          (click)="seleccionarMetodo('tarjeta')"
-        >
-          <mat-icon>credit_card</mat-icon>
-          <span>Tarjeta</span>
-        </button>
+      @if (!esDomicilio()) {
+        <div class="pago-botones">
+          <button
+            type="button"
+            class="pago-btn"
+            [class.activo]="metodoPago() === 'efectivo'"
+            (click)="seleccionarMetodo('efectivo')"
+          >
+            <mat-icon>payments</mat-icon>
+            <span>Efectivo</span>
+          </button>
 
-        <button
-          type="button"
-          class="pago-btn"
-          [class.activo]="metodoPago() === 'transferencia'"
-          (click)="seleccionarMetodo('transferencia')"
-        >
-          <mat-icon>qr_code_2</mat-icon>
-          <span>Transferencia</span>
-        </button>
+          <button
+            type="button"
+            class="pago-btn"
+            [class.activo]="metodoPago() === 'tarjeta'"
+            (click)="seleccionarMetodo('tarjeta')"
+          >
+            <mat-icon>credit_card</mat-icon>
+            <span>Tarjeta</span>
+          </button>
 
-        @if (!esDomicilio()) {
+          <button
+            type="button"
+            class="pago-btn"
+            [class.activo]="metodoPago() === 'transferencia'"
+            (click)="seleccionarMetodo('transferencia')"
+          >
+            <mat-icon>qr_code_2</mat-icon>
+            <span>Transferencia</span>
+          </button>
+
           <button
             type="button"
             class="pago-btn mixto-btn"
@@ -119,8 +128,42 @@
             <mat-icon>call_split</mat-icon>
             <span>Mixto</span>
           </button>
-        }
-      </div>
+        </div>
+      } @else {
+        <!-- Vista exclusiva para Domicilio: el cliente ya escogió cómo va a pagar -->
+        <div
+          class="domicilio-metodo-card"
+          [class.pago-transfer]="metodoPago() === 'transferencia'"
+          [class.pago-efectivo]="metodoPago() === 'efectivo'"
+          [class.pago-tarjeta]="metodoPago() === 'tarjeta'"
+        >
+          <div class="metodo-card-left">
+            <div class="metodo-icon-wrapper">
+              <mat-icon>
+                {{
+                  metodoPago() === 'transferencia'
+                    ? 'account_balance_wallet'
+                    : metodoPago() === 'tarjeta'
+                    ? 'credit_card'
+                    : 'payments'
+                }}
+              </mat-icon>
+            </div>
+            <div class="metodo-card-text">
+              <span class="metodo-card-title">{{ metodoPagoNombre() }}</span>
+              <span class="metodo-card-desc">
+                {{
+                  metodoPago() === 'transferencia'
+                    ? 'Pago mediante transferencia electrónica (Nequi / Daviplata / Bancolombia).'
+                    : metodoPago() === 'tarjeta'
+                    ? 'Pago con tarjeta débito o crédito (contra entrega con datáfono).'
+                    : 'Pago en efectivo contra entrega.'
+                }}
+              </span>
+            </div>
+          </div>
+        </div>
+      }
 
       <!-- 4A. Pago 100% Efectivo -->
       @if (metodoPago() === 'efectivo') {
@@ -154,7 +197,15 @@
         </div>
       }
 
-      <!-- 4B. Pago Mixto / Múltiples Medios -->
+      <!-- 4B. Aviso Informativo Transferencia en Domicilio -->
+      @if (metodoPago() === 'transferencia' && esDomicilio()) {
+        <div class="transferencia-aviso">
+          <mat-icon>verified</mat-icon>
+          <span>Recuerda validar el comprobante de transferencia bancaria enviado por el cliente.</span>
+        </div>
+      }
+
+      <!-- 4C. Pago Mixto / Múltiples Medios -->
       @if (metodoPago() === 'mixto') {
         <div class="mixto-caja">
           <div class="mixto-fila">

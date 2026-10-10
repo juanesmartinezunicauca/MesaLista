@@ -40,13 +40,40 @@ export class FacturaDialogComponent {
   // Estados de Pago y Propinas
   esDomicilio = computed(() => Boolean(this.data?.pedido));
 
-  metodoPago = signal<MetodoPagoTipo>(
-    this.data?.pedido?.metodo_pago?.toLowerCase().includes('transf')
-      ? 'transferencia'
-      : this.data?.pedido?.metodo_pago?.toLowerCase().includes('tarj')
-      ? 'tarjeta'
-      : 'efectivo'
-  );
+  private inicializarMetodoPago(): MetodoPagoTipo {
+    if (this.data?.pedido) {
+      const p = this.data.pedido;
+      const raw = (
+        p.metodo_pago ||
+        p.factura?.pagos?.[0]?.medioPago?.nombre ||
+        p.observacion_raw?.match(/\[PAGO:\s*([^\]]+)\]/i)?.[1] ||
+        p.observacion?.match(/\[PAGO:\s*([^\]]+)\]/i)?.[1] ||
+        'efectivo'
+      ).toLowerCase();
+
+      if (raw.includes('transf')) return 'transferencia';
+      if (raw.includes('tarj')) return 'tarjeta';
+      return 'efectivo';
+    }
+    return 'efectivo';
+  }
+
+  metodoPago = signal<MetodoPagoTipo>(this.inicializarMetodoPago());
+
+  metodoPagoNombre = computed<string>(() => {
+    switch (this.metodoPago()) {
+      case 'transferencia':
+        return 'Transferencia Electrónica';
+      case 'tarjeta':
+        return 'Tarjeta Débito / Crédito';
+      case 'mixto':
+        return 'Pago Mixto';
+      case 'efectivo':
+      default:
+        return 'Efectivo';
+    }
+  });
+
   tipoPropina = signal<'cero' | 'diez' | 'personalizada'>(this.data?.pedido ? 'cero' : 'diez');
   propinaPersonalizada = signal<number>(0);
   efectivoRecibido = signal<number>(0);
@@ -198,6 +225,8 @@ export class FacturaDialogComponent {
   });
 
   seleccionarMetodo(metodo: MetodoPagoTipo): void {
+    if (this.esDomicilio()) return; // En domicilios se respeta la forma de pago establecida por el cliente
+
     this.metodoPago.set(metodo);
 
     if (metodo === 'efectivo' && this.efectivoRecibido() === 0) {

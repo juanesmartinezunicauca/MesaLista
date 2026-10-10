@@ -161,3 +161,69 @@ describe('FacturaDialogComponent', () => {
     expect(dialogRefSpy.close).toHaveBeenCalledWith(null);
   });
 });
+
+describe('FacturaDialogComponent en Domicilio', () => {
+  let component: FacturaDialogComponent;
+  let fixture: ComponentFixture<FacturaDialogComponent>;
+  let dialogRefSpy: { close: any };
+
+  const mockPedidoDomicilio = {
+    id_pedido: 201,
+    numero_pedido: 55,
+    tipo: 'domicilio',
+    estado: 'enviada',
+    etapaOperativa: 'En Reparto',
+    metodo_pago: 'Transferencia',
+    totalCalculado: 25000,
+    items: [
+      {
+        id_item: 1,
+        id_producto: 1,
+        cantidad: 1,
+        precio_unitario: 25000,
+        subtotal: 25000,
+        producto: { nombre: 'Pizza Especial' },
+      },
+    ],
+  };
+
+  beforeEach(async () => {
+    dialogRefSpy = { close: vi.fn() };
+
+    await TestBed.configureTestingModule({
+      imports: [FacturaDialogComponent],
+      providers: [
+        provideAnimationsAsync(),
+        { provide: MAT_DIALOG_DATA, useValue: { pedido: mockPedidoDomicilio } },
+        { provide: MatDialogRef, useValue: dialogRefSpy },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(FacturaDialogComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('debe detectar que es domicilio e inicializar con el método fijado por el cliente', () => {
+    expect(component.esDomicilio()).toBe(true);
+    expect(component.metodoPago()).toBe('transferencia');
+    expect(component.metodoPagoNombre()).toBe('Transferencia Electrónica');
+  });
+
+  it('no debe permitir cambiar el método de pago si es domicilio', () => {
+    component.seleccionarMetodo('efectivo');
+    expect(component.metodoPago()).toBe('transferencia');
+  });
+
+  it('debe cobrar directamente por transferencia sin requerir efectivo recibido', () => {
+    expect(component.puedeCobrar()).toBe(true);
+    component.confirmarCobro();
+    expect(dialogRefSpy.close).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cobrado: true,
+        metodoPago: 'transferencia',
+        total: 25000,
+      })
+    );
+  });
+});
