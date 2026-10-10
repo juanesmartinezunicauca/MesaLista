@@ -31,6 +31,7 @@ describe('CajaService', () => {
       },
       pedido: {
         count: jest.fn().mockResolvedValue(0),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
     };
 

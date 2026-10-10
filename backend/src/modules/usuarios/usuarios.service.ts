@@ -31,41 +31,57 @@ export class UsuariosService {
    * Registra un nuevo usuario con contraseña hasheada mediante Argon2id (OWASP).
    */
   async crear(createUsuarioDto: CreateUsuarioDto) {
-    const usuarioExistente = await this.prisma.usuario.findUnique({
-      where: { usuario: createUsuarioDto.usuario },
+    const emailNormalizado = createUsuarioDto.email.trim().toLowerCase();
+
+    // Validar si el email ya existe
+    const emailExistente = await this.prisma.usuario.findUnique({
+      where: { email: emailNormalizado },
     });
 
-    if (usuarioExistente) {
+    if (emailExistente) {
       throw new ConflictException(
-        `El nombre de usuario '${createUsuarioDto.usuario}' ya está en uso.`,
+        `El correo electrónico '${emailNormalizado}' ya está registrado.`,
       );
     }
 
-    if (createUsuarioDto.email) {
-      const emailExistente = await this.prisma.usuario.findUnique({
-        where: { email: createUsuarioDto.email },
+    // Resolver username: si no viene especificado, se deriva del email
+    let finalUsername = createUsuarioDto.usuario?.trim();
+    if (!finalUsername) {
+      const base = emailNormalizado.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 40) || 'usuario';
+      finalUsername = base;
+      let counter = 1;
+      while (await this.prisma.usuario.findUnique({ where: { usuario: finalUsername } })) {
+        finalUsername = `${base.slice(0, 35)}_${counter++}`;
+      }
+    } else {
+      const usuarioExistente = await this.prisma.usuario.findUnique({
+        where: { usuario: finalUsername },
       });
 
-      if (emailExistente) {
+      if (usuarioExistente) {
         throw new ConflictException(
-          `El correo electrónico '${createUsuarioDto.email}' ya está registrado.`,
+          `El nombre de usuario '${finalUsername}' ya está en uso.`,
         );
       }
     }
 
-    // Configuración recomendada por OWASP para Argon2id
-    const passwordHash = await argon2.hash(createUsuarioDto.password, {
-      type: argon2.argon2id,
-      memoryCost: 65536, // 64 MB
-      timeCost: 3,       // 3 iteraciones
-      parallelism: 4,
-    });
+    // Hashear contraseña solo si se especificó explícitamente (cuenta tradicional)
+    // De lo contrario, queda tercerizado exclusivamente a Google OAuth (passwordHash: null)
+    let passwordHash: string | null = null;
+    if (createUsuarioDto.password && createUsuarioDto.password.trim()) {
+      passwordHash = await argon2.hash(createUsuarioDto.password, {
+        type: argon2.argon2id,
+        memoryCost: 65536, // 64 MB
+        timeCost: 3,       // 3 iteraciones
+        parallelism: 4,
+      });
+    }
 
     return this.prisma.usuario.create({
       data: {
-        nombre: createUsuarioDto.nombre,
-        usuario: createUsuarioDto.usuario,
-        email: createUsuarioDto.email,
+        nombre: createUsuarioDto.nombre.trim(),
+        usuario: finalUsername,
+        email: emailNormalizado,
         passwordHash,
         rol: createUsuarioDto.rol,
         estado: createUsuarioDto.estado ?? EstadoUsuario.activo,

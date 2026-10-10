@@ -15,7 +15,8 @@ function normalizarMedioPago(nombre?: string | null): 'efectivo' | 'tarjeta' | '
   const norm = (nombre || '').toLowerCase().trim();
   if (norm.includes('efectivo')) return 'efectivo';
   if (norm.includes('tarjeta') || norm.includes('datafono') || norm.includes('pos')) return 'tarjeta';
-  return 'transferencia'; // transferencia, nequi, daviplata, bancolombia, etc.
+  if (norm.includes('transferencia') || norm.includes('nequi') || norm.includes('daviplata') || norm.includes('bancolombia')) return 'transferencia';
+  return 'efectivo'; // Si no se especifica o no coincide, se asume efectivo por estándar físico de cajón
 }
 
 /**
@@ -240,6 +241,7 @@ export class CajaService {
       resumen: {
         valor_base: valorBase,
         total_ventas: totalVentas,
+        ventas_netas: redondearMoneda(totalVentas - totalPropinas),
         total_propinas: totalPropinas,
         total_transacciones: transaccionesValidas,
         total_facturas_anuladas: totalFacturasAnuladas,
@@ -318,18 +320,31 @@ export class CajaService {
       throw new BadRequestException('No hay ninguna caja abierta en el sistema para realizar arqueo.');
     }
 
-    // Validar que no existan pedidos pendientes de pago o sin facturar
-    const pedidosPendientes = await this.prisma.pedido.count({
+    // 1. Validar que no existan pedidos pendientes de pago o sin facturar
+    const pedidosSinFacturar = await this.prisma.pedido.count({
       where: {
         estado: EstadoPedido.enviada,
+        id_factura: null,
       },
     });
 
-    if (pedidosPendientes > 0) {
+    if (pedidosSinFacturar > 0) {
       throw new BadRequestException(
-        `No es posible cerrar la caja: existen ${pedidosPendientes} pedido(s) activos o sin facturar. Debes cobrar o cancelar todos los pedidos antes de realizar el arqueo.`,
+        `No es posible cerrar la caja: existen ${pedidosSinFacturar} comanda(s) activas sin cobrar ni facturar. Debes cobrar o cancelar todas las cuentas antes de realizar el arqueo.`,
       );
     }
+
+    // 2. Al cerrar formalmente el turno de caja, cualquier pedido facturado en esta jornada
+    // que aún se encuentre en reparto/preparación se archiva operativamente como 'cerrada'.
+    await this.prisma.pedido.updateMany({
+      where: {
+        estado: EstadoPedido.enviada,
+        id_factura: { not: null },
+      },
+      data: {
+        estado: EstadoPedido.cerrada,
+      },
+    });
 
     const valorTeorico = redondearMoneda(estadoActual.resumen.efectivo_esperado);
     const valorFisico = redondearMoneda(dto.valor_final_fisico);
@@ -489,6 +504,7 @@ export class CajaService {
         valor_final_fisico: Number(t.valor_final_fisico || 0),
         diferencia: Number(t.diferencia || 0),
         total_ventas: redondearMoneda(totalVentas),
+        ventas_netas: redondearMoneda(totalVentas - totalPropinas),
         ventas_efectivo: redondearMoneda(ventasEfectivo),
         ventas_transferencia: redondearMoneda(ventasTransferencia),
         ventas_tarjeta: redondearMoneda(ventasTarjeta),

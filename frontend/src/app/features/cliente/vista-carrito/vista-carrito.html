@@ -196,6 +196,16 @@
             </div>
 
             <div class="form-body">
+              @if (currentUser()?.email) {
+                <div class="user-auth-badge">
+                  <mat-icon class="verified-icon">verified_user</mat-icon>
+                  <div class="user-auth-info">
+                    <span class="auth-label">Cliente identificado (Google):</span>
+                    <strong class="auth-email">{{ currentUser()?.email }}</strong>
+                  </div>
+                </div>
+              }
+
               <div class="input-field-group">
                 <label>Nombre Completo *</label>
                 <div class="field-with-icon">

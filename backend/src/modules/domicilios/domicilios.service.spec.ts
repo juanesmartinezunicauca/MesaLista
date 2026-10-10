@@ -27,6 +27,9 @@ describe('DomiciliosService', () => {
     caja: {
       findFirst: jest.Mock;
     };
+    factura: {
+      update: jest.Mock;
+    };
     $transaction: jest.Mock;
   };
 
@@ -51,6 +54,9 @@ describe('DomiciliosService', () => {
       },
       caja: {
         findFirst: jest.fn().mockResolvedValue({ id_caja: 1, estado: 'abierta' }),
+      },
+      factura: {
+        update: jest.fn(),
       },
       $transaction: jest.fn((callback) => callback(prisma)),
     };
@@ -294,6 +300,73 @@ describe('DomiciliosService', () => {
         data: { cantidad_inventario: { increment: 3 } },
       });
       expect(result.etapaOperativa).toBe('Cancelado');
+    });
+
+    it('debe anular automáticamente la factura en caja si el pedido cancelado ya estaba facturado', async () => {
+      prisma.pedido.findUnique.mockResolvedValue({
+        id_pedido: 6,
+        id_factura: 15,
+        numero_pedido: 105,
+        tipo: TipoPedido.domicilio,
+        estado: EstadoPedido.enviada,
+        items: [],
+      });
+      prisma.pedido.update.mockResolvedValue({
+        id_pedido: 6,
+        id_factura: 15,
+        numero_pedido: 105,
+        tipo: TipoPedido.domicilio,
+        estado: EstadoPedido.cancelada,
+        items: [],
+      });
+
+      await service.cancelar(6, 'Cliente canceló el pedido');
+
+      expect(prisma.factura.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id_venta: 15 },
+          data: expect.objectContaining({
+            estado: 'anulada',
+          }),
+        })
+      );
+    });
+
+    it('debe rechazar marcar como Entregado si el pedido aún no cuenta con factura de cobro', async () => {
+      prisma.pedido.findUnique.mockResolvedValue({
+        id_pedido: 7,
+        id_factura: null, // Sin factura
+        numero_pedido: 106,
+        tipo: TipoPedido.domicilio,
+        estado: EstadoPedido.enviada,
+        items: [],
+      });
+
+      await expect(service.cambiarEstado(7, { estado: 'Entregado' })).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it('debe permitir marcar como Entregado si el pedido ya está facturado en caja', async () => {
+      prisma.pedido.findUnique.mockResolvedValue({
+        id_pedido: 7,
+        id_factura: 20, // Facturado
+        numero_pedido: 106,
+        tipo: TipoPedido.domicilio,
+        estado: EstadoPedido.enviada,
+        items: [],
+      });
+      prisma.pedido.update.mockResolvedValue({
+        id_pedido: 7,
+        id_factura: 20,
+        numero_pedido: 106,
+        tipo: TipoPedido.domicilio,
+        estado: EstadoPedido.cerrada,
+        items: [],
+      });
+
+      const res = await service.cambiarEstado(7, { estado: 'Entregado' });
+      expect(res.etapaOperativa).toBe('Entregado');
     });
 
     it('debe registrar el nombre y teléfono del repartidor al cambiar a En Reparto', async () => {

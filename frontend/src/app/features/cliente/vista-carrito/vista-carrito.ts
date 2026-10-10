@@ -222,6 +222,7 @@ export class VistaCarritoComponent implements OnInit {
         nombre,
         telefono: tel,
         direccion: direccionCompleta,
+        email: this.currentUser()?.email || undefined,
       },
       items: itemsPayload,
       observacion: this.observaciones().trim() || undefined,

@@ -9,7 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { EstadoUsuario, RolUsuario, Usuario } from '../../../core/models/usuario.model';
-import { UsuariosApiService } from '../../../core/services/api/usuarios-api.service';
+import { CreateUsuarioPayload, UpdateUsuarioPayload, UsuariosApiService } from '../../../core/services/api/usuarios-api.service';
 
 export interface UsuarioDialogData {
   usuario?: Usuario;
@@ -74,25 +74,21 @@ export class UsuarioDialogComponent {
 
   constructor() {
     const u = this.data?.usuario;
-    const isEdit = !!u;
 
     this.usuarioForm = this.fb.group({
       nombre: [u?.nombre || '', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
       usuario: [
         u?.usuario || '',
         [
-          Validators.required,
           Validators.minLength(3),
           Validators.maxLength(50),
           Validators.pattern(/^[a-zA-Z0-9._-]+$/),
         ],
       ],
-      email: [u?.email || '', [Validators.email]],
+      email: [u?.email || '', [Validators.required, Validators.email]],
       password: [
         '',
-        isEdit
-          ? [Validators.minLength(8), Validators.maxLength(100), Validators.pattern(/^(?=.*[a-zA-Z])(?=.*\d)/)]
-          : [Validators.required, Validators.minLength(8), Validators.maxLength(100), Validators.pattern(/^(?=.*[a-zA-Z])(?=.*\d)/)],
+        [Validators.minLength(8), Validators.maxLength(100), Validators.pattern(/^(?=.*[a-zA-Z])(?=.*\d)/)],
       ],
       rol: [u?.rol || 'mesero', [Validators.required]],
       estado: [u?.estado ? u.estado === 'activo' : true],
@@ -125,20 +121,16 @@ export class UsuarioDialogComponent {
     this.guardando.set(true);
 
     if (this.esEdicion() && this.data?.usuario) {
-      const payload: {
-        nombre?: string;
-        usuario?: string;
-        email?: string;
-        password?: string;
-        rol?: RolUsuario;
-        estado?: EstadoUsuario;
-      } = {
+      const payload: UpdateUsuarioPayload = {
         nombre: val.nombre.trim(),
-        usuario: val.usuario.trim(),
         email: val.email?.trim() ? val.email.trim().toLowerCase() : undefined,
         rol: val.rol,
         estado: val.estado ? 'activo' : 'inactivo',
       };
+
+      if (val.usuario && val.usuario.trim()) {
+        payload.usuario = val.usuario.trim();
+      }
 
       if (val.password && val.password.trim()) {
         payload.password = val.password.trim();
@@ -158,21 +150,18 @@ export class UsuarioDialogComponent {
         },
       });
     } else {
-      const payload: {
-        nombre: string;
-        usuario: string;
-        email?: string;
-        password: string;
-        rol: RolUsuario;
-        estado?: EstadoUsuario;
-      } = {
+      const email = val.email.trim().toLowerCase();
+      const payload: CreateUsuarioPayload = {
         nombre: val.nombre.trim(),
-        usuario: val.usuario.trim(),
-        email: val.email?.trim() ? val.email.trim().toLowerCase() : undefined,
-        password: val.password.trim(),
+        email: email,
+        usuario: val.usuario?.trim() || email.split('@')[0],
         rol: val.rol,
         estado: val.estado ? ('activo' as EstadoUsuario) : ('inactivo' as EstadoUsuario),
       };
+
+      if (val.password && val.password.trim()) {
+        payload.password = val.password.trim();
+      }
 
       this.usuariosApi.crear(payload).subscribe({
         next: (nuevoUsuario) => {

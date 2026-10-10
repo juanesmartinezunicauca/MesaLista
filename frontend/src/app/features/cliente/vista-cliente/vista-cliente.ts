@@ -168,7 +168,7 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
     this.cargarCatalogo();
     this.cargarEstadoServicio();
 
-    // Si viene redirigido desde el carrito u otra vista hacia Mis Pedidos
+    // Si viene redirigido desde el carrito u otra vista
     this.route.queryParams.subscribe((params) => {
       if (params['tab'] === 'mis-pedidos') {
         this.vistaActiva.set('mis-pedidos');
@@ -176,6 +176,14 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
         if (this.isAuthenticated()) {
           this.cargarMisPedidos(false);
         }
+      }
+      if (params['auth'] === 'required' && !this.isAuthenticated()) {
+        this.snackBar.open(
+          'Debes iniciar sesión con tu cuenta de Google para acceder a tu carrito y pedir domicilios.',
+          'Iniciar Sesión',
+          { duration: 5000 }
+        );
+        this.mostrarModalAuth.set(true);
       }
     });
 
@@ -379,6 +387,15 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
   }
 
   abrirCarrito(): void {
+    if (!this.isAuthenticated()) {
+      this.snackBar.open(
+        'Debes iniciar sesión con tu cuenta de Google para acceder a tu carrito y pedir domicilios.',
+        'Iniciar Sesión',
+        { duration: 4000 }
+      );
+      this.mostrarModalAuth.set(true);
+      return;
+    }
     this.router.navigate(['/cliente/carrito']);
   }
 
@@ -418,9 +435,9 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
     window.open(this.generarUrlWhatsApp(codigoPedido), '_blank', 'noopener,noreferrer');
   }
 
-  irALogin(): void {
+  irALogin(returnUrl: string = '/cliente'): void {
     this.mostrarModalAuth.set(false);
-    this.router.navigate(['/login'], { queryParams: { returnUrl: '/cliente' } });
+    this.router.navigate(['/login'], { queryParams: { returnUrl } });
   }
 
   cerrarModalAuth(): void {
@@ -526,6 +543,7 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
         nombre: clienteNombre,
         telefono: this.telefonoContacto().trim(),
         direccion: direccion,
+        email: this.currentUser()?.email || undefined,
       },
       items: itemsPayload,
       observacion: notasArray.length > 0 ? notasArray.join(' | ').slice(0, 255) : undefined,

@@ -3,6 +3,7 @@ import { Layout } from './shared/components/layout/layout';
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 import { clienteViewGuard } from './core/guards/cliente-view.guard';
+import { clienteCarritoGuard } from './core/guards/cliente-carrito.guard';
 
 export const routes: Routes = [
   // Ruta inicial por defecto: Menú público del cliente
@@ -18,10 +19,10 @@ export const routes: Routes = [
       ),
   },
 
-  // Vista dedicada del Carrito de Compras
+  // Vista dedicada del Carrito de Compras (Requiere autenticación de cliente)
   {
     path: 'cliente/carrito',
-    canActivate: [clienteViewGuard],
+    canActivate: [clienteCarritoGuard],
     loadComponent: () =>
       import('./features/cliente/vista-carrito/vista-carrito').then(
         (m) => m.VistaCarritoComponent

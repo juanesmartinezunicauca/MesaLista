@@ -45,6 +45,7 @@ describe('UsuariosController', () => {
     const dto = {
       nombre: 'Juan Mesero',
       usuario: 'jmesero',
+      email: 'jmesero@gmail.com',
       password: 'password123',
       rol: RolUsuario.mesero,
     };

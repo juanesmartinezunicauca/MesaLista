@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, Length } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, Length } from 'class-validator';
 
 export class CreateClienteDomicilioDto {
   @IsNotEmpty({ message: 'El nombre del cliente es requerido.' })
@@ -15,4 +15,8 @@ export class CreateClienteDomicilioDto {
   @IsString({ message: 'La dirección debe ser una cadena de texto.' })
   @Length(5, 255, { message: 'La dirección debe tener entre 5 y 255 caracteres.' })
   direccion!: string;
+
+  @IsOptional()
+  @IsString({ message: 'El correo electrónico debe ser una cadena de texto.' })
+  email?: string;
 }

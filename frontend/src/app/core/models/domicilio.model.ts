@@ -51,6 +51,7 @@ export interface CreateDomicilioPayload {
     nombre: string;
     telefono: string;
     direccion: string;
+    email?: string;
   };
   items: {
     id_producto: number;
