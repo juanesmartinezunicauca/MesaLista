@@ -20,6 +20,18 @@ import { CreateFacturaDto, UpdateFacturaDto } from './dto';
 export class FacturacionService {
   private readonly logger = new Logger('SecurityAudit');
 
+  // Proyección optimizada para excluir imágenes Base64 pesadas en facturación
+  private readonly productoSelectOperativo = {
+    id_producto: true,
+    nombre: true,
+    categoria: true,
+    precio_venta: true,
+    costo: true,
+    controla_inventario: true,
+    cantidad_inventario: true,
+    disponible: true,
+  } as const;
+
   constructor(private readonly prisma: PrismaService) {}
 
   /**
@@ -269,7 +281,13 @@ export class FacturacionService {
         pagos: { include: { medioPago: true } },
         pedidos: {
           include: {
-            items: { include: { producto: true } },
+            items: {
+              include: {
+                producto: {
+                  select: this.productoSelectOperativo,
+                },
+              },
+            },
           },
         },
       },
@@ -293,7 +311,13 @@ export class FacturacionService {
         pagos: { include: { medioPago: true } },
         pedidos: {
           include: {
-            items: { include: { producto: true } },
+            items: {
+              include: {
+                producto: {
+                  select: this.productoSelectOperativo,
+                },
+              },
+            },
           },
         },
       },

@@ -104,7 +104,6 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
     // Polling reactivo cada 12 segundos para recibir pedidos del cliente en tiempo real
     this.pollingTimer = setInterval(() => {
       this.cargarPedidos(false);
-      this.cargarEstadoServicio();
     }, 12000);
   }
 
@@ -116,7 +115,7 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
 
   cargarPedidos(mostrarSpinner = true): void {
     if (mostrarSpinner) this.cargando.set(true);
-    this.domiciliosApi.obtenerTodos().subscribe({
+    this.domiciliosApi.obtenerTodos({ estado: 'activos' }).subscribe({
       next: (data) => {
         // En el panel operativo solo se mantienen los pedidos activos; los entregados/cancelados van a Historial
         const activos = (data || []).filter(

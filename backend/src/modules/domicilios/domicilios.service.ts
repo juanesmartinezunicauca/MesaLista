@@ -284,7 +284,9 @@ export class DomiciliosService {
 
     // Filtrado por etapa operativa
     if (filtros?.estado && filtros.estado !== 'Todos') {
-      if (filtros.estado === 'Pendiente') {
+      if (filtros.estado === 'activos' || filtros.estado === 'Activos') {
+        where.estado = EstadoPedido.enviada;
+      } else if (filtros.estado === 'Pendiente') {
         where.estado = EstadoPedido.enviada;
         where.observacion = {
           contains: '[PENDIENTE]',

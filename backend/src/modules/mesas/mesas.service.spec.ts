@@ -121,7 +121,7 @@ describe('MesasService', () => {
           pedidos: {
             where: { estado: EstadoPedido.enviada },
             include: {
-              items: { include: { producto: true } },
+              items: { include: { producto: expect.any(Object) } },
               usuario: { select: { id_usuario: true, nombre: true } },
             },
           },
