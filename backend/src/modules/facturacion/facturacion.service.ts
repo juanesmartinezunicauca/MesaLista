@@ -33,7 +33,8 @@ export class FacturacionService {
     // 2. Si es una mesa o un pedido específico (ej. domicilio), buscar los pedidos activos
     let subtotal = 0;
     let pedidosActivos: any[] = [];
-    let idClienteFinal = dto.id_cliente;
+    let clienteNombreFinal = dto.cliente_nombre;
+    let clienteEmailFinal = dto.cliente_email;
 
     if (dto.id_mesa) {
       const mesa = await this.prisma.mesa.findUnique({
@@ -70,7 +71,6 @@ export class FacturacionService {
         where: { id_pedido: dto.id_pedido },
         include: {
           items: true,
-          cliente: true,
         },
       });
 
@@ -94,7 +94,8 @@ export class FacturacionService {
       }
 
       pedidosActivos = [pedido];
-      idClienteFinal = idClienteFinal || pedido.id_cliente || undefined;
+      clienteNombreFinal = clienteNombreFinal || pedido.cliente_nombre || undefined;
+      clienteEmailFinal = clienteEmailFinal || pedido.cliente_email || undefined;
 
       for (const it of pedido.items) {
         subtotal += it.cantidad * Number(it.precio_unitario);
@@ -130,7 +131,8 @@ export class FacturacionService {
           id_caja: cajaActiva.id_caja,
           id_usuario,
           id_mesa: dto.id_mesa || null,
-          id_cliente: idClienteFinal || null,
+          cliente_nombre: clienteNombreFinal || null,
+          cliente_email: clienteEmailFinal || null,
           valor: new Prisma.Decimal(subtotal),
           propina: new Prisma.Decimal(propina),
           valor_total: new Prisma.Decimal(valorTotal),
@@ -245,8 +247,8 @@ export class FacturacionService {
       const q = filtros.buscar.trim();
       where.OR = [
         { observacion: { contains: q, mode: 'insensitive' } },
-        { cliente: { nombre: { contains: q, mode: 'insensitive' } } },
-        { cliente: { telefono: { contains: q, mode: 'insensitive' } } },
+        { cliente_nombre: { contains: q, mode: 'insensitive' } },
+        { cliente_email: { contains: q, mode: 'insensitive' } },
       ];
     }
 
@@ -255,7 +257,6 @@ export class FacturacionService {
       orderBy: { fecha_hora: 'desc' },
       include: {
         mesa: true,
-        cliente: true,
         usuario: { select: { id_usuario: true, nombre: true, rol: true } },
         pagos: { include: { medioPago: true } },
         pedidos: {
@@ -334,7 +335,6 @@ export class FacturacionService {
         where: { id_venta: id },
         include: {
           mesa: true,
-          cliente: true,
           usuario: { select: { nombre: true, rol: true } },
           pagos: { include: { medioPago: true } },
           pedidos: {
@@ -355,7 +355,6 @@ export class FacturacionService {
       where: { id_venta: id },
       include: {
         mesa: true,
-        cliente: true,
         usuario: { select: { nombre: true } },
         pagos: { include: { medioPago: true } },
         pedidos: {
@@ -417,7 +416,6 @@ export class FacturacionService {
         },
         include: {
           mesa: true,
-          cliente: true,
           usuario: { select: { nombre: true, rol: true } },
           pagos: { include: { medioPago: true } },
         },

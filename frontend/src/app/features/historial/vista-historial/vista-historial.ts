@@ -173,6 +173,7 @@ export class VistaHistorialComponent implements OnInit {
       (d) =>
         String(d.numero_pedido).includes(q) ||
         (d.cliente?.nombre && d.cliente.nombre.toLowerCase().includes(q)) ||
+        (d.cliente?.email && d.cliente.email.toLowerCase().includes(q)) ||
         (d.cliente?.telefono && d.cliente.telefono.includes(q)) ||
         (d.cliente?.direccion && d.cliente.direccion.toLowerCase().includes(q)) ||
         (d.estado && d.estado.toLowerCase().includes(q))

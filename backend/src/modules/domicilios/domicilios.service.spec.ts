@@ -7,11 +7,8 @@ import { DomiciliosService } from './domicilios.service';
 describe('DomiciliosService', () => {
   let service: DomiciliosService;
   let prisma: {
-    cliente: {
-      findFirst: jest.Mock;
-      findMany: jest.Mock;
-      create: jest.Mock;
-      update: jest.Mock;
+    usuario: {
+      findUnique: jest.Mock;
     };
     producto: {
       findMany: jest.Mock;
@@ -35,11 +32,13 @@ describe('DomiciliosService', () => {
 
   beforeEach(async () => {
     prisma = {
-      cliente: {
-        findFirst: jest.fn(),
-        findMany: jest.fn(),
-        create: jest.fn(),
-        update: jest.fn(),
+      usuario: {
+        findUnique: jest.fn().mockResolvedValue({
+          id_usuario: 1,
+          nombre: 'Personal Restaurante',
+          email: 'personal@mesalista.com',
+          rol: 'cajero',
+        }),
       },
       producto: {
         findMany: jest.fn(),
@@ -90,7 +89,7 @@ describe('DomiciliosService', () => {
       observacion: 'Sin salsas',
     };
 
-    it('debe registrar un nuevo cliente y crear el pedido a domicilio correctamente', async () => {
+    it('debe crear el pedido a domicilio con los datos del cliente correctamente', async () => {
       prisma.producto.findMany.mockResolvedValue([
         {
           id_producto: 1,
@@ -101,12 +100,11 @@ describe('DomiciliosService', () => {
           precio_venta: 18000,
         },
       ]);
-      prisma.cliente.findFirst.mockResolvedValue(null);
-      prisma.cliente.create.mockResolvedValue({
-        id_cliente: 1,
-        nombre: 'Andrea Pérez',
-        telefono: '3101234567',
-        direccion: 'Calle 5 # 10-20',
+      prisma.usuario.findUnique.mockResolvedValue({
+        id_usuario: 1,
+        nombre: 'Cajero Turno',
+        email: 'cajero@test.com',
+        rol: 'cajero',
       });
       prisma.pedido.findFirst.mockResolvedValue(null); // último pedido consecutivo
       prisma.pedido.create.mockResolvedValue({
@@ -114,6 +112,9 @@ describe('DomiciliosService', () => {
         numero_pedido: 1,
         tipo: TipoPedido.domicilio,
         estado: EstadoPedido.enviada,
+        cliente_nombre: 'Andrea Pérez',
+        cliente_telefono: '3101234567',
+        cliente_direccion: 'Calle 5 # 10-20',
         items: [
           {
             id_producto: 1,
@@ -125,7 +126,7 @@ describe('DomiciliosService', () => {
 
       const result = await service.crear(dto, 1);
 
-      expect(prisma.cliente.create).toHaveBeenCalled();
+      expect(prisma.pedido.create).toHaveBeenCalled();
       expect(prisma.producto.update).toHaveBeenCalledWith({
         where: { id_producto: 1 },
         data: { cantidad_inventario: { decrement: 2 } },
@@ -135,7 +136,7 @@ describe('DomiciliosService', () => {
       expect(result.totalCalculado).toBe(36000);
     });
 
-    it('debe actualizar la dirección si el cliente ya existe', async () => {
+    it('debe tomar nombre y correo de la sesión si el creador es rol cliente', async () => {
       prisma.producto.findMany.mockResolvedValue([
         {
           id_producto: 1,
@@ -145,32 +146,33 @@ describe('DomiciliosService', () => {
           precio_venta: 18000,
         },
       ]);
-      prisma.cliente.findFirst.mockResolvedValue({
-        id_cliente: 2,
-        nombre: 'Andrea P.',
-        telefono: '3101234567',
-        direccion: 'Antigua Calle',
-      });
-      prisma.cliente.update.mockResolvedValue({
-        id_cliente: 2,
-        nombre: 'Andrea Pérez',
-        telefono: '3101234567',
-        direccion: 'Calle 5 # 10-20',
+      prisma.usuario.findUnique.mockResolvedValue({
+        id_usuario: 5,
+        nombre: 'Cliente Autenticado',
+        email: 'cliente@auth.com',
+        rol: RolUsuario.cliente,
       });
       prisma.pedido.create.mockResolvedValue({
         id_pedido: 102,
         numero_pedido: 2,
         tipo: TipoPedido.domicilio,
         estado: EstadoPedido.enviada,
+        cliente_nombre: 'Cliente Autenticado',
+        cliente_email: 'cliente@auth.com',
         items: [],
       });
 
-      await service.crear(dto, 1);
+      const result = await service.crear(dto, 5);
 
-      expect(prisma.cliente.update).toHaveBeenCalledWith({
-        where: { id_cliente: 2 },
-        data: { nombre: 'Andrea Pérez', direccion: 'Calle 5 # 10-20' },
-      });
+      expect(prisma.pedido.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            cliente_nombre: 'Cliente Autenticado',
+            cliente_email: 'cliente@auth.com',
+          }),
+        }),
+      );
+      expect(result.id_pedido).toBe(102);
     });
 
     it('debe lanzar NotFoundException si el producto no existe', async () => {
@@ -233,18 +235,7 @@ describe('DomiciliosService', () => {
     });
   });
 
-  describe('buscarClientes', () => {
-    it('debe retornar lista de clientes que coinciden con el teléfono', async () => {
-      prisma.cliente.findMany.mockResolvedValue([
-        { id_cliente: 1, nombre: 'Carlos', telefono: '3123456789', direccion: 'Cra 4' },
-      ]);
 
-      const result = await service.buscarClientes('312');
-
-      expect(result.length).toBe(1);
-      expect(result[0].nombre).toBe('Carlos');
-    });
-  });
 
   describe('cambiarEstado y cancelar', () => {
     it('debe marcar pedido como En Reparto agregando la etiqueta en observacion', async () => {

@@ -67,7 +67,6 @@ export class DomiciliosService {
 
   // Inclusión estándar para pedidos de tipo domicilio
   private readonly domicilioInclude = {
-    cliente: true,
     usuario: {
       select: {
         id_usuario: true,
@@ -136,45 +135,25 @@ export class DomiciliosService {
       }
     }
 
-    // 2. Transacción atómica: cliente, stock, consecutivo y comanda
+    // 2. Transacción atómica: stock, consecutivo y comanda
     return this.prisma.$transaction(async (tx) => {
-      // 2.1 Buscar o registrar cliente por email (identificador principal) o teléfono
-      const emailLimpio = clienteDto.email?.trim() ? clienteDto.email.trim().toLowerCase() : undefined;
-      const telefonoLimpio = clienteDto.telefono?.trim();
+      // 2.1 Obtener datos del cliente: si el creador es rol 'cliente', tomar nombre y correo de su sesión
+      const usuarioCreador = await tx.usuario.findUnique({
+        where: { id_usuario },
+        select: { id_usuario: true, nombre: true, email: true, rol: true },
+      });
 
-      let cliente = null;
-      if (emailLimpio) {
-        cliente = await tx.cliente.findUnique({
-          where: { email: emailLimpio },
-        });
-      }
+      const esClienteAuth = usuarioCreador?.rol === RolUsuario.cliente;
+      const clienteNombre = esClienteAuth && usuarioCreador?.nombre
+        ? usuarioCreador.nombre.trim()
+        : (clienteDto?.nombre?.trim() || usuarioCreador?.nombre || 'Cliente');
 
-      if (!cliente && telefonoLimpio) {
-        cliente = await tx.cliente.findFirst({
-          where: { telefono: telefonoLimpio },
-        });
-      }
+      const clienteEmail = esClienteAuth && usuarioCreador?.email
+        ? usuarioCreador.email.trim().toLowerCase()
+        : (clienteDto?.email?.trim() ? clienteDto.email.trim().toLowerCase() : (usuarioCreador?.email || null));
 
-      if (cliente) {
-        // Actualizar datos si cambiaron de nombre o dirección
-        cliente = await tx.cliente.update({
-          where: { id_cliente: cliente.id_cliente },
-          data: {
-            nombre: clienteDto.nombre.trim(),
-            direccion: clienteDto.direccion.trim(),
-            ...(emailLimpio ? { email: emailLimpio } : {}),
-          },
-        });
-      } else {
-        cliente = await tx.cliente.create({
-          data: {
-            nombre: clienteDto.nombre.trim(),
-            telefono: telefonoLimpio || '',
-            direccion: clienteDto.direccion.trim(),
-            email: emailLimpio || null,
-          },
-        });
-      }
+      const clienteTelefono = clienteDto?.telefono?.trim() || null;
+      const clienteDireccion = clienteDto?.direccion?.trim() || null;
 
       // 2.2 Descontar stock para productos controlados
       for (const item of items) {
@@ -232,7 +211,10 @@ export class DomiciliosService {
           tipo: TipoPedido.domicilio,
           estado: EstadoPedido.enviada,
           id_usuario,
-          id_cliente: cliente.id_cliente,
+          cliente_nombre: clienteNombre,
+          cliente_email: clienteEmail,
+          cliente_telefono: clienteTelefono,
+          cliente_direccion: clienteDireccion,
           observacion: observacionConPendiente,
           items: {
             create: items.map((it) => {
@@ -282,13 +264,12 @@ export class DomiciliosService {
 
     if (filtros?.buscar && filtros.buscar.trim()) {
       const q = filtros.buscar.trim();
-      where.cliente = {
-        OR: [
-          { nombre: { contains: q, mode: 'insensitive' } },
-          { telefono: { contains: q, mode: 'insensitive' } },
-          { direccion: { contains: q, mode: 'insensitive' } },
-        ],
-      };
+      where.OR = [
+        { cliente_nombre: { contains: q, mode: 'insensitive' } },
+        { cliente_email: { contains: q, mode: 'insensitive' } },
+        { cliente_telefono: { contains: q, mode: 'insensitive' } },
+        { cliente_direccion: { contains: q, mode: 'insensitive' } },
+      ];
     }
 
     // Filtrado por etapa operativa
@@ -369,70 +350,7 @@ export class DomiciliosService {
     return this.mapearEtapaOperativa(pedido);
   }
 
-  /**
-   * Busca clientes registrados por teléfono o nombre para autocompletar en el formulario.
-   */
-  async buscarClientes(query: string) {
-    if (!query || query.trim().length === 0) {
-      return this.prisma.cliente.findMany({
-        take: 10,
-        orderBy: { id_cliente: 'desc' },
-      });
-    }
 
-    const q = query.trim();
-    return this.prisma.cliente.findMany({
-      where: {
-        OR: [
-          { telefono: { contains: q, mode: 'insensitive' } },
-          { nombre: { contains: q, mode: 'insensitive' } },
-        ],
-      },
-      take: 10,
-      orderBy: { nombre: 'asc' },
-    });
-  }
-
-  /**
-   * Directorio general de clientes con resumen de pedidos y facturas (sin entidades de usuario ni contraseñas).
-   */
-  async obtenerClientesDirectorio(query?: string) {
-    const where: any = {};
-    if (query && query.trim()) {
-      const q = query.trim();
-      where.OR = [
-        { nombre: { contains: q, mode: 'insensitive' } },
-        { telefono: { contains: q, mode: 'insensitive' } },
-        { direccion: { contains: q, mode: 'insensitive' } },
-      ];
-    }
-
-    const clientes = await this.prisma.cliente.findMany({
-      where,
-      orderBy: { id_cliente: 'desc' },
-      take: 100,
-      include: {
-        _count: {
-          select: { pedidos: true, facturas: true },
-        },
-        pedidos: {
-          take: 1,
-          orderBy: { fecha_hora: 'desc' },
-          select: { fecha_hora: true, tipo: true, estado: true },
-        },
-      },
-    });
-
-    return clientes.map((c) => ({
-      id_cliente: c.id_cliente,
-      nombre: c.nombre,
-      telefono: c.telefono,
-      direccion: c.direccion,
-      total_pedidos: c._count.pedidos,
-      total_facturas: c._count.facturas,
-      ultimo_pedido: c.pedidos[0]?.fecha_hora || null,
-    }));
-  }
 
   /**
    * Modifica la etapa operativa de un domicilio (aceptar/enviar a cocina, despachar a reparto con repartidor, cerrar/entregar o cancelar).
@@ -634,6 +552,12 @@ export class DomiciliosService {
 
     return {
       ...pedido,
+      cliente: {
+        nombre: pedido.cliente_nombre || (pedido.cliente?.nombre ?? ''),
+        email: pedido.cliente_email ?? (pedido.cliente?.email ?? null),
+        telefono: pedido.cliente_telefono || (pedido.cliente?.telefono ?? ''),
+        direccion: pedido.cliente_direccion || (pedido.cliente?.direccion ?? ''),
+      },
       observacion: observacionLimpia || null,
       observacion_raw: pedido.observacion,
       etapaOperativa,

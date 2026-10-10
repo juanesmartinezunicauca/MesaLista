@@ -21,11 +21,6 @@ export class QueryPedidoDto {
   @Type(() => Number)
   id_mesa?: number;
 
-  @IsOptional()
-  @IsInt({ message: 'El ID del cliente debe ser un número entero.' })
-  @Min(1)
-  @Type(() => Number)
-  id_cliente?: number;
 
   @IsOptional()
   @IsDateString({}, { message: 'La fecha debe tener un formato ISO válido (YYYY-MM-DD).' })

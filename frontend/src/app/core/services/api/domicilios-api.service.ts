@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { Cliente, CreateDomicilioPayload, Domicilio, EstadoServicioDomicilio } from '../../models';
+import { CreateDomicilioPayload, Domicilio, EstadoServicioDomicilio } from '../../models';
 
 @Injectable({
   providedIn: 'root',
@@ -50,32 +50,7 @@ export class DomiciliosApiService {
     return this.http.get<Domicilio[]>(`${this.apiUrl}/mis-pedidos`);
   }
 
-  /**
-   * Busca clientes registrados por teléfono o nombre para autocompletado en el formulario.
-   */
-  buscarClientes(query: string): Observable<Cliente[]> {
-    const params = new HttpParams().set('query', query || '');
-    return this.http.get<Cliente[]>(`${this.apiUrl}/clientes/buscar`, { params });
-  }
 
-  /**
-   * Directorio general de clientes con resumen de pedidos para el módulo de Clientes.
-   */
-  obtenerClientes(query?: string): Observable<Array<{
-    id_cliente: number;
-    nombre: string;
-    telefono: string;
-    direccion: string;
-    total_pedidos: number;
-    total_facturas: number;
-    ultimo_pedido: string | null;
-  }>> {
-    let params = new HttpParams();
-    if (query && query.trim()) {
-      params = params.set('query', query.trim());
-    }
-    return this.http.get<any[]>(`${this.apiUrl}/clientes`, { params });
-  }
 
   /**
    * Cambia la etapa operativa de un domicilio ('Aceptar', 'En Preparación', 'En Reparto', 'Entregado', 'Cancelado').

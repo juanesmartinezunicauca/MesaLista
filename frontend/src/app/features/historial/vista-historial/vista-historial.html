@@ -383,7 +383,17 @@
                     <span class="badge-code">DOM-#{{ dom.numero_pedido }}</span>
                   </td>
                   <td>{{ dom.fecha_hora | date:'dd/MM/yyyy hh:mm a' }}</td>
-                  <td class="font-bold">{{ dom.cliente?.nombre }}</td>
+                  <td>
+                    <div class="client-cell">
+                      <strong class="client-name">{{ dom.cliente?.nombre || 'Cliente' }}</strong>
+                      @if (dom.cliente?.email) {
+                        <small class="client-email" style="display: flex; align-items: center; gap: 4px; color: #64748b; font-size: 0.78rem; font-weight: normal; margin-top: 2px;">
+                          <mat-icon style="font-size: 13px; width: 13px; height: 13px; vertical-align: middle;">mail</mat-icon>
+                          <span>{{ dom.cliente.email }}</span>
+                        </small>
+                      }
+                    </div>
+                  </td>
                   <td class="font-mono">{{ dom.cliente?.telefono }}</td>
                   <td class="max-address">{{ dom.cliente?.direccion }}</td>
                   <td class="font-mono font-bold">${{ (dom.totalCalculado || dom.factura?.total || 0) | number:'1.0-0' }}</td>

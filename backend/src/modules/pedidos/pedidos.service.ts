@@ -39,16 +39,7 @@ export class PedidosService {
       );
     }
 
-    if (
-      createPedidoDto.tipo === TipoPedido.domicilio &&
-      !createPedidoDto.id_cliente
-    ) {
-      throw new BadRequestException(
-        'Para pedidos a domicilio se requiere especificar el ID del cliente.',
-      );
-    }
-
-    // 2. Verificar existencia de la mesa o cliente
+    // 2. Verificar existencia de la mesa si es salón
     if (createPedidoDto.tipo === TipoPedido.salon && createPedidoDto.id_mesa) {
       const mesa = await this.prisma.mesa.findUnique({
         where: { id_mesa: createPedidoDto.id_mesa },
@@ -60,19 +51,7 @@ export class PedidosService {
       }
     }
 
-    if (
-      createPedidoDto.tipo === TipoPedido.domicilio &&
-      createPedidoDto.id_cliente
-    ) {
-      const cliente = await this.prisma.cliente.findUnique({
-        where: { id_cliente: createPedidoDto.id_cliente },
-      });
-      if (!cliente) {
-        throw new NotFoundException(
-          `El cliente con ID #${createPedidoDto.id_cliente} no fue encontrado.`,
-        );
-      }
-    }
+
 
     // 3. Verificar productos en catálogo, disponibilidad y stock
     const productIds = createPedidoDto.items.map((i) => i.id_producto);
@@ -131,10 +110,6 @@ export class PedidosService {
             createPedidoDto.tipo === TipoPedido.salon
               ? createPedidoDto.id_mesa
               : null,
-          id_cliente:
-            createPedidoDto.tipo === TipoPedido.domicilio
-              ? createPedidoDto.id_cliente
-              : null,
           observacion: createPedidoDto.observacion ? createPedidoDto.observacion.trim().slice(0, 255) : undefined,
           items: {
             create: createPedidoDto.items.map((item) => ({
@@ -149,7 +124,6 @@ export class PedidosService {
         },
         include: {
           mesa: true,
-          cliente: true,
           usuario: {
             select: {
               id_usuario: true,
@@ -215,9 +189,7 @@ export class PedidosService {
       where.id_mesa = filtros.id_mesa;
     }
 
-    if (filtros?.id_cliente) {
-      where.id_cliente = filtros.id_cliente;
-    }
+
 
     if (filtros?.fecha) {
       const fechaInicio = new Date(filtros.fecha);
@@ -245,7 +217,6 @@ export class PedidosService {
       orderBy: { fecha_hora: 'desc' },
       include: {
         mesa: true,
-        cliente: true,
         usuario: {
           select: {
             id_usuario: true,

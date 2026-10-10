@@ -35,10 +35,6 @@ async function reset() {
     // 8. Liberar mesas
     await tx.mesa.updateMany({ data: { estado: 'libre' } });
     console.log('Mesas restablecidas a estado libre.');
-
-    // 9. Borrar clientes de prueba
-    const cli = await tx.cliente.deleteMany();
-    console.log(`Clientes eliminados: ${cli.count}`);
   });
 
   // Reiniciar secuencias PostgreSQL si aplican
@@ -49,7 +45,6 @@ async function reset() {
     'factura_id_venta_seq',
     'gasto_id_gasto_seq',
     'caja_id_caja_seq',
-    'cliente_id_cliente_seq',
   ];
 
   for (const s of seqs) {

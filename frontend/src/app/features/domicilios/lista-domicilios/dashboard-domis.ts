@@ -90,11 +90,13 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
         const clienteNom = p.cliente?.nombre?.toLowerCase() || '';
         const clienteTel = p.cliente?.telefono?.toLowerCase() || '';
         const clienteDir = p.cliente?.direccion?.toLowerCase() || '';
+        const clienteEmail = p.cliente?.email?.toLowerCase() || '';
         const consecutivo = `#${p.numero_pedido}`;
         return (
           clienteNom.includes(query) ||
           clienteTel.includes(query) ||
           clienteDir.includes(query) ||
+          clienteEmail.includes(query) ||
           consecutivo.includes(query)
         );
       });
@@ -397,7 +399,8 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
         this.facturacionApi
           .crearFactura({
             id_pedido: pedido.id_pedido,
-            id_cliente: pedido.id_cliente,
+            cliente_nombre: pedido.cliente?.nombre,
+            cliente_email: pedido.cliente?.email,
             propina: resultado.propina,
             observacion: `Domicilio #${pedido.numero_pedido} - Cliente: ${pedido.cliente?.nombre}`,
             pagos: pagosPayload,
@@ -482,7 +485,8 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
 
     const payload = {
       id_pedido: pedido.id_pedido,
-      id_cliente: pedido.id_cliente,
+      cliente_nombre: pedido.cliente?.nombre,
+      cliente_email: pedido.cliente?.email,
       propina: 0,
       observacion: `Cobro domicilio #${pedido.numero_pedido} - Cliente: ${pedido.cliente?.nombre}`,
       pagos: [

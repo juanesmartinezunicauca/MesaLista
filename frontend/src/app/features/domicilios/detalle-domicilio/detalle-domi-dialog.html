@@ -54,6 +54,12 @@
             <span class="label">Nombre:</span>
             <span class="value strong">{{ pedido.cliente.nombre }}</span>
           </div>
+          @if (pedido.cliente.email) {
+            <div class="detail-row">
+              <span class="label">Correo:</span>
+              <span class="value font-mono">{{ pedido.cliente.email }}</span>
+            </div>
+          }
           <div class="detail-row phone-row">
             <span class="label">Teléfono:</span>
             <div class="phone-actions">

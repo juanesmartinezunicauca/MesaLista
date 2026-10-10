@@ -221,6 +221,12 @@
                             </a>
                         </div>
                     </div>
+                    @if (pedido.cliente.email) {
+                        <div class="client-email-row" style="display: flex; align-items: center; gap: 4px; font-size: 0.75rem; color: #64748b; margin-top: 2px;">
+                            <mat-icon style="font-size: 13px; width: 13px; height: 13px;">mail</mat-icon>
+                            <span>{{ pedido.cliente.email }}</span>
+                        </div>
+                    }
                 </div>
 
                 <!-- Dirección de entrega -->

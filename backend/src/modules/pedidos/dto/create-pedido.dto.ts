@@ -27,11 +27,6 @@ export class CreatePedidoDto {
   @Type(() => Number)
   id_mesa?: number;
 
-  @IsOptional()
-  @IsInt({ message: 'El ID del cliente debe ser un número entero.' })
-  @Min(1, { message: 'El ID del cliente debe ser mayor o igual a 1.' })
-  @Type(() => Number)
-  id_cliente?: number;
 
   @IsOptional()
   @IsString({ message: 'La observación debe ser una cadena de texto.' })
