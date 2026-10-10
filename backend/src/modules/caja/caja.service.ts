@@ -204,7 +204,7 @@ export class CajaService {
         const esAnulada = f.estado === EstadoFactura.anulada;
         const origenStr = f.id_mesa
           ? `Pago Mesa #${f.mesa?.numero}`
-          : (f.cliente ? `Domicilio - ${f.cliente.nombre}` : 'Venta Directa / Barra');
+          : (f.cliente_nombre ? `Domicilio - ${f.cliente_nombre}` : 'Venta Directa / Barra');
 
         return {
           id: `factura-${f.id_venta}`,
@@ -551,9 +551,6 @@ export class CajaService {
       await tx.mesa.updateMany({
         data: {
           estado: 'libre',
-          total_acumulado: 0,
-          fecha_apertura: null,
-          id_cliente_actual: null,
         },
       });
 

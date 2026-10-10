@@ -243,7 +243,6 @@ export class PedidosService {
       where: { id_pedido: id },
       include: {
         mesa: true,
-        cliente: true,
         usuario: {
           select: {
             id_usuario: true,
@@ -314,7 +313,6 @@ export class PedidosService {
       data: { estado: cambiarEstadoDto.estado },
       include: {
         mesa: true,
-        cliente: true,
         items: {
           include: {
             producto: {
