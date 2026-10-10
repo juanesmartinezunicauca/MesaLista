@@ -41,14 +41,22 @@
         <div class="electronic-sales-banner">
             <mat-icon>account_balance</mat-icon>
             <div class="banner-text">
-                <span>Ventas Bancarias / Electrónicas: </span>
+                <div>
+                    <span>Ventas Bancarias / Electrónicas: </span>
+                    @if (ventasTransferencia() > 0) {
+                        <strong>Transferencia: $ {{ ventasTransferencia() | number:'1.2-2' }}</strong>
+                    }
+                    @if (ventasTarjeta() > 0) {
+                        <span> | </span><strong>Tarjeta: $ {{ ventasTarjeta() | number:'1.2-2' }}</strong>
+                    }
+                </div>
+                <span class="electronic-hint">(En cuentas bancarias / billeteras digitales. No suman al cajón físico de efectivo).</span>
                 @if (ventasTransferencia() > 0) {
-                    <strong>Transferencia: $ {{ ventasTransferencia() | number:'1.2-2' }}</strong>
+                    <label class="conciliacion-check-label" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; cursor: pointer; font-size: 0.85rem; font-weight: 500;">
+                        <input type="checkbox" [ngModel]="transferenciasVerificadas()" (ngModelChange)="transferenciasVerificadas.set($event)" [disabled]="isClosing()">
+                        <span>Comprobantes de transferencia verificados en app bancaria / Nequi / Daviplata</span>
+                    </label>
                 }
-                @if (ventasTarjeta() > 0) {
-                    <span> | </span><strong>Tarjeta: $ {{ ventasTarjeta() | number:'1.2-2' }}</strong>
-                }
-                <span class="electronic-hint">(En bancos / no suman al cajón físico. Total ventas turno: $ {{ totalVentas() | number:'1.2-2' }})</span>
             </div>
         </div>
         }

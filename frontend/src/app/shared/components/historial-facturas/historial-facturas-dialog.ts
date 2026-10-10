@@ -207,29 +207,47 @@ export class HistorialFacturasDialogComponent implements OnInit {
     });
   }
 
-  eliminarFactura(factura: any): void {
-    const confirmar = confirm(
-      `¿Estás seguro de anular y eliminar la factura #FAC-${factura.id_venta}? Esta acción removerá el cobro del turno de caja y desvinculará el pedido.`
-    );
-    if (!confirmar) return;
+  anularFactura(factura: any): void {
+    if (factura.estado === 'anulada') {
+      this.snackBar.open(`La factura #FAC-${factura.id_venta} ya se encuentra anulada.`, 'Entendido', {
+        duration: 3000,
+      });
+      return;
+    }
 
-    this.facturacionApi.eliminarFactura(factura.id_venta).subscribe({
+    const motivo = prompt(
+      `Ingresa el motivo justificado de anulación para la factura #FAC-${factura.id_venta}:`,
+      'Error en método de pago o digitación',
+    );
+    if (motivo === null) return;
+    if (!motivo.trim()) {
+      this.snackBar.open('El motivo de anulación es obligatorio para auditoría contable.', 'Cerrar', {
+        duration: 3000,
+      });
+      return;
+    }
+
+    this.facturacionApi.anularFactura(factura.id_venta, motivo.trim()).subscribe({
       next: (res) => {
         this.snackBar.open(
-          res.mensaje || `Factura #FAC-${factura.id_venta} eliminada exitosamente.`,
+          res.mensaje || `Factura #FAC-${factura.id_venta} anulada exitosamente.`,
           'OK',
           { duration: 3500 }
         );
-        this.facturas.update((list) => list.filter((f) => f.id_venta !== factura.id_venta));
+        this.cargarFacturas();
         if (this.facturaEditando()?.id_venta === factura.id_venta) {
           this.facturaEditando.set(null);
         }
       },
       error: (err) => {
-        const msg = err.error?.message || 'Error al eliminar la factura.';
+        const msg = err.error?.message || 'Error al anular la factura.';
         this.snackBar.open(msg, 'Cerrar', { duration: 4000 });
       },
     });
+  }
+
+  eliminarFactura(factura: any): void {
+    this.anularFactura(factura);
   }
 
   obtenerResumenMediosPago(pagos: any[]): string {

@@ -74,6 +74,8 @@ describe('SidebarComponent', () => {
       '/caja',
       '/catalogo',
       '/usuarios',
+      '/clientes',
+      '/historial',
       '/reportes',
     ]);
   });

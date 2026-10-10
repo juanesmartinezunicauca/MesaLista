@@ -148,6 +148,55 @@ describe('CajaService', () => {
       expect(estado.resumen?.efectivo_esperado).toBe(135000);
       expect(estado.movimientos.length).toBe(3);
     });
+
+    it('debe excluir facturas anuladas del cálculo de ventas y efectivo esperado', async () => {
+      prisma.caja.findFirst.mockResolvedValue({
+        id_caja: 10,
+        fecha_apertura: new Date(),
+        valor_inicial: 50000,
+        usuarioApertura: { nombre: 'Carlos' },
+        facturas: [
+          {
+            id_venta: 1,
+            estado: 'emitida',
+            valor_total: 40000,
+            propina: 0,
+            fecha_hora: new Date(),
+            id_mesa: 1,
+            mesa: { numero: 1 },
+            usuario: { nombre: 'Mesero' },
+            pagos: [{ monto: 40000, medioPago: { nombre: 'Efectivo' } }],
+          },
+          {
+            id_venta: 2,
+            estado: 'anulada',
+            motivo_anulacion: 'Error en cobro',
+            valor_total: 25000,
+            propina: 0,
+            fecha_hora: new Date(),
+            id_mesa: 2,
+            mesa: { numero: 2 },
+            usuario: { nombre: 'Mesero' },
+            pagos: [{ monto: 25000, medioPago: { nombre: 'Efectivo' } }],
+          },
+        ],
+        gastos: [],
+      });
+
+      const estado = await service.obtenerEstadoActual();
+
+      expect(estado.abierta).toBe(true);
+      expect(estado.resumen?.total_ventas).toBe(40000);
+      expect(estado.resumen?.ventas_efectivo).toBe(40000);
+      expect(estado.resumen?.total_transacciones).toBe(1);
+      expect(estado.resumen?.total_facturas_anuladas).toBe(1);
+      // Base 50.000 + Venta válida 40.000 (factura anulada NO se suma) = 90.000
+      expect(estado.resumen?.efectivo_esperado).toBe(90000);
+      // El movimiento anulado debe reportar monto 0
+      const movAnulado = estado.movimientos.find((m) => m.id === 'factura-2');
+      expect(movAnulado?.tipo).toBe('Anulada');
+      expect(movAnulado?.monto).toBe(0);
+    });
   });
 
   describe('registrarGasto', () => {
@@ -218,6 +267,33 @@ describe('CajaService', () => {
       expect(cierre.valor_final_fisico).toBe(98000);
       expect(cierre.diferencia).toBe(-2000);
       expect(cierre.tipo_cuadre).toBe('faltante');
+    });
+
+    it('debe registrar tipo_cuadre exacto cuando el físico coincide con el teórico', async () => {
+      prisma.caja.findFirst.mockResolvedValue({
+        id_caja: 5,
+        fecha_apertura: new Date(),
+        valor_inicial: 100000,
+        usuarioApertura: { nombre: 'Admin' },
+        facturas: [],
+        gastos: [],
+      });
+
+      prisma.caja.update.mockResolvedValue({
+        id_caja: 5,
+        fecha_apertura: new Date(),
+        fecha_cierre: new Date(),
+        valor_inicial: 100000,
+        usuarioCierre: { nombre: 'Admin' },
+      });
+
+      const cierre = await service.cerrarCaja({ valor_final_fisico: 100000 }, 1);
+
+      expect(cierre.exito).toBe(true);
+      expect(cierre.valor_final_teorico).toBe(100000);
+      expect(cierre.valor_final_fisico).toBe(100000);
+      expect(cierre.diferencia).toBe(0);
+      expect(cierre.tipo_cuadre).toBe('exacto');
     });
 
     it('debe rechazar el cierre si hay pedidos abiertos o sin facturar', async () => {

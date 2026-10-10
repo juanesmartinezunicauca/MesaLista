@@ -1,0 +1,408 @@
+<div class="historial-container">
+  <!-- Encabezado de la Sección -->
+  <header class="page-header">
+    <div class="header-titles">
+      <div class="title-row">
+        <mat-icon class="header-icon">manage_history</mat-icon>
+        <h1 class="page-title">Historial del Sistema</h1>
+      </div>
+      <p class="page-subtitle">
+        Auditoría unificada de turnos de caja, facturas electrónicas/POS, comandas de mesas y entregas a domicilio.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <button
+        type="button"
+        mat-stroked-button
+        class="btn-reload"
+        (click)="cargarDatosTab(tabActiva())"
+        [disabled]="cargando()"
+      >
+        <mat-icon [class.spinning]="cargando()">sync</mat-icon>
+        <span>Actualizar</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Pestañas de Navegación del Módulo -->
+  <nav class="custom-tabs-nav">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="tabActiva() === 'caja'"
+      (click)="cambiarTab('caja')"
+    >
+      <mat-icon>point_of_sale</mat-icon>
+      <span>Turnos de Caja</span>
+      <span class="tab-badge">{{ turnosCaja().length }}</span>
+    </button>
+
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="tabActiva() === 'facturas'"
+      (click)="cambiarTab('facturas')"
+    >
+      <mat-icon>receipt_long</mat-icon>
+      <span>Facturas de Venta</span>
+      <span class="tab-badge">{{ facturas().length }}</span>
+    </button>
+
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="tabActiva() === 'pedidos'"
+      (click)="cambiarTab('pedidos')"
+    >
+      <mat-icon>table_restaurant</mat-icon>
+      <span>Pedidos de Salón</span>
+      <span class="tab-badge">{{ pedidosSalon().length }}</span>
+    </button>
+
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="tabActiva() === 'domicilios'"
+      (click)="cambiarTab('domicilios')"
+    >
+      <mat-icon>delivery_dining</mat-icon>
+      <span>Domicilios</span>
+      <span class="tab-badge">{{ domicilios().length }}</span>
+    </button>
+  </nav>
+
+  <!-- Barra de Filtro y Búsqueda -->
+  <section class="filters-card">
+    <div class="search-box">
+      <mat-icon class="search-icon">search</mat-icon>
+      <input
+        type="text"
+        [placeholder]="
+          tabActiva() === 'caja' ? 'Buscar por Turno # o Cajero...' :
+          tabActiva() === 'facturas' ? 'Buscar por Factura #, Mesa, Cliente o Medio de Pago...' :
+          tabActiva() === 'pedidos' ? 'Buscar por Pedido #, Mesa, Mesero o Producto...' :
+          'Buscar por Domicilio #, Cliente, Teléfono o Dirección...'
+        "
+        [ngModel]="busqueda()"
+        (ngModelChange)="busqueda.set($event)"
+      />
+      @if (busqueda()) {
+        <button type="button" class="btn-clear" (click)="busqueda.set('')">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </div>
+  </section>
+
+  <!-- Loading State -->
+  @if (cargando()) {
+    <div class="loading-state">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Cargando registros históricos...</p>
+    </div>
+  } @else {
+
+    <!-- ============================================================== -->
+    <!-- TAB 1: TURNOS DE CAJA                                          -->
+    <!-- ============================================================== -->
+    @if (tabActiva() === 'caja') {
+      @if (turnosCajaFiltrados().length === 0) {
+        <div class="empty-state">
+          <mat-icon class="empty-icon">point_of_sale</mat-icon>
+          <h3>No hay turnos cerrados registrados</h3>
+          <p>Los turnos de caja completados aparecerán aquí con su respectivo arqueo y descuadre.</p>
+        </div>
+      } @else {
+        <div class="table-responsive">
+          <table class="historial-table">
+            <thead>
+              <tr>
+                <th>Turno #</th>
+                <th>Apertura / Cierre</th>
+                <th>Cajero Cierre</th>
+                <th>Base Inicial</th>
+                <th>Ventas Efectivo</th>
+                <th>Transferencias (Bancos)</th>
+                <th>Gastos Turno</th>
+                <th>Físico Contado</th>
+                <th>Diferencia</th>
+                <th>Movimientos</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (turno of turnosCajaFiltrados(); track turno.id_caja) {
+                <tr>
+                  <td>
+                    <span class="badge-code">CJA-#{{ turno.id_caja }}</span>
+                  </td>
+                  <td>
+                    <div class="fechas-col">
+                      <span><strong>Abre:</strong> {{ turno.fecha_apertura | date:'dd/MM hh:mm a' }}</span>
+                      <span class="text-muted"><strong>Cierra:</strong> {{ turno.fecha_cierre | date:'dd/MM hh:mm a' }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="user-chip">
+                      <mat-icon>person</mat-icon>
+                      <span>{{ turno.usuarioCierre?.nombre || turno.usuarioApertura?.nombre || 'Cajero' }}</span>
+                    </div>
+                  </td>
+                  <td class="font-mono">${{ turno.valor_inicial | number:'1.0-0' }}</td>
+                  <td class="font-mono text-success font-bold">${{ (turno.ventas_efectivo || 0) | number:'1.0-0' }}</td>
+                  <td>
+                    <span class="pago-tag pago-transfer font-mono font-bold">
+                      ${{ (turno.ventas_transferencia || 0) | number:'1.0-0' }}
+                    </span>
+                  </td>
+                  <td class="font-mono text-danger">-${{ (turno.total_gastos || 0) | number:'1.0-0' }}</td>
+                  <td class="font-mono font-bold font-lg">${{ (turno.valor_final_fisico || 0) | number:'1.0-0' }}</td>
+                  <td>
+                    @if (turno.diferencia === 0) {
+                      <span class="cuadre-tag cuadre-exacto">
+                        <mat-icon>check_circle</mat-icon> Exacto ($0)
+                      </span>
+                    } @else if (turno.diferencia > 0) {
+                      <span class="cuadre-tag cuadre-sobrante">
+                        <mat-icon>arrow_upward</mat-icon> +${{ turno.diferencia | number:'1.0-0' }}
+                      </span>
+                    } @else {
+                      <span class="cuadre-tag cuadre-faltante">
+                        <mat-icon>arrow_downward</mat-icon> -${{ (-turno.diferencia) | number:'1.0-0' }}
+                      </span>
+                    }
+                  </td>
+                  <td>
+                    <span class="count-pill">
+                      {{ turno.facturas_validas ?? turno._count?.facturas ?? 0 }} facturas
+                      @if (turno.facturas_anuladas && turno.facturas_anuladas > 0) {
+                        <span class="text-anuladas">({{ turno.facturas_anuladas }} anuladas)</span>
+                      }
+                      · {{ turno._count?.gastos || 0 }} gastos
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+
+    <!-- ============================================================== -->
+    <!-- TAB 2: FACTURAS DE VENTA                                       -->
+    <!-- ============================================================== -->
+    @if (tabActiva() === 'facturas') {
+      @if (facturasFiltradas().length === 0) {
+        <div class="empty-state">
+          <mat-icon class="empty-icon">receipt_long</mat-icon>
+          <h3>No hay facturas registradas</h3>
+          <p>Las facturas emitidas por caja para salón y domicilios se listarán aquí.</p>
+        </div>
+      } @else {
+        <div class="table-responsive">
+          <table class="historial-table">
+            <thead>
+              <tr>
+                <th>Factura #</th>
+                <th>Fecha y Hora</th>
+                <th>Estado</th>
+                <th>Origen</th>
+                <th>Cliente / Responsable</th>
+                <th>Medios de Pago</th>
+                <th>Propina</th>
+                <th>Total Cobrado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (fac of facturasFiltradas(); track fac.id_venta) {
+                <tr [class.row-anulada]="fac.estado === 'anulada'">
+                  <td>
+                    <span class="badge-code" [class.badge-code-anulada]="fac.estado === 'anulada'">FAC-#{{ fac.id_venta }}</span>
+                  </td>
+                  <td>{{ fac.fecha_hora | date:'dd/MM/yyyy hh:mm a' }}</td>
+                  <td>
+                    @if (fac.estado === 'anulada') {
+                      <span
+                        class="badge-estado badge-anulada"
+                        [matTooltip]="'Anulada: ' + (fac.motivo_anulacion || 'Sin motivo especificado') + ' (' + (fac.fecha_anulacion | date:'dd/MM/yyyy hh:mm a') + ')'"
+                      >
+                        <mat-icon>cancel</mat-icon> Anulada
+                      </span>
+                    } @else {
+                      <span class="badge-estado badge-emitida">
+                        <mat-icon>check_circle</mat-icon> Emitida
+                      </span>
+                    }
+                  </td>
+                  <td>
+                    @if (fac.mesa) {
+                      <span class="origin-tag tag-mesa">
+                        <mat-icon>table_restaurant</mat-icon> Mesa {{ fac.mesa.numero }}
+                      </span>
+                    } @else {
+                      <span class="origin-tag tag-domicilio">
+                        <mat-icon>delivery_dining</mat-icon> Domicilio
+                      </span>
+                    }
+                  </td>
+                  <td>
+                    <span>{{ fac.cliente?.nombre || fac.usuario?.nombre || 'Cliente General' }}</span>
+                  </td>
+                  <td>
+                    <div class="pagos-tags">
+                      @for (pago of fac.pagos; track pago.id_pago) {
+                        <span class="pago-tag" [class.pago-efectivo]="pago.medioPago?.nombre === 'Efectivo'" [class.pago-transfer]="pago.medioPago?.nombre === 'Transferencia'">
+                          {{ pago.medioPago?.nombre }}: ${{ pago.monto | number:'1.0-0' }}
+                        </span>
+                      }
+                    </div>
+                  </td>
+                  <td class="font-mono text-muted">${{ (fac.propina || 0) | number:'1.0-0' }}</td>
+                  <td class="font-mono font-bold font-lg" [class.total-anulada]="fac.estado === 'anulada'">
+                    ${{ (fac.valor_total || fac.total || 0) | number:'1.0-0' }}
+                  </td>
+                  <td>
+                    @if (fac.estado === 'anulada') {
+                      <span class="motivo-anulacion-hint" [matTooltip]="fac.motivo_anulacion">
+                        {{ fac.motivo_anulacion || 'Anulada' }}
+                      </span>
+                    } @else {
+                      <button
+                        mat-button
+                        class="btn-anular-mini"
+                        (click)="anularFactura(fac)"
+                        matTooltip="Anular formalmente esta factura y corregir el saldo de caja"
+                      >
+                        <mat-icon>block</mat-icon> Anular
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+
+    <!-- ============================================================== -->
+    <!-- TAB 3: PEDIDOS DE SALÓN                                        -->
+    <!-- ============================================================== -->
+    @if (tabActiva() === 'pedidos') {
+      @if (pedidosSalonFiltrados().length === 0) {
+        <div class="empty-state">
+          <mat-icon class="empty-icon">restaurant_menu</mat-icon>
+          <h3>No hay pedidos de salón registrados</h3>
+          <p>Las comandas tomadas en mesas aparecerán detalladas aquí.</p>
+        </div>
+      } @else {
+        <div class="table-responsive">
+          <table class="historial-table">
+            <thead>
+              <tr>
+                <th>Pedido #</th>
+                <th>Mesa</th>
+                <th>Mesero</th>
+                <th>Fecha y Hora</th>
+                <th>Productos / Comanda</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (ped of pedidosSalonFiltrados(); track ped.id_pedido) {
+                <tr>
+                  <td>
+                    <span class="badge-code">PED-#{{ ped.numero_pedido }}</span>
+                  </td>
+                  <td>
+                    <span class="mesa-badge">Mesa {{ ped.mesa?.numero }}</span>
+                  </td>
+                  <td>
+                    <div class="user-chip">
+                      <mat-icon>badge</mat-icon>
+                      <span>{{ ped.usuario?.nombre || 'Mesero' }}</span>
+                    </div>
+                  </td>
+                  <td>{{ ped.fecha_hora | date:'dd/MM/yyyy hh:mm a' }}</td>
+                  <td>
+                    <div class="items-summary">
+                      @for (it of ped.items; track it.id_item) {
+                        <span class="item-tag">
+                          {{ it.cantidad }}x {{ it.producto?.nombre }}
+                          @if (it.ingredientes_removidos) {
+                            <small class="text-sin"> (Sin: {{ it.ingredientes_removidos }})</small>
+                          }
+                        </span>
+                      }
+                    </div>
+                  </td>
+                  <td>
+                    <span class="status-badge" [class.status-enviada]="ped.estado === 'enviada'" [class.status-cerrada]="ped.estado === 'cerrada'" [class.status-cancelada]="ped.estado === 'cancelada'">
+                      {{ ped.estado | uppercase }}
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+
+    <!-- ============================================================== -->
+    <!-- TAB 4: DOMICILIOS                                              -->
+    <!-- ============================================================== -->
+    @if (tabActiva() === 'domicilios') {
+      @if (domiciliosFiltrados().length === 0) {
+        <div class="empty-state">
+          <mat-icon class="empty-icon">moped</mat-icon>
+          <h3>No hay domicilios registrados</h3>
+          <p>Los pedidos a domicilio solicitados aparecerán con su seguimiento aquí.</p>
+        </div>
+      } @else {
+        <div class="table-responsive">
+          <table class="historial-table">
+            <thead>
+              <tr>
+                <th>Domicilio #</th>
+                <th>Fecha y Hora</th>
+                <th>Cliente</th>
+                <th>Teléfono</th>
+                <th>Dirección Popayán</th>
+                <th>Total</th>
+                <th>Método de Pago</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (dom of domiciliosFiltrados(); track dom.id_pedido) {
+                <tr>
+                  <td>
+                    <span class="badge-code">DOM-#{{ dom.numero_pedido }}</span>
+                  </td>
+                  <td>{{ dom.fecha_hora | date:'dd/MM/yyyy hh:mm a' }}</td>
+                  <td class="font-bold">{{ dom.cliente?.nombre }}</td>
+                  <td class="font-mono">{{ dom.cliente?.telefono }}</td>
+                  <td class="max-address">{{ dom.cliente?.direccion }}</td>
+                  <td class="font-mono font-bold">${{ (dom.totalCalculado || dom.factura?.total || 0) | number:'1.0-0' }}</td>
+                  <td>
+                    <span class="pago-tag" [class.pago-transfer]="dom.metodo_pago === 'Transferencia'" [class.pago-efectivo]="dom.metodo_pago === 'Efectivo'">
+                      {{ dom.metodo_pago || 'Efectivo' }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="status-badge status-domicilio" [attr.data-estado]="dom.estado">
+                      {{ dom.estado | uppercase }}
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+  }
+</div>

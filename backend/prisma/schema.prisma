@@ -50,6 +50,11 @@ enum TipoAjuste {
   Arqueo
 }
 
+enum EstadoFactura {
+  emitida
+  anulada
+}
+
 // ──────────────── Modelos ────────────────
 
 model Usuario {
@@ -176,8 +181,11 @@ model Factura {
   valor       Decimal  @db.Decimal(10, 2)
   propina     Decimal  @default(0) @db.Decimal(10, 2)
   valor_total Decimal  @db.Decimal(10, 2)
-  fecha_hora  DateTime @default(now())
-  observacion String?  @db.VarChar(255)
+  fecha_hora       DateTime      @default(now())
+  observacion      String?       @db.VarChar(255)
+  estado           EstadoFactura @default(emitida)
+  fecha_anulacion  DateTime?
+  motivo_anulacion String?       @db.VarChar(255)
 
   mesa    Mesa?    @relation(fields: [id_mesa], references: [id_mesa])
   cliente Cliente? @relation(fields: [id_cliente], references: [id_cliente])

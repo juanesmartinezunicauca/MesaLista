@@ -15,7 +15,7 @@ import {
 import { RolUsuario } from '@prisma/client';
 import { CurrentUser, Roles } from '../../common/decorators';
 import { JwtAuthGuard, RolesGuard } from '../../common/guards';
-import { CreateFacturaDto, UpdateFacturaDto } from './dto';
+import { AnularFacturaDto, CreateFacturaDto, UpdateFacturaDto } from './dto';
 import { FacturacionService } from './facturacion.service';
 
 @Controller('facturas')
@@ -76,13 +76,35 @@ export class FacturacionController {
   }
 
   /**
+   * PATCH /api/v1/facturas/:id/anular
+   * Anula formalmente una factura registrada por error de cobro, devolución o ajuste.
+   * Preserva el consecutivo de auditoría y descuenta su valor del arqueo de caja.
+   */
+  @Patch(':id/anular')
+  @Roles(RolUsuario.administrador, RolUsuario.cajero)
+  anular(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AnularFacturaDto,
+    @CurrentUser('id_usuario') id_usuario: number,
+  ) {
+    return this.facturacionService.anularFactura(id, dto.motivo, id_usuario);
+  }
+
+  /**
    * DELETE /api/v1/facturas/:id
    * Elimina / anula una factura registrada y restituye el saldo en el turno de caja.
    */
   @Delete(':id')
   @Roles(RolUsuario.administrador, RolUsuario.cajero)
-  eliminar(@Param('id', ParseIntPipe) id: number) {
-    return this.facturacionService.eliminarFactura(id);
+  eliminar(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('id_usuario') id_usuario: number,
+  ) {
+    return this.facturacionService.anularFactura(
+      id,
+      'Anulación solicitada por terminal de cobro',
+      id_usuario || 1,
+    );
   }
 }
 
