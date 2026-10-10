@@ -187,8 +187,16 @@ describe('VistaClienteComponent', () => {
     expect(component.vistaActiva()).toBe('mis-pedidos');
   });
 
-  it('debe navegar a la vista del carrito al iniciar checkout o abrir carrito', () => {
+  it('debe navegar a la vista del carrito al iniciar checkout o abrir carrito si está autenticado', () => {
+    mockIsAuthenticatedSignal.set(true);
     component.iniciarCheckout();
     expect(router.navigate).toHaveBeenCalledWith(['/cliente/carrito']);
+  });
+
+  it('debe solicitar autenticación al abrir carrito si no está autenticado', () => {
+    mockIsAuthenticatedSignal.set(false);
+    component.abrirCarrito();
+    expect(component.mostrarModalAuth()).toBe(true);
+    expect(snackBar.open).toHaveBeenCalled();
   });
 });

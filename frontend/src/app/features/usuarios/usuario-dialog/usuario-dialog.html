@@ -25,10 +25,35 @@
         </div>
       }
 
+      <!-- Banner informativo sobre Tercerización de Autenticación con Google -->
+      <div class="oauth-delegation-info">
+        <mat-icon>security</mat-icon>
+        <div class="oauth-info-text">
+          <strong>Autenticación Tercerizada con Google (OAuth 2.0)</strong>
+          <p>
+            Al registrar el correo de Google del colaborador, su perfil queda pre-autorizado con el rol indicado. La autenticación, contraseñas y 2FA son delegadas 100% a Google.
+          </p>
+        </div>
+      </div>
+
       <div class="form-content">
+        <!-- Correo Electrónico (Google OAuth) -->
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Correo Electrónico (Google / Gmail) *</mat-label>
+          <input matInput type="email" formControlName="email" placeholder="Ej. empleado@gmail.com">
+          <mat-icon matPrefix>mail</mat-icon>
+          <mat-hint>El colaborador iniciará sesión con su cuenta de Google mediante este correo.</mat-hint>
+          @if (tieneError('email', 'required')) {
+            <mat-error>El correo electrónico de Google es obligatorio.</mat-error>
+          }
+          @if (tieneError('email', 'email')) {
+            <mat-error>Ingresa un formato de correo electrónico válido.</mat-error>
+          }
+        </mat-form-field>
+
         <!-- Nombre Completo -->
         <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Nombre Completo</mat-label>
+          <mat-label>Nombre Completo *</mat-label>
           <input matInput type="text" formControlName="nombre" placeholder="Ej. Carlos Mendoza">
           <mat-icon matPrefix>badge</mat-icon>
           @if (tieneError('nombre', 'required')) {
@@ -39,37 +64,9 @@
           }
         </mat-form-field>
 
-        <!-- Nombre de Usuario -->
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Nombre de Usuario (Login)</mat-label>
-          <input matInput type="text" formControlName="usuario" placeholder="Ej. cmendoza">
-          <mat-icon matPrefix>alternate_email</mat-icon>
-          <mat-hint>Solo letras, números, puntos, guiones o guión bajo.</mat-hint>
-          @if (tieneError('usuario', 'required')) {
-            <mat-error>El usuario de acceso es obligatorio.</mat-error>
-          }
-          @if (tieneError('usuario', 'minlength')) {
-            <mat-error>Debe tener mínimo 3 caracteres.</mat-error>
-          }
-          @if (tieneError('usuario', 'pattern')) {
-            <mat-error>Formato no válido (sin espacios ni caracteres especiales).</mat-error>
-          }
-        </mat-form-field>
-
-        <!-- Correo Electrónico (Google OAuth) -->
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Correo Electrónico (Google / Gmail)</mat-label>
-          <input matInput type="email" formControlName="email" placeholder="Ej. empleado@gmail.com">
-          <mat-icon matPrefix>mail</mat-icon>
-          <mat-hint>Vincula su cuenta para que pueda ingresar con Google OAuth directamente.</mat-hint>
-          @if (tieneError('email', 'email')) {
-            <mat-error>Ingresa un formato de correo electrónico válido.</mat-error>
-          }
-        </mat-form-field>
-
         <!-- Rol / Perfil -->
         <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Rol / Perfil Operativo</mat-label>
+          <mat-label>Rol / Perfil Operativo *</mat-label>
           <mat-select formControlName="rol">
             <mat-select-trigger>
               @if (getRolSeleccionado(); as rol) {
@@ -94,15 +91,29 @@
           <mat-icon matPrefix>supervised_user_circle</mat-icon>
         </mat-form-field>
 
-        <!-- Contraseña -->
+        <!-- Nombre de Usuario (Opcional) -->
         <mat-form-field appearance="outline" class="w-full">
-          <mat-label>{{ esEdicion() ? 'Nueva Contraseña (Opcional)' : 'Contraseña de Acceso' }}</mat-label>
+          <mat-label>Nombre de Usuario (Opcional)</mat-label>
+          <input matInput type="text" formControlName="usuario" placeholder="Ej. cmendoza">
+          <mat-icon matPrefix>alternate_email</mat-icon>
+          <mat-hint>Opcional: Si se deja en blanco se genera automáticamente del correo.</mat-hint>
+          @if (tieneError('usuario', 'minlength')) {
+            <mat-error>Debe tener mínimo 3 caracteres.</mat-error>
+          }
+          @if (tieneError('usuario', 'pattern')) {
+            <mat-error>Formato no válido (sin espacios ni caracteres especiales).</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Contraseña Local (Opcional) -->
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>{{ esEdicion() ? 'Nueva Contraseña Local (Opcional)' : 'Contraseña Local (Opcional - Tercerizado con Google)' }}</mat-label>
           <input
             matInput
             type="password"
             [type]="mostrarPassword() ? 'text' : 'password'"
             formControlName="password"
-            placeholder="Mínimo 6 caracteres"
+            placeholder="Dejar vacío para delegar autenticación exclusivamente a Google"
           >
           <mat-icon matPrefix>lock</mat-icon>
           <button
@@ -114,12 +125,7 @@
           >
             <mat-icon>{{ mostrarPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
           </button>
-          @if (esEdicion()) {
-            <mat-hint>Dejar vacío si no deseas cambiar la contraseña actual.</mat-hint>
-          }
-          @if (tieneError('password', 'required')) {
-            <mat-error>La contraseña es obligatoria.</mat-error>
-          }
+          <mat-hint>Recomendado: Dejar en blanco si el colaborador usará acceso con Google.</mat-hint>
           @if (tieneError('password', 'minlength')) {
             <mat-error>La contraseña debe tener al menos 8 caracteres.</mat-error>
           }

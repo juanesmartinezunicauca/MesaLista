@@ -108,11 +108,18 @@ export class FacturacionService {
     const valorTotal = subtotal + propina;
 
     // 3. Validar que la suma de los pagos cubra el total
-    const totalPagado = dto.pagos.reduce((acc, p) => acc + p.monto, 0);
+    let totalPagado = Math.round((dto.pagos.reduce((acc, p) => acc + p.monto, 0) + Number.EPSILON) * 100) / 100;
     if (totalPagado < valorTotal) {
       throw new BadRequestException(
         `El monto pagado ($${totalPagado.toLocaleString()}) no cubre el valor total ($${valorTotal.toLocaleString()}).`,
       );
+    }
+
+    // Regla contable: Si el pago fue en efectivo con billete de mayor denominación (se dio cambio/vueltos físico),
+    // el monto a asentar contablemente en el pago de caja es el valor total exacto de la factura.
+    if (totalPagado > valorTotal && dto.pagos.length === 1 && dto.pagos[0].medio_pago.toLowerCase().includes('efectivo')) {
+      dto.pagos[0].monto = valorTotal;
+      totalPagado = valorTotal;
     }
 
     // 4. Transacción atómica: Factura + Pagos + Actualización de pedidos y mesa

@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EstadoCaja, EstadoPedido, RolUsuario, TipoPedido } from '@prisma/client';
+import { EstadoCaja, EstadoFactura, EstadoPedido, RolUsuario, TipoPedido } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CambiarEstadoDomicilioDto, CreateDomicilioDto } from './dto';
 
@@ -138,11 +138,22 @@ export class DomiciliosService {
 
     // 2. Transacción atómica: cliente, stock, consecutivo y comanda
     return this.prisma.$transaction(async (tx) => {
-      // 2.1 Buscar o registrar cliente por teléfono
-      const telefonoLimpio = clienteDto.telefono.trim();
-      let cliente = await tx.cliente.findFirst({
-        where: { telefono: telefonoLimpio },
-      });
+      // 2.1 Buscar o registrar cliente por email (identificador principal) o teléfono
+      const emailLimpio = clienteDto.email?.trim() ? clienteDto.email.trim().toLowerCase() : undefined;
+      const telefonoLimpio = clienteDto.telefono?.trim();
+
+      let cliente = null;
+      if (emailLimpio) {
+        cliente = await tx.cliente.findUnique({
+          where: { email: emailLimpio },
+        });
+      }
+
+      if (!cliente && telefonoLimpio) {
+        cliente = await tx.cliente.findFirst({
+          where: { telefono: telefonoLimpio },
+        });
+      }
 
       if (cliente) {
         // Actualizar datos si cambiaron de nombre o dirección
@@ -151,14 +162,16 @@ export class DomiciliosService {
           data: {
             nombre: clienteDto.nombre.trim(),
             direccion: clienteDto.direccion.trim(),
+            ...(emailLimpio ? { email: emailLimpio } : {}),
           },
         });
       } else {
         cliente = await tx.cliente.create({
           data: {
             nombre: clienteDto.nombre.trim(),
-            telefono: telefonoLimpio,
+            telefono: telefonoLimpio || '',
             direccion: clienteDto.direccion.trim(),
+            email: emailLimpio || null,
           },
         });
       }
@@ -442,6 +455,12 @@ export class DomiciliosService {
     }
 
     if (dto.estado === 'Entregado' || dto.estado === 'Cerrar') {
+      if (!pedido.id_factura) {
+        throw new BadRequestException(
+          `No se puede marcar el pedido #DOM-${pedido.numero_pedido} como 'Entregado': Debe ser cobrado y facturado en caja antes de cerrarlo.`,
+        );
+      }
+
       const cerrado = await this.prisma.pedido.update({
         where: { id_pedido: id },
         data: {
@@ -513,7 +532,19 @@ export class DomiciliosService {
         }
       }
 
-      // 2. Marcar comanda como cancelada
+      // 2. Si el pedido ya contaba con factura en caja, anularla formalmente para no distorsionar el arqueo
+      if (pedido.id_factura) {
+        await tx.factura.update({
+          where: { id_venta: pedido.id_factura },
+          data: {
+            estado: EstadoFactura.anulada,
+            fecha_anulacion: new Date(),
+            motivo_anulacion: `Cancelación de pedido a domicilio #${pedido.numero_pedido}: ${motivo || 'Pedido cancelado'}`,
+          },
+        });
+      }
+
+      // 3. Marcar comanda como cancelada
       const notaCancelado = motivo ? `[CANCELADO: ${motivo}]` : '[CANCELADO]';
       const observacionLimpia = (pedido.observacion || '')
         .replace(/\[PENDIENTE\]/gi, '')

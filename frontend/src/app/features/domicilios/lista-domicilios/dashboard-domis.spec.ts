@@ -182,4 +182,22 @@ describe('DashboardDomisComponent', () => {
       }),
     );
   });
+
+  it('debe advertir y no cerrar el domicilio si no cuenta con factura de cobro', () => {
+    const pedidoSinFactura = { ...mockDomicilios[1], id_factura: undefined };
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+    component.cerrarDomicilio(pedidoSinFactura as any);
+
+    expect(fakeDomiciliosApi.cambiarEstado).not.toHaveBeenCalledWith(pedidoSinFactura.id_pedido, 'Entregado');
+  });
+
+  it('debe permitir cerrar el domicilio si ya cuenta con factura en caja', () => {
+    const pedidoFacturado = { ...mockDomicilios[1], id_factura: 10 };
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    component.cerrarDomicilio(pedidoFacturado as any);
+
+    expect(fakeDomiciliosApi.cambiarEstado).toHaveBeenCalledWith(pedidoFacturado.id_pedido, 'Entregado');
+  });
 });

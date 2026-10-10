@@ -62,12 +62,13 @@ describe('UsuariosService', () => {
       const resultado = await service.crear({
         nombre: 'Carlos Mesero',
         usuario: 'cmesero',
+        email: 'cmesero@unicauca.edu.co',
         password: 'passwordSegura123',
         rol: RolUsuario.mesero,
       });
 
       expect(prisma.usuario.findUnique).toHaveBeenCalledWith({
-        where: { usuario: 'cmesero' },
+        where: { email: 'cmesero@unicauca.edu.co' },
       });
       expect(prisma.usuario.create).toHaveBeenCalled();
       const createArgs = prisma.usuario.create.mock.calls[0][0];
@@ -85,17 +86,43 @@ describe('UsuariosService', () => {
       expect(resultado).toEqual(mockCreado);
     });
 
-    it('debe lanzar ConflictException si el nombre de usuario ya existe', async () => {
+    it('debe crear un empleado pre-autorizado para Google OAuth sin contraseña (passwordHash en null)', async () => {
+      prisma.usuario.findUnique.mockResolvedValue(null);
+
+      const mockCreado = {
+        id_usuario: 2,
+        nombre: 'Ana Cajera',
+        usuario: 'anacajera',
+        email: 'ana@unicauca.edu.co',
+        rol: RolUsuario.cajero,
+        estado: EstadoUsuario.activo,
+      };
+
+      prisma.usuario.create.mockResolvedValue(mockCreado);
+
+      const resultado = await service.crear({
+        nombre: 'Ana Cajera',
+        email: 'ana@unicauca.edu.co',
+        rol: RolUsuario.cajero,
+      });
+
+      expect(prisma.usuario.create).toHaveBeenCalled();
+      const createArgs = prisma.usuario.create.mock.calls[0][0];
+      expect(createArgs.data.email).toBe('ana@unicauca.edu.co');
+      expect(createArgs.data.passwordHash).toBeNull();
+      expect(resultado).toEqual(mockCreado);
+    });
+
+    it('debe lanzar ConflictException si el correo electrónico ya existe', async () => {
       prisma.usuario.findUnique.mockResolvedValue({
         id_usuario: 2,
-        usuario: 'yaexiste',
+        email: 'yaexiste@unicauca.edu.co',
       });
 
       await expect(
         service.crear({
           nombre: 'Juan Admin',
-          usuario: 'yaexiste',
-          password: 'password123',
+          email: 'yaexiste@unicauca.edu.co',
           rol: RolUsuario.administrador,
         }),
       ).rejects.toThrow(ConflictException);

@@ -10,26 +10,26 @@ export class CreateUsuarioDto {
   @Length(2, 100, { message: 'El nombre debe tener entre 2 y 100 caracteres' })
   nombre!: string;
 
+  @IsOptional()
   @IsString({ message: 'El usuario debe ser una cadena de texto' })
-  @IsNotEmpty({ message: 'El usuario es obligatorio' })
   @Length(3, 50, { message: 'El nombre de usuario debe tener entre 3 y 50 caracteres' })
   @Matches(/^[a-zA-Z0-9._-]+$/, {
     message: 'El nombre de usuario solo puede contener letras, números, puntos, guiones y guiones bajos',
   })
-  usuario!: string;
+  usuario?: string;
 
-  @IsOptional()
+  @IsNotEmpty({ message: 'El correo electrónico es obligatorio para la autenticación delegada con Google OAuth.' })
   @IsEmail({}, { message: 'El correo electrónico no tiene un formato válido' })
   @Length(5, 100, { message: 'El correo electrónico debe tener entre 5 y 100 caracteres' })
-  email?: string;
+  email!: string;
 
+  @IsOptional()
   @IsString({ message: 'La contraseña debe ser una cadena de texto' })
-  @IsNotEmpty({ message: 'La contraseña es obligatoria' })
   @Length(8, 100, { message: 'La contraseña debe tener al menos 8 caracteres' })
   @Matches(/^(?=.*[a-zA-Z])(?=.*\d)/, {
     message: 'La contraseña debe contener al menos una letra y un número',
   })
-  password!: string;
+  password?: string;
 
   @IsEnum(RolUsuario, {
     message: 'El rol debe ser: administrador, cajero, mesero, cocina o cliente',

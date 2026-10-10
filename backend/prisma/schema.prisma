@@ -89,10 +89,11 @@ model Mesa {
 }
 
 model Cliente {
-  id_cliente Int    @id @default(autoincrement())
-  nombre     String @db.VarChar(100)
-  telefono   String @db.VarChar(20)
-  direccion  String @db.VarChar(255)
+  id_cliente Int     @id @default(autoincrement())
+  nombre     String  @db.VarChar(100)
+  email      String? @unique @db.VarChar(100)
+  telefono   String? @db.VarChar(20)
+  direccion  String? @db.VarChar(255)
 
   pedidos  Pedido[]
   facturas Factura[]

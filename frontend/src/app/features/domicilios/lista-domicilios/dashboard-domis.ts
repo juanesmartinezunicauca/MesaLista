@@ -425,6 +425,22 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
 
   // 5. Cerrar pedido y enviarlo a historial
   cerrarDomicilio(pedido: Domicilio): void {
+    if (!pedido.id_factura) {
+      const cobrar = confirm(
+        `El pedido #${pedido.numero_pedido} aún no ha sido facturado ni cobrado en caja.\n\n¿Deseas registrar su factura de cobro en este momento para poder marcarlo como entregado?`
+      );
+      if (cobrar) {
+        this.facturarDomicilio(pedido);
+      } else {
+        this.snackBar.open(
+          'Por control contable, todo domicilio debe ser facturado en caja antes de cerrarse.',
+          'Entendido',
+          { duration: 4000 }
+        );
+      }
+      return;
+    }
+
     const confirmar = confirm(
       `¿Confirmar que el pedido #${pedido.numero_pedido} fue entregado? Se cerrará y pasará al Historial.`
     );
