@@ -65,4 +65,19 @@ export class PedidosApiService {
   cambiarEstado(id: number, estado: string): Observable<any> {
     return this.http.patch<any>(`${this.apiUrl}/${id}/estado`, { estado });
   }
+
+  /**
+   * Actualiza datos de un pedido desde historial (cajero / admin)
+   */
+  actualizarPedido(id: number, payload: { observacion?: string; id_mesa?: number; estado?: string }): Observable<any> {
+    return this.http.patch<any>(`${this.apiUrl}/${id}`, payload);
+  }
+
+  /**
+   * Elimina un pedido histórico (super admin)
+   */
+  eliminarPedido(id: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/${id}`);
+  }
 }
+

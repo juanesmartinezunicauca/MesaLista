@@ -14,7 +14,6 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { NewDeliveryDialogComponent } from '../nuevo-domicilio/nuevo-domi-modal';
 import { DetalleDomiDialogComponent } from '../detalle-domicilio/detalle-domi-dialog';
 import { FacturaDialogComponent } from '../../mesas/dialogs/factura-dialog';
-import { HistorialFacturasDialogComponent } from '../../../shared/components/historial-facturas/historial-facturas-dialog';
 import { DomiciliosApiService } from '../../../core/services/api/domicilios-api.service';
 import { FacturacionApiService } from '../../../core/services/api/facturacion-api.service';
 import { Domicilio, EstadoServicioDomicilio } from '../../../core/models';
@@ -54,7 +53,7 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
 
   private pollingTimer: any = null;
 
-  // Métricas y KPIs de la jornada
+  // Métricas y KPIs de la jornada activa
   kpis = computed(() => {
     const list = this.pedidos();
     return {
@@ -62,10 +61,6 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
       pendientes: list.filter((p) => p.etapaOperativa === 'Pendiente').length,
       enPreparacion: list.filter((p) => p.etapaOperativa === 'En Preparación').length,
       enReparto: list.filter((p) => p.etapaOperativa === 'En Reparto').length,
-      entregados: list.filter((p) => p.etapaOperativa === 'Entregado').length,
-      historial: list.filter(
-        (p) => p.etapaOperativa === 'Entregado' || p.etapaOperativa === 'Cancelado'
-      ).length,
     };
   });
 
@@ -77,10 +72,6 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
 
     if (filtro === 'Pendientes') {
       lista = lista.filter((p) => p.etapaOperativa === 'Pendiente');
-    } else if (filtro === 'Historial') {
-      lista = lista.filter(
-        (p) => p.etapaOperativa === 'Entregado' || p.etapaOperativa === 'Cancelado'
-      );
     } else if (filtro !== 'Todos') {
       lista = lista.filter((p) => p.etapaOperativa === filtro);
     }
@@ -127,7 +118,11 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
     if (mostrarSpinner) this.cargando.set(true);
     this.domiciliosApi.obtenerTodos().subscribe({
       next: (data) => {
-        this.pedidos.set(data);
+        // En el panel operativo solo se mantienen los pedidos activos; los entregados/cancelados van a Historial
+        const activos = (data || []).filter(
+          (p) => p.etapaOperativa !== 'Entregado' && p.etapaOperativa !== 'Cancelado'
+        );
+        this.pedidos.set(activos);
         this.cargando.set(false);
       },
       error: () => {
@@ -451,9 +446,9 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
 
     this.procesandoId.set(pedido.id_pedido);
     this.domiciliosApi.cambiarEstado(pedido.id_pedido, 'Entregado').subscribe({
-      next: (actualizado) => {
+      next: () => {
         this.procesandoId.set(null);
-        this.actualizarPedidoEnLista(actualizado);
+        this.removerPedidoDeLista(pedido.id_pedido);
         this.snackBar.open(
           `Pedido #${pedido.numero_pedido} entregado y archivado en Historial.`,
           'OK',
@@ -465,14 +460,6 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
         const msg = err.error?.message || 'Error al cerrar el pedido.';
         this.snackBar.open(msg, 'Cerrar', { duration: 3000 });
       },
-    });
-  }
-
-  // 6. Abrir Historial de Facturación y edición de facturas
-  abrirHistorialFacturas(): void {
-    this.dialog.open(HistorialFacturasDialogComponent, {
-      width: '840px',
-      maxWidth: '95vw',
     });
   }
 
@@ -526,9 +513,9 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
     this.domiciliosApi
       .cancelar(pedido.id_pedido, 'Cancelado desde panel de domicilios')
       .subscribe({
-        next: (actualizado) => {
+        next: () => {
           this.procesandoId.set(null);
-          this.actualizarPedidoEnLista(actualizado);
+          this.removerPedidoDeLista(pedido.id_pedido);
           this.snackBar.open(
             `Pedido #${pedido.numero_pedido} cancelado e inventario revertido.`,
             'OK',
@@ -549,52 +536,10 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
     );
   }
 
-  limpiarHistorial(): void {
-    const confirmar = confirm(
-      '¿Estás seguro de que deseas limpiar todo el historial de domicilios cerrados y cancelados? Esta acción eliminará estos pedidos del listado sin alterar las facturas ni los registros de caja.'
-    );
-    if (!confirmar) return;
-
-    this.cargando.set(true);
-    this.domiciliosApi.limpiarHistorial().subscribe({
-      next: (res) => {
-        this.snackBar.open(
-          res.mensaje || 'Historial de domicilios limpiado exitosamente.',
-          'OK',
-          { duration: 4000 }
-        );
-        this.cargarPedidos();
-      },
-      error: (err) => {
-        this.cargando.set(false);
-        const msg = err.error?.message || 'Error al limpiar el historial.';
-        this.snackBar.open(msg, 'Cerrar', { duration: 4000 });
-      },
-    });
+  private removerPedidoDeLista(id_pedido: number): void {
+    this.pedidos.update((lista) => lista.filter((p) => p.id_pedido !== id_pedido));
   }
 
-  eliminarDelHistorial(pedido: Domicilio): void {
-    const confirmar = confirm(
-      `¿Eliminar el pedido #${pedido.numero_pedido} del historial? (La factura en caja permanecerá intacta).`
-    );
-    if (!confirmar) return;
-
-    this.procesandoId.set(pedido.id_pedido);
-    this.domiciliosApi.eliminar(pedido.id_pedido).subscribe({
-      next: () => {
-        this.procesandoId.set(null);
-        this.snackBar.open(`Pedido #${pedido.numero_pedido} eliminado del historial.`, 'OK', {
-          duration: 3000,
-        });
-        this.pedidos.update((lista) => lista.filter((p) => p.id_pedido !== pedido.id_pedido));
-      },
-      error: (err) => {
-        this.procesandoId.set(null);
-        const msg = err.error?.message || 'Error al eliminar el pedido del historial.';
-        this.snackBar.open(msg, 'Cerrar', { duration: 4000 });
-      },
-    });
-  }
 
   formatearHora(fecha: string | Date): string {
     if (!fecha) return '';

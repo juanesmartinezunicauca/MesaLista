@@ -107,4 +107,23 @@ export class DomiciliosApiService {
   eliminar(id: number): Observable<{ exito: boolean; mensaje: string }> {
     return this.http.delete<{ exito: boolean; mensaje: string }>(`${this.apiUrl}/${id}`);
   }
+
+  /**
+   * Edita datos de un pedido a domicilio desde el historial (cajero / admin)
+   */
+  actualizarDomicilio(
+    id: number,
+    payload: {
+      cliente_nombre?: string;
+      cliente_email?: string;
+      cliente_telefono?: string;
+      cliente_direccion?: string;
+      metodo_pago?: string;
+      observacion?: string;
+      estado?: string;
+    }
+  ): Observable<Domicilio> {
+    return this.http.patch<Domicilio>(`${this.apiUrl}/${id}`, payload);
+  }
 }
+

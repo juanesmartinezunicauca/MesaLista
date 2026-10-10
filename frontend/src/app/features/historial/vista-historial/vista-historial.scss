@@ -529,3 +529,78 @@
   font-size: 0.8rem;
 }
 
+.actions-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.btn-action-edit {
+  color: #2563eb !important;
+  background: #eff6ff;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0 0.55rem;
+  min-width: auto;
+  line-height: 28px;
+  height: 28px;
+  transition: all 0.2s;
+
+  mat-icon {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+  }
+
+  &:hover {
+    background: #dbeafe;
+    color: #1d4ed8 !important;
+  }
+}
+
+.btn-action-delete {
+  color: #dc2626 !important;
+  background: #fef2f2;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0 0.55rem;
+  min-width: auto;
+  line-height: 28px;
+  height: 28px;
+  transition: all 0.2s;
+
+  mat-icon {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+  }
+
+  &:hover {
+    background: #fee2e2;
+    color: #b91c1c !important;
+  }
+}
+
+.badge-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+
+  mat-icon {
+    font-size: 13px;
+    width: 13px;
+    height: 13px;
+    color: #94a3b8;
+  }
+}
+
+

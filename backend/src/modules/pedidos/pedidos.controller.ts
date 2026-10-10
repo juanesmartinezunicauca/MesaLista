@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -18,6 +19,7 @@ import {
   CambiarEstadoPedidoDto,
   CreatePedidoDto,
   QueryPedidoDto,
+  UpdatePedidoDto,
 } from './dto';
 import { PedidosService } from './pedidos.service';
 
@@ -102,4 +104,28 @@ export class PedidosController {
   cancelar(@Param('id', ParseIntPipe) id: number) {
     return this.pedidosService.cancelar(id);
   }
+
+  /**
+   * PATCH /api/v1/pedidos/:id
+   * Edita la información u observación de un pedido desde el historial.
+   */
+  @Patch(':id')
+  @Roles(RolUsuario.administrador, RolUsuario.cajero)
+  actualizar(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdatePedidoDto,
+  ) {
+    return this.pedidosService.actualizar(id, dto);
+  }
+
+  /**
+   * DELETE /api/v1/pedidos/:id
+   * Elimina un pedido histórico. Exclusivo para Super Administrador.
+   */
+  @Delete(':id')
+  @Roles(RolUsuario.administrador)
+  eliminar(@Param('id', ParseIntPipe) id: number) {
+    return this.pedidosService.eliminar(id);
+  }
 }
+

@@ -95,7 +95,7 @@ export class FacturacionController {
    * Elimina / anula una factura registrada y restituye el saldo en el turno de caja.
    */
   @Delete(':id')
-  @Roles(RolUsuario.administrador, RolUsuario.cajero)
+  @Roles(RolUsuario.administrador)
   eliminar(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser('id_usuario') id_usuario: number,

@@ -6,7 +6,11 @@ import {
 } from '@nestjs/common';
 import { EstadoCaja, EstadoFactura, EstadoPedido, RolUsuario, TipoPedido } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { CambiarEstadoDomicilioDto, CreateDomicilioDto } from './dto';
+import {
+  CambiarEstadoDomicilioDto,
+  CreateDomicilioDto,
+  UpdateDomicilioDto,
+} from './dto';
 
 @Injectable()
 export class DomiciliosService {
@@ -603,9 +607,9 @@ export class DomiciliosService {
   }
 
   /**
-   * Elimina un domicilio específico del historial (solo cerrado o cancelado).
+   * Actualiza los datos de un domicilio desde el historial (cajero o administrador).
    */
-  async eliminar(id: number) {
+  async actualizarDomicilio(id: number, dto: UpdateDomicilioDto) {
     const pedido = await this.prisma.pedido.findUnique({
       where: { id_pedido: id },
     });
@@ -614,10 +618,46 @@ export class DomiciliosService {
       throw new NotFoundException(`El pedido a domicilio #${id} no existe.`);
     }
 
-    if (pedido.estado !== EstadoPedido.cerrada && pedido.estado !== EstadoPedido.cancelada) {
-      throw new BadRequestException(
-        `Solo se pueden eliminar pedidos del historial que estén entregados o cancelados.`,
-      );
+    const data: any = {};
+    if (dto.cliente_nombre !== undefined) data.cliente_nombre = dto.cliente_nombre.trim();
+    if (dto.cliente_email !== undefined) data.cliente_email = dto.cliente_email ? dto.cliente_email.trim() : null;
+    if (dto.cliente_telefono !== undefined) data.cliente_telefono = dto.cliente_telefono.trim();
+    if (dto.cliente_direccion !== undefined) data.cliente_direccion = dto.cliente_direccion.trim();
+    if (dto.estado !== undefined) data.estado = dto.estado;
+
+    if (dto.observacion !== undefined || dto.metodo_pago !== undefined) {
+      let obsActual = pedido.observacion || '';
+      if (dto.metodo_pago) {
+        obsActual = obsActual.replace(/\[PAGO:[^\]]*\]/g, '').trim();
+        obsActual = `[PAGO: ${dto.metodo_pago.trim()}] ${obsActual}`.trim();
+      }
+      if (dto.observacion !== undefined) {
+        const etiquetas = (pedido.observacion || '').match(/\[(PENDIENTE|EN REPARTO|REPARTIDOR:[^\]]+|PAGO:[^\]]+)\]/g) || [];
+        const textoLimpio = dto.observacion.trim();
+        obsActual = [...etiquetas, textoLimpio].filter(Boolean).join(' ');
+      }
+      data.observacion = obsActual.slice(0, 255);
+    }
+
+    const actualizado = await this.prisma.pedido.update({
+      where: { id_pedido: id },
+      data,
+      include: this.domicilioInclude,
+    });
+
+    return this.mapearEtapaOperativa(actualizado);
+  }
+
+  /**
+   * Elimina un domicilio específico del historial. Exclusivo para Super Administrador.
+   */
+  async eliminar(id: number) {
+    const pedido = await this.prisma.pedido.findUnique({
+      where: { id_pedido: id },
+    });
+
+    if (!pedido || pedido.tipo !== TipoPedido.domicilio) {
+      throw new NotFoundException(`El pedido a domicilio #${id} no existe.`);
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -632,3 +672,4 @@ export class DomiciliosService {
     });
   }
 }
+

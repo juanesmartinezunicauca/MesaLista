@@ -13,10 +13,31 @@
       </div>
 
       @if (carritoService.carrito().length > 0) {
-        <button mat-stroked-button color="warn" class="btn-clear-all" (click)="vaciar()">
-          <mat-icon>delete_sweep</mat-icon>
-          <span>Vaciar Carrito</span>
-        </button>
+        <div class="header-cart-actions">
+          <button mat-stroked-button color="warn" class="btn-clear-all" (click)="vaciar()">
+            <mat-icon>delete_sweep</mat-icon>
+            <span>Vaciar Carrito</span>
+          </button>
+          <button
+            type="button"
+            mat-flat-button
+            class="btn-submit-order-header"
+            [disabled]="enviandoPedido() || carritoService.carrito().length === 0"
+            (click)="confirmarPedido()"
+          >
+            @if (enviandoPedido()) {
+              <ng-container>
+                <mat-spinner diameter="18" class="order-spinner"></mat-spinner>
+                <span>Enviando Comanda...</span>
+              </ng-container>
+            } @else {
+              <ng-container>
+                <mat-icon>check_circle</mat-icon>
+                <span>Enviar Domicilio (${{ carritoService.totalPrecio() | number:'1.0-0' }} COP)</span>
+              </ng-container>
+            }
+          </button>
+        </div>
       }
     </div>
   </header>
@@ -326,26 +347,7 @@
                 </div>
               }
 
-              <!-- Botón Principal de Envío -->
-              <button
-                type="button"
-                mat-flat-button
-                class="btn-submit-order"
-                [disabled]="enviandoPedido() || carritoService.carrito().length === 0"
-                (click)="confirmarPedido()"
-              >
-                @if (enviandoPedido()) {
-                  <ng-container>
-                    <mat-spinner diameter="22" class="order-spinner"></mat-spinner>
-                    <span>Enviando Comanda a Cocina...</span>
-                  </ng-container>
-                } @else {
-                  <ng-container>
-                    <mat-icon>check_circle</mat-icon>
-                    <span>Confirmar y Enviar Pedido (${{ carritoService.totalPrecio() | number:'1.0-0' }} COP)</span>
-                  </ng-container>
-                }
-              </button>
+              <!-- Botón principal ubicado en el encabezado junto a Vaciar Carrito -->
             </div>
           </div>
         </aside>

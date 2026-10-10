@@ -20,6 +20,7 @@ import {
   CambiarRecepcionDomiciliosDto,
   CancelarDomicilioDto,
   CreateDomicilioDto,
+  UpdateDomicilioDto,
 } from './dto';
 import { DomiciliosService } from './domicilios.service';
 
@@ -139,12 +140,25 @@ export class DomiciliosController {
   }
 
   /**
+   * PATCH /api/v1/domicilios/:id
+   * Edita los datos de un domicilio desde el historial.
+   */
+  @Patch(':id')
+  @Roles(RolUsuario.administrador, RolUsuario.cajero)
+  actualizar(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateDomicilioDto,
+  ) {
+    return this.domiciliosService.actualizarDomicilio(id, dto);
+  }
+
+  /**
    * DELETE /api/v1/domicilios/historial
    * Limpia todos los pedidos a domicilio entregados y cancelados del historial.
-   * Totalmente seguro: no afecta mesas de salón, clientes ni facturación de caja.
+   * Exclusivo para Super Administrador.
    */
   @Delete('historial')
-  @Roles(RolUsuario.administrador, RolUsuario.cajero)
+  @Roles(RolUsuario.administrador)
   limpiarHistorial() {
     return this.domiciliosService.limpiarHistorial();
   }
@@ -152,9 +166,10 @@ export class DomiciliosController {
   /**
    * DELETE /api/v1/domicilios/:id
    * Elimina un pedido cerrado o cancelado específico del historial.
+   * Exclusivo para Super Administrador.
    */
   @Delete(':id')
-  @Roles(RolUsuario.administrador, RolUsuario.cajero)
+  @Roles(RolUsuario.administrador)
   eliminar(@Param('id', ParseIntPipe) id: number) {
     return this.domiciliosService.eliminar(id);
   }
