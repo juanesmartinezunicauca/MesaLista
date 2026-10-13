@@ -1114,23 +1114,30 @@
           border-radius: 6px;
           overflow: hidden;
           background: #ffffff;
+          box-sizing: border-box;
 
           .btn-step {
             border: none;
             background: #f1f5f9;
-            width: 26px;
-            height: 26px;
-            display: flex;
+            width: 28px !important;
+            height: 28px !important;
+            min-width: 28px !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            box-sizing: border-box;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             color: #475569;
+            line-height: 1;
             transition: all 0.15s;
 
             mat-icon {
-              font-size: 14px;
-              width: 14px;
-              height: 14px;
+              font-size: 15px;
+              width: 15px;
+              height: 15px;
+              line-height: 15px;
             }
 
             &:hover {
@@ -1140,11 +1147,13 @@
           }
 
           .qty-number {
-            min-width: 26px;
+            min-width: 28px;
+            padding: 0 4px;
             text-align: center;
             font-size: 0.82rem;
             font-weight: 700;
             color: #0f172a;
+            user-select: none;
           }
         }
 
@@ -1216,6 +1225,14 @@
           height: 38px;
           font-size: 0.85rem;
           text-align: center;
+          padding: 0 4px;
+          -moz-appearance: textfield;
+
+          &::-webkit-outer-spin-button,
+          &::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+          }
         }
       }
 

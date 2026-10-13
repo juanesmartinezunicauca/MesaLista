@@ -532,6 +532,11 @@ export class VistaHistorialComponent implements OnInit {
         },
       });
     } else if (m.tipo === 'factura') {
+      // Si el usuario seleccionó un producto en el menú pero no presionó el botón "Añadir", lo incorporamos automáticamente
+      if (this.productoSeleccionadoId() && this.cantidadNuevoProducto() > 0) {
+        this.agregarProductoAFactura();
+      }
+
       const fac = m.itemOriginal;
       const propinaNum = Number(m.facturaPropina) >= 0 ? Number(m.facturaPropina) : 0;
       const nuevoTotal = this.totalFacturaCalculado();

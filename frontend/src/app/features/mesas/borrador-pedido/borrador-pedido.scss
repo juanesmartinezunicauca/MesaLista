@@ -106,6 +106,13 @@
       color: $text-secondary;
       cursor: pointer;
       white-space: nowrap;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1.2;
+      box-sizing: border-box;
+      outline: none;
       transition: all $transition-fast;
 
       &:hover {

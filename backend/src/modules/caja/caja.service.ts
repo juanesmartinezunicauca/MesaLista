@@ -623,7 +623,7 @@ export class CajaService {
       throw new NotFoundException(`El gasto #${id} no fue encontrado.`);
     }
 
-    if (gasto.caja.estado === EstadoCaja.cerrada && usuarioAuth?.rol !== RolUsuario.administrador) {
+    if (gasto.caja?.estado === EstadoCaja.cerrada && usuarioAuth?.rol !== RolUsuario.administrador) {
       throw new BadRequestException(
         'Este gasto pertenece a un turno de caja que ya fue cerrado y arqueado. Solo un Administrador puede realizar correcciones retroactivas.',
       );

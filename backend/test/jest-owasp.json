@@ -1,0 +1,23 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": "..",
+  "testEnvironment": "node",
+  "testRegex": "test/owasp-compliance\\.spec\\.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "reporters": [
+    "default",
+    [
+      "jest-html-reporters",
+      {
+        "publicPath": "./reports/owasp-compliance",
+        "filename": "reporte-owasp-top10.html",
+        "pageTitle": "Mesa Lista - Evidencia de Pruebas de Cumplimiento OWASP Top 10 (2025)",
+        "logoImgPath": "",
+        "expand": true,
+        "openReport": false
+      }
+    ]
+  ]
+}

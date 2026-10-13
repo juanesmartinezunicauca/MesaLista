@@ -1,0 +1,13 @@
+{
+  "name": "mesa-lista",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mesa Lista - Sistema de Gestión Gastronómica",
+  "scripts": {
+    "test:owasp": "npm --prefix backend run test:owasp",
+    "test:backend": "npm --prefix backend run test",
+    "test:frontend": "npm --prefix frontend run test",
+    "start:backend": "npm --prefix backend run start:dev",
+    "start:frontend": "npm --prefix frontend run dev"
+  }
+}
