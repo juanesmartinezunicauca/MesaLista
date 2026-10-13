@@ -1,4 +1,4 @@
-﻿import { Controller } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { GastosService } from './gastos.service';
 
 @Controller('gastos')

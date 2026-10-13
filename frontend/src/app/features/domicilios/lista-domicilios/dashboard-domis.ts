@@ -104,7 +104,6 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
     // Polling reactivo cada 12 segundos para recibir pedidos del cliente en tiempo real
     this.pollingTimer = setInterval(() => {
       this.cargarPedidos(false);
-      this.cargarEstadoServicio();
     }, 12000);
   }
 
@@ -116,7 +115,7 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
 
   cargarPedidos(mostrarSpinner = true): void {
     if (mostrarSpinner) this.cargando.set(true);
-    this.domiciliosApi.obtenerTodos().subscribe({
+    this.domiciliosApi.obtenerTodos({ estado: 'activos' }).subscribe({
       next: (data) => {
         // En el panel operativo solo se mantienen los pedidos activos; los entregados/cancelados van a Historial
         const activos = (data || []).filter(
@@ -309,19 +308,30 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
   }
 
   solicitarDespachoConRepartidor(pedido: Domicilio): void {
-    const nombre = prompt(
-      `Nombre del domiciliario para pedido #${pedido.numero_pedido}:`,
-      pedido.repartidor?.nombre || ''
-    );
-    if (nombre === null) return;
+    let nombre: string | null = null;
+    let telefono: string | null = null;
 
-    const telefono = prompt(
-      `Teléfono o número del domiciliario:`,
-      pedido.repartidor?.telefono || ''
-    );
-    if (telefono === null) return;
+    try {
+      nombre = prompt(
+        `Nombre del repartidor para pedido #${pedido.numero_pedido} (opcional, presiona Aceptar para continuar):`,
+        pedido.repartidor?.nombre || ''
+      );
+      // Si ingresó nombre, solicitar teléfono
+      if (nombre && nombre.trim()) {
+        telefono = prompt(
+          `Teléfono del repartidor (opcional):`,
+          pedido.repartidor?.telefono || ''
+        );
+      }
+    } catch {
+      // Si el navegador bloquea los prompts nativos, continuar con despacho estándar
+    }
 
-    this.despachar(pedido, nombre.trim(), telefono.trim());
+    this.despachar(
+      pedido,
+      nombre?.trim() || undefined,
+      telefono?.trim() || undefined
+    );
   }
 
   regresarAPreparacion(pedido: Domicilio): void {

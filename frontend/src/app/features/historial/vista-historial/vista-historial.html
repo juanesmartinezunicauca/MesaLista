@@ -401,17 +401,6 @@
                   </td>
                   <td>
                     <div class="actions-cell">
-                      @if (puedeEditar()) {
-                        <button
-                          mat-button
-                          class="btn-action-edit"
-                          (click)="editarPedidoSalon(ped)"
-                          matTooltip="Editar observación o estado del pedido"
-                        >
-                          <mat-icon>edit</mat-icon>
-                          <span>Editar</span>
-                        </button>
-                      }
                       @if (puedeEliminar()) {
                         <button
                           mat-button
@@ -422,6 +411,8 @@
                           <mat-icon>delete_forever</mat-icon>
                           <span>Eliminar</span>
                         </button>
+                      } @else {
+                        <span class="text-muted-cell">-</span>
                       }
                     </div>
                   </td>
@@ -492,17 +483,6 @@
                   </td>
                   <td>
                     <div class="actions-cell">
-                      @if (puedeEditar()) {
-                        <button
-                          mat-button
-                          class="btn-action-edit"
-                          (click)="editarDomicilio(dom)"
-                          matTooltip="Editar datos de entrega, cliente o pago"
-                        >
-                          <mat-icon>edit</mat-icon>
-                          <span>Editar</span>
-                        </button>
-                      }
                       @if (puedeEliminar()) {
                         <button
                           mat-button
@@ -513,6 +493,8 @@
                           <mat-icon>delete_forever</mat-icon>
                           <span>Eliminar</span>
                         </button>
+                      } @else {
+                        <span class="text-muted-cell">-</span>
                       }
                     </div>
                   </td>
@@ -623,7 +605,7 @@
   <!-- ============================================================== -->
   @if (modalEdicion(); as m) {
     <div class="modal-backdrop" (click)="cerrarModal()">
-      <div class="modal-dialog" (click)="$event.stopPropagation()">
+      <div class="modal-dialog" [class.modal-wide-dialog]="m.tipo === 'factura'" (click)="$event.stopPropagation()">
         <!-- Encabezado del Modal -->
         <div class="modal-header" [attr.data-tipo]="m.tipo">
           <div class="modal-header-icon">
@@ -658,8 +640,161 @@
             </div>
           }
 
-          <!-- CASO 2: FACTURA -->
+          <!-- CASO 2: FACTURA (EDICIÓN AVANZADA DE ÍTEMS, PROPINA Y AUDITORÍA) -->
           @if (m.tipo === 'factura') {
+            <!-- Banner de Impacto Contable y Diferencia -->
+            <div class="factura-balance-banner" [class.balance-positivo]="diferenciaFacturaCalculada() > 0" [class.balance-negativo]="diferenciaFacturaCalculada() < 0">
+              <div class="balance-metric">
+                <span class="metric-label">Total Original</span>
+                <strong class="metric-value font-mono">${{ facturaTotalOriginal() | number:'1.0-0' }}</strong>
+              </div>
+
+              <div class="balance-arrow">
+                <mat-icon>arrow_forward</mat-icon>
+              </div>
+
+              <div class="balance-metric">
+                <span class="metric-label">Nuevo Total Calculado</span>
+                <strong class="metric-value font-mono text-primary">${{ totalFacturaCalculado() | number:'1.0-0' }}</strong>
+              </div>
+
+              <div class="balance-diff-badge" [class.diff-plus]="diferenciaFacturaCalculada() > 0" [class.diff-minus]="diferenciaFacturaCalculada() < 0">
+                <span class="diff-title">Diferencia Caja:</span>
+                <span class="diff-amount font-mono">
+                  {{ diferenciaFacturaCalculada() > 0 ? '+' : '' }}${{ diferenciaFacturaCalculada() | number:'1.0-0' }}
+                </span>
+              </div>
+            </div>
+
+            <p class="balance-sync-hint">
+              <mat-icon>info</mat-icon>
+              <span>El arqueo contable de caja y el stock de inventario se sincronizarán automáticamente con estos cambios.</span>
+            </p>
+
+            <!-- Sección de Ítems / Productos de la Factura -->
+            <div class="factura-editor-section">
+              <div class="section-header-row">
+                <div class="section-title">
+                  <mat-icon>restaurant_menu</mat-icon>
+                  <span>Productos y Cantidades</span>
+                </div>
+                <span class="section-count">{{ itemsFacturaEditando().length }} ítems</span>
+              </div>
+
+              <!-- Lista de Ítems Actuales -->
+              <div class="items-editor-table">
+                <div class="items-editor-thead">
+                  <span class="col-name">Producto</span>
+                  <span class="col-price">Precio Unit.</span>
+                  <span class="col-qty">Cantidad</span>
+                  <span class="col-total">Subtotal</span>
+                  <span class="col-actions"></span>
+                </div>
+
+                <div class="items-editor-tbody">
+                  @for (it of itemsFacturaEditando(); track $index) {
+                    <div class="item-editor-row">
+                      <div class="col-name">
+                        <strong>{{ it.nombre }}</strong>
+                        @if (it.categoria) {
+                          <small class="text-muted">{{ it.categoria }}</small>
+                        }
+                      </div>
+
+                      <div class="col-price font-mono">
+                        ${{ it.precio_unitario | number:'1.0-0' }}
+                      </div>
+
+                      <div class="col-qty">
+                        <div class="qty-stepper">
+                          <button
+                            type="button"
+                            class="btn-step"
+                            (click)="decrementarItem(it)"
+                            matTooltip="Reducir cantidad"
+                          >
+                            <mat-icon>remove</mat-icon>
+                          </button>
+                          <span class="qty-number font-mono">{{ it.cantidad }}</span>
+                          <button
+                            type="button"
+                            class="btn-step"
+                            (click)="incrementarItem(it)"
+                            matTooltip="Aumentar cantidad"
+                          >
+                            <mat-icon>add</mat-icon>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div class="col-total font-mono font-bold">
+                        ${{ (it.precio_unitario * it.cantidad) | number:'1.0-0' }}
+                      </div>
+
+                      <div class="col-actions">
+                        <button
+                          type="button"
+                          class="btn-item-delete"
+                          (click)="eliminarItemFactura(it)"
+                          matTooltip="Remover este producto de la factura"
+                        >
+                          <mat-icon>delete_outline</mat-icon>
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+
+              <!-- Añadir Nuevo Producto del Menú -->
+              <div class="agregar-producto-box">
+                <div class="agregar-input-group">
+                  <label class="agregar-label">
+                    <mat-icon>add_circle_outline</mat-icon>
+                    <span>Agregar Producto del Menú:</span>
+                  </label>
+                  <div class="agregar-row">
+                    <select
+                      class="form-control form-select select-producto-catalogo"
+                      [ngModel]="productoSeleccionadoId()"
+                      (ngModelChange)="productoSeleccionadoId.set($event ? +$event : null)"
+                    >
+                      <option [ngValue]="null" disabled selected>Selecciona un producto para añadir...</option>
+                      @for (p of productosDisponibles(); track p.id_producto) {
+                        <option [ngValue]="p.id_producto">
+                          {{ p.nombre }} — ${{ p.precio_venta | number:'1.0-0' }}
+                        </option>
+                      }
+                    </select>
+
+                    <div class="agregar-cant-box">
+                      <input
+                        type="number"
+                        min="1"
+                        class="form-control input-cant-add"
+                        placeholder="Cant."
+                        [ngModel]="cantidadNuevoProducto()"
+                        (ngModelChange)="cantidadNuevoProducto.set($event ? +$event : 1)"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      mat-flat-button
+                      color="primary"
+                      class="btn-add-item"
+                      [disabled]="!productoSeleccionadoId() || cantidadNuevoProducto() <= 0"
+                      (click)="agregarProductoAFactura()"
+                    >
+                      <mat-icon>add</mat-icon>
+                      <span>Añadir</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Resumen Financiero y Campos de Pago -->
             <div class="form-grid-2">
               <div class="form-group">
                 <label class="form-label">
@@ -689,131 +824,34 @@
               </div>
             </div>
 
+            <!-- Motivo de Edición (Auditoría Contable) -->
             <div class="form-group">
               <label class="form-label">
-                <mat-icon>edit_note</mat-icon>
-                <span>Observación de Factura</span>
-              </label>
-              <textarea
-                class="form-control form-textarea"
-                rows="3"
-                maxlength="255"
-                placeholder="Observaciones de cobro, correcciones o justificaciones..."
-                [(ngModel)]="m.facturaObservacion"
-              ></textarea>
-            </div>
-          }
-
-          <!-- CASO 3: PEDIDO DE SALÓN -->
-          @if (m.tipo === 'pedido') {
-            <div class="form-group">
-              <label class="form-label">
-                <mat-icon>flag</mat-icon>
-                <span>Estado del Pedido</span>
-              </label>
-              <select class="form-control form-select" [(ngModel)]="m.pedidoEstado">
-                <option value="enviada">En curso / Enviado a cocina</option>
-                <option value="cerrada">Cerrado / Completado</option>
-                <option value="cancelada">Cancelado / Anulado</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">
-                <mat-icon>restaurant_menu</mat-icon>
-                <span>Observaciones de Comanda</span>
-              </label>
-              <textarea
-                class="form-control form-textarea"
-                rows="3"
-                maxlength="255"
-                placeholder="Especificaciones de la orden, platos o notas de atención..."
-                [(ngModel)]="m.pedidoObservacion"
-              ></textarea>
-            </div>
-          }
-
-          <!-- CASO 4: DOMICILIO -->
-          @if (m.tipo === 'domicilio') {
-            <div class="form-grid-2">
-              <div class="form-group">
-                <label class="form-label">
-                  <mat-icon>person</mat-icon>
-                  <span>Nombre del Cliente</span>
-                </label>
-                <input
-                  type="text"
-                  class="form-control"
-                  placeholder="Nombre completo..."
-                  [(ngModel)]="m.domicilioNombre"
-                />
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">
-                  <mat-icon>phone</mat-icon>
-                  <span>Teléfono</span>
-                </label>
-                <input
-                  type="tel"
-                  class="form-control"
-                  placeholder="Ej. 3101234567"
-                  [(ngModel)]="m.domicilioTelefono"
-                />
-              </div>
-            </div>
-
-            <div class="form-grid-2">
-              <div class="form-group">
-                <label class="form-label">
-                  <mat-icon>email</mat-icon>
-                  <span>Correo Electrónico (Opcional)</span>
-                </label>
-                <input
-                  type="email"
-                  class="form-control"
-                  placeholder="cliente@ejemplo.com"
-                  [(ngModel)]="m.domicilioEmail"
-                />
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">
-                  <mat-icon>payments</mat-icon>
-                  <span>Método de Pago</span>
-                </label>
-                <select class="form-control form-select" [(ngModel)]="m.domicilioMetodoPago">
-                  <option value="Efectivo">Efectivo</option>
-                  <option value="Transferencia">Transferencia</option>
-                  <option value="Tarjeta">Tarjeta</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">
-                <mat-icon>location_on</mat-icon>
-                <span>Dirección de Entrega</span>
+                <mat-icon>history_edu</mat-icon>
+                <span>Motivo de Corrección (Auditoría y Trazabilidad)</span>
               </label>
               <input
                 type="text"
                 class="form-control"
-                placeholder="Dirección, apto, conjunto o indicaciones..."
-                [(ngModel)]="m.domicilioDireccion"
+                maxlength="200"
+                placeholder="Ej. Corrección por cambio de plato solicitado por comensal..."
+                [(ngModel)]="m.facturaMotivoEdicion"
               />
+              <span class="field-hint">Quedará registrado en la bitácora de auditoría con tu nombre y fecha.</span>
             </div>
 
+            <!-- Observaciones Adicionales -->
             <div class="form-group">
               <label class="form-label">
-                <mat-icon>notes</mat-icon>
-                <span>Observaciones o Indicaciones</span>
+                <mat-icon>edit_note</mat-icon>
+                <span>Observaciones Generales de la Factura</span>
               </label>
               <textarea
                 class="form-control form-textarea"
                 rows="2"
                 maxlength="255"
-                placeholder="Instrucciones para el domiciliario..."
-                [(ngModel)]="m.domicilioObservacion"
+                placeholder="Notas adicionales de facturación o cliente..."
+                [(ngModel)]="m.facturaObservacion"
               ></textarea>
             </div>
           }

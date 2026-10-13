@@ -231,10 +231,17 @@
                     color: #475569;
                     font-size: 12px;
                     font-weight: 500;
-                    padding: 4px 10px;
+                    padding: 4px 12px;
                     border-radius: 20px;
                     cursor: pointer;
                     white-space: nowrap;
+                    flex-shrink: 0;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    line-height: 1.2;
+                    box-sizing: border-box;
+                    outline: none;
                     transition: all 0.15s ease;
 
                     &:hover {

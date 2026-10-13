@@ -264,6 +264,32 @@ describe('DomiciliosService', () => {
       expect(result.etapaOperativa).toBe('En Reparto');
     });
 
+    it('debe preservar la forma de pago del cliente [PAGO: Transferencia] al cambiar de estado', async () => {
+      prisma.pedido.findUnique.mockResolvedValue({
+        id_pedido: 51,
+        tipo: TipoPedido.domicilio,
+        estado: EstadoPedido.enviada,
+        observacion: '[PENDIENTE] [PAGO: Transferencia] Apto 302',
+        items: [],
+      });
+      prisma.pedido.update.mockResolvedValue({
+        id_pedido: 51,
+        tipo: TipoPedido.domicilio,
+        estado: EstadoPedido.enviada,
+        observacion: '[PAGO: Transferencia] Apto 302',
+        items: [],
+      });
+
+      const result = await service.cambiarEstado(51, { estado: 'En Preparación' });
+
+      expect(prisma.pedido.update).toHaveBeenCalledWith({
+        where: { id_pedido: 51 },
+        data: { observacion: '[PAGO: Transferencia] Apto 302' },
+        include: expect.any(Object),
+      });
+      expect(result.metodo_pago).toBe('Transferencia');
+    });
+
     it('debe cancelar el pedido y devolver stock a inventario', async () => {
       prisma.pedido.findUnique.mockResolvedValue({
         id_pedido: 6,

@@ -18,13 +18,23 @@ export interface CreateFacturaPayload {
   }>;
 }
 
+export interface UpdateFacturaItemPayload {
+  id_item?: number;
+  id_producto: number;
+  cantidad: number;
+  precio_unitario?: number;
+  observacion?: string;
+}
+
 export interface UpdateFacturaPayload {
   propina?: number;
   observacion?: string;
+  items?: UpdateFacturaItemPayload[];
   pagos?: Array<{
     medio_pago: string;
     monto: number;
   }>;
+  motivo_edicion?: string;
 }
 
 @Injectable({

@@ -91,8 +91,9 @@ export class CajaController {
   actualizarGasto(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateGastoDto,
+    @CurrentUser() usuarioAuth?: any,
   ) {
-    return this.cajaService.actualizarGasto(id, dto);
+    return this.cajaService.actualizarGasto(id, dto, usuarioAuth);
   }
 
   /**

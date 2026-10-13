@@ -18,6 +18,18 @@ import {
 export class MesasService {
     constructor(private readonly prisma: PrismaService) { }
 
+    // Proyección optimizada para excluir imágenes Base64 pesadas en consultas operativas
+    private readonly productoSelectOperativo = {
+        id_producto: true,
+        nombre: true,
+        categoria: true,
+        precio_venta: true,
+        costo: true,
+        controla_inventario: true,
+        cantidad_inventario: true,
+        disponible: true,
+    } as const;
+
     /**
      * Crea una nueva mesa en el restaurante asegurando número único.
      */
@@ -60,7 +72,9 @@ export class MesasService {
                     include: {
                         items: {
                             include: {
-                                producto: true,
+                                producto: {
+                                    select: this.productoSelectOperativo,
+                                },
                             },
                         },
                         usuario: {
@@ -95,7 +109,9 @@ export class MesasService {
                     include: {
                         items: {
                             include: {
-                                producto: true,
+                                producto: {
+                                    select: this.productoSelectOperativo,
+                                },
                             },
                         },
                         usuario: {
