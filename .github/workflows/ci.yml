@@ -2,7 +2,7 @@ name: CI/CD Pipeline - MesaLista
 
 on:
   push:
-    branches: [ develop, main ]
+    branches: [ develop, main, chore/ci-cd-github-actions-codeql ]
   pull_request:
     branches: [ develop, main ]
 
@@ -13,14 +13,16 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    env:
+      NODE_OPTIONS: "--experimental-vm-modules"
     steps:
       - name: Checkout del Repositorio
         uses: actions/checkout@v4
 
-      - name: Configurar Node.js 22.x
+      - name: Configurar Node.js 24.x
         uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version: 24.x
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
 
@@ -49,10 +51,10 @@ jobs:
       - name: Checkout del Repositorio
         uses: actions/checkout@v4
 
-      - name: Configurar Node.js 22.x
+      - name: Configurar Node.js 24.x
         uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version: 24.x
 
       - name: Instalar Dependencias
         run: npm install
