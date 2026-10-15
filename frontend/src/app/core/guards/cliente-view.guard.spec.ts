@@ -13,7 +13,7 @@ describe('clienteViewGuard', () => {
 
   const executeGuard = () => {
     return TestBed.runInInjectionContext(() =>
-      clienteViewGuard({} as any, {} as any)
+      (clienteViewGuard as any)()
     );
   };
 

@@ -80,7 +80,7 @@ export class AperturaCajaComponent implements OnInit {
     this.errorMessage.set(null);
 
     this.cajaApi.abrirCaja(base).subscribe({
-      next: (res) => {
+      next: () => {
         this.isOpening.set(false);
         this.snackBar.open(`¡Caja abierta con éxito! Base: $${base.toLocaleString()}`, 'Entendido', {
           duration: 3500,

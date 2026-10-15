@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -15,7 +15,6 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { CarritoService, CartItem } from '../../../core/services/carrito/carrito.service';
 import { DomiciliosApiService } from '../../../core/services/api/domicilios-api.service';
 import { AuthService } from '../../../core/services/auth/auth.service';
-import { Producto } from '../../../core/models/producto.model';
 import { CreateDomicilioPayload } from '../../../core/models/domicilio.model';
 
 @Component({

@@ -13,7 +13,7 @@ describe('clienteCarritoGuard', () => {
 
   const executeGuard = () => {
     return TestBed.runInInjectionContext(() =>
-      clienteCarritoGuard({} as any, {} as any)
+      (clienteCarritoGuard as any)()
     );
   };
 

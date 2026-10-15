@@ -140,7 +140,6 @@ export class FacturacionService {
     // el monto a asentar contablemente en el pago de caja es el valor total exacto de la factura.
     if (totalPagado > valorTotal && dto.pagos.length === 1 && dto.pagos[0].medio_pago.toLowerCase().includes('efectivo')) {
       dto.pagos[0].monto = valorTotal;
-      totalPagado = valorTotal;
     }
 
     // 4. Transacción atómica: Factura + Pagos + Actualización de pedidos y mesa
@@ -446,10 +445,9 @@ export class FacturacionService {
       if (dto.pagos && dto.pagos.length > 0) {
         await tx.pago.deleteMany({ where: { id_venta: id } });
 
-        let totalPagosDto = dto.pagos.reduce((acc, p) => acc + Number(p.monto), 0);
+        const totalPagosDto = dto.pagos.reduce((acc, p) => acc + Number(p.monto), 0);
         if (dto.pagos.length === 1 && Math.abs(totalPagosDto - nuevoTotal) > 0.01) {
           dto.pagos[0].monto = nuevoTotal;
-          totalPagosDto = nuevoTotal;
         }
 
         for (const p of dto.pagos) {

@@ -195,7 +195,7 @@ describe('🛡️ BATERÍA DE PRUEBAS DE CUMPLIMIENTO OWASP TOP 10 (2025) - MESA
         password: '$argon2id$v=19$m=65536...',
       };
 
-      const { password, ...usuarioSaneado } = usuarioEnBd;
+      const { password: _password, ...usuarioSaneado } = usuarioEnBd;
 
       expect(usuarioSaneado).not.toHaveProperty('password');
       expect(Object.keys(usuarioSaneado)).not.toContain('password');

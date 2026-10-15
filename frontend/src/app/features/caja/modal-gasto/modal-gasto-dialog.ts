@@ -70,7 +70,7 @@ export class ModalGastoDialogComponent {
         observacion: formVal.observacion?.trim() || undefined,
       })
       .subscribe({
-        next: (res) => {
+        next: () => {
           this.isSaving.set(false);
           this.snackBar.open('Gasto registrado exitosamente.', 'Cerrar', { duration: 3000 });
           this.dialogRef.close(true);

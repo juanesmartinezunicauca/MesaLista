@@ -367,7 +367,7 @@ export class DomiciliosService {
   /**
    * Modifica la etapa operativa de un domicilio (aceptar/enviar a cocina, despachar a reparto con repartidor, cerrar/entregar o cancelar).
    */
-  async cambiarEstado(id: number, dto: CambiarEstadoDomicilioDto, id_usuario?: number) {
+  async cambiarEstado(id: number, dto: CambiarEstadoDomicilioDto, _id_usuario?: number) {
     const pedido = await this.obtenerPorId(id);
 
     if (
@@ -526,7 +526,7 @@ export class DomiciliosService {
       | 'En Preparación'
       | 'En Reparto'
       | 'Entregado'
-      | 'Cancelado' = 'Pendiente';
+      | 'Cancelado';
 
     if (pedido.estado === EstadoPedido.cerrada) {
       etapaOperativa = 'Entregado';

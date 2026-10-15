@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { EstadoCaja, EstadoFactura, EstadoPedido, Prisma, RolUsuario } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { AbrirCajaDto, CerrarCajaDto, CreateGastoDto, ActualizarBaseDto, UpdateGastoDto } from './dto';
+import { AbrirCajaDto, CerrarCajaDto, CreateGastoDto, UpdateGastoDto } from './dto';
 
 /**
  * Normaliza y categoriza un medio de pago para evitar inconsistencias contables por diferencias de mayúsculas o nombres extendidos.
