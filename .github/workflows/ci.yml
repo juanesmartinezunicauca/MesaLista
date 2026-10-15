@@ -1,0 +1,63 @@
+name: CI/CD Pipeline - MesaLista
+
+on:
+  push:
+    branches: [ develop, main, chore/ci-cd-github-actions-codeql ]
+  pull_request:
+    branches: [ develop, main ]
+
+jobs:
+  backend-qa:
+    name: Backend (Build, Lint & Test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      NODE_OPTIONS: "--experimental-vm-modules"
+    steps:
+      - name: Checkout del Repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 24.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar Dependencias
+        run: npm ci || npm install
+
+      - name: Generar Cliente de Prisma ORM
+        run: npx prisma generate
+
+      - name: Análisis Estático con Oxlint (Linter)
+        run: npm run lint
+
+      - name: Ejecutar Pruebas Automatizadas con Jest
+        run: npm test -- --passWithNoTests
+
+      - name: Compilación del Backend (NestJS)
+        run: npm run build
+
+  frontend-qa:
+    name: Frontend (Build & Validate)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout del Repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 24.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+
+      - name: Instalar Dependencias
+        run: npm install
+
+      - name: Compilación del Frontend (Angular 22)
+        run: npm run build
