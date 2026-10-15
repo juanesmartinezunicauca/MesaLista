@@ -168,7 +168,7 @@ export class ProductoFormComponent implements OnInit {
           this.ingredientes.set(list);
         }
       },
-      error: (err) => {
+      error: () => {
         this.isLoadingProduct.set(false);
         this.mensajeFeedback.set({
           tipo: 'error',

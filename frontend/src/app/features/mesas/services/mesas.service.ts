@@ -9,7 +9,7 @@ import {
   PedidoMesa,
   ProductoCatalogo,
 } from '../models/mesa.model';
-import { MesasApiService, BackendMesa } from '../../../core/services/api/mesas-api.service';
+import { MesasApiService } from '../../../core/services/api/mesas-api.service';
 import { PedidosApiService, CreatePedidoPayload } from '../../../core/services/api/pedidos-api.service';
 import { CatalogoApiService } from '../../../core/services/api/catalogo-api.service';
 import { AuthService } from '../../../core/services/auth/auth.service';
@@ -387,8 +387,6 @@ export class MesasService {
    * - Transiciona la mesa a 'ocupada'
    */
   enviarPedidoACocina(id_mesa: number, observacion?: string): { exito: boolean; mensaje: string } {
-    let resultado = { exito: false, mensaje: '' };
-
     const mesaActual = this.mesasSignal().find((m) => m.id_mesa === id_mesa);
     if (!mesaActual || mesaActual.borrador_local.length === 0) {
       return { exito: false, mensaje: 'El borrador del pedido está vacío.' };
@@ -479,12 +477,10 @@ export class MesasService {
       },
     });
 
-    resultado = {
+    return {
       exito: true,
       mensaje: `Pedido #${numeroPedido} enviado con éxito a cocina. Mesa #${mesaActual.numero} marcada como Ocupada.`,
     };
-
-    return resultado;
   }
 
   /**

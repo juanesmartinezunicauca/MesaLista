@@ -119,7 +119,7 @@ export class AuthService {
         idToken: googleDto.idToken,
         audience: googleClientId || undefined,
       });
-    } catch (error) {
+    } catch {
       this.logger.warn('[SECURITY_AUDIT] Intento fallido de login Google: Token inválido o expirado.');
       throw new UnauthorizedException(
         'Token de Google inválido o expirado. Por favor intenta iniciar sesión de nuevo.',

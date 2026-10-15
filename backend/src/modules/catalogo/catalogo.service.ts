@@ -116,7 +116,7 @@ export class CatalogoService {
    * Actualiza los datos operativos o económicos de un producto.
    */
   async actualizar(id: number, updateProductoDto: UpdateProductoDto) {
-    const producto = await this.obtenerPorId(id);
+    await this.obtenerPorId(id);
 
     if (updateProductoDto.nombre) {
       const nombreNormalizado = updateProductoDto.nombre.trim();

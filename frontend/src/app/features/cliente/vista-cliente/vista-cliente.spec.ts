@@ -45,10 +45,6 @@ describe('VistaClienteComponent', () => {
     },
   ];
 
-  const mockRouter = {
-    navigate: vi.fn(),
-  };
-
   const mockCatalogoService = {
     obtenerProductos: vi.fn().mockReturnValue(of(mockProductos)),
   };
@@ -68,10 +64,6 @@ describe('VistaClienteComponent', () => {
     currentUser: mockCurrentUserSignal,
     isAuthenticated: mockIsAuthenticatedSignal,
     logout: vi.fn(),
-  };
-
-  const mockSnackBar = {
-    open: vi.fn(),
   };
 
   let router: Router;
