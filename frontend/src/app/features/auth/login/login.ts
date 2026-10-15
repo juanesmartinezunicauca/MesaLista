@@ -118,6 +118,21 @@ export class LoginComponent implements AfterViewInit {
     }
   }
 
+  loginMicrosoft(): void {
+    const msClientId = environment.microsoftClientId;
+    if (!msClientId || msClientId.includes('TU_MICROSOFT_CLIENT_ID')) {
+      this.errorMessage.set(
+        'El acceso con Hotmail/Microsoft es gratuito. Para habilitarlo en este entorno se requiere el Client ID de Microsoft Entra ID (Azure Portal).'
+      );
+      return;
+    }
+
+    const tenant = 'common';
+    const redirectUri = encodeURIComponent(window.location.origin + '/login');
+    const scope = encodeURIComponent('openid profile email');
+    window.location.href = `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/authorize?client_id=${msClientId}&response_type=id_token&redirect_uri=${redirectUri}&scope=${scope}&response_mode=fragment&nonce=${Date.now()}`;
+  }
+
   private handleGoogleResponse(response: any): void {
     if (!response || !response.credential) {
       this.errorMessage.set('No se recibieron credenciales válidas de Google.');

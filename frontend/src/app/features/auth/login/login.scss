@@ -14,7 +14,6 @@
 .brand-panel {
   flex: 1.1;
   position: relative;
-  // Gradiente ambiental gastronómico elegante y autónomo (sin dependencias de red externas)
   background:
     radial-gradient(circle at 20% 20%, rgba(255, 107, 53, 0.25) 0%, transparent 50%),
     radial-gradient(circle at 80% 80%, rgba(37, 99, 235, 0.15) 0%, transparent 50%),
@@ -104,27 +103,30 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 32px;
+  padding: 32px 24px;
+  overflow-y: auto;
 
   .form-wrapper {
     width: 100%;
     max-width: 420px;
-    animation: fadeInUp 0.5s ease-out;
+    animation: fadeInUp 0.4s ease-out;
   }
 
   .form-header {
-    margin-bottom: 24px;
+    margin-bottom: 22px;
 
     h1 {
       color: $text-light;
-      font-size: 2rem;
-      font-weight: 700;
-      margin-bottom: 8px;
+      font-size: 1.85rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
     }
 
     p {
       color: $text-light-muted;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
+      line-height: 1.4;
     }
   }
 
@@ -150,19 +152,142 @@
   }
 }
 
+// --- 1. SECCIÓN SSO PRINCIPAL (SUPERIOR) ---
+.sso-primary-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 18px;
+
+  .sso-header-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    color: #93c5fd;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-size: 0.775rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    align-self: flex-start;
+    margin-bottom: 4px;
+
+    .shield-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      color: #60a5fa;
+    }
+  }
+
+  .google-auth-container {
+    width: 100%;
+    min-height: 48px;
+
+    .google-btn-render {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+      overflow: hidden;
+      border-radius: $radius-md;
+
+      iframe {
+        margin: 0 auto !important;
+        width: 100% !important;
+      }
+    }
+  }
+
+  .sso-btn {
+    width: 100%;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    border-radius: $radius-md;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all $transition-fast;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+
+    .sso-svg-icon {
+      flex-shrink: 0;
+    }
+
+    &:hover:not([disabled]) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    &[disabled] {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+  }
+
+  .google-custom-btn {
+    background: #ffffff;
+    color: #1f2937;
+    border: 1px solid #d1d5db;
+
+    &:hover:not([disabled]) {
+      background: #f9fafb;
+      border-color: #9ca3af;
+    }
+  }
+
+  .microsoft-custom-btn {
+    background: #2f2f2f;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+
+    &:hover:not([disabled]) {
+      background: #3a3a3a;
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+  }
+}
+
+// --- SEPARADOR OAUTH ---
+.oauth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 16px;
+
+  .divider-line {
+    flex: 1;
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .divider-text {
+    color: $text-muted;
+    font-size: 0.775rem;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+    text-align: center;
+  }
+}
+
+// --- 2. FORMULARIO SECUNDARIO INFERIOR (LOCAL) ---
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 
   .field-container {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
 
     .custom-label {
-      color: $text-light;
-      font-size: 0.875rem;
+      color: $text-light-muted;
+      font-size: 0.8125rem;
       font-weight: 500;
     }
   }
@@ -171,7 +296,7 @@
     width: 100%;
 
     --mdc-outlined-text-field-container-shape: #{$radius-md};
-    --mdc-outlined-text-field-outline-color: rgba(255, 255, 255, 0.15);
+    --mdc-outlined-text-field-outline-color: rgba(255, 255, 255, 0.12);
     --mdc-outlined-text-field-focus-outline-color: #{$brand-orange};
     --mdc-outlined-text-field-input-text-color: #{$text-light};
     --mdc-outlined-text-field-input-text-placeholder-color: #{$text-light-muted};
@@ -199,124 +324,57 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    margin-top: 4px;
-    margin-bottom: 8px;
+    margin-top: 2px;
 
     .forgot-link {
-      color: $brand-orange;
-      font-size: 0.875rem;
+      color: $text-light-muted;
+      font-size: 0.8125rem;
       font-weight: 500;
       text-decoration: none;
       transition: color $transition-fast;
 
       &:hover {
-        color: $brand-orange-hover;
+        color: $brand-orange;
         text-decoration: underline;
       }
     }
   }
 
-  .submit-btn {
-    height: 48px;
+  .submit-local-btn {
+    height: 44px;
     border-radius: $radius-md !important;
-    background-color: $brand-orange !important;
-    color: #ffffff !important;
-    font-size: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    background-color: rgba(255, 255, 255, 0.04) !important;
+    color: #e2e8f0 !important;
+    font-size: 0.9rem;
     font-weight: 600;
-    box-shadow: $shadow-orange !important;
     transition: all $transition-base !important;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
+    margin-top: 4px;
+
+    .btn-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: #94a3b8;
+    }
 
     &:hover:not([disabled]) {
-      background-color: $brand-orange-hover !important;
+      background-color: rgba(255, 255, 255, 0.1) !important;
+      border-color: rgba(255, 255, 255, 0.35) !important;
+      color: #ffffff !important;
       transform: translateY(-1px);
     }
 
     &[disabled] {
-      opacity: 0.6;
-      background-color: $text-muted !important;
-    }
-  }
-
-  .oauth-divider {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin: 20px 0 16px;
-
-    .divider-line {
-      flex: 1;
-      height: 1px;
-      background-color: rgba(255, 255, 255, 0.1);
-    }
-
-    .divider-text {
-      color: $text-muted;
-      font-size: 0.8125rem;
-      font-weight: 500;
-      letter-spacing: 0.2px;
-    }
-  }
-
-  .google-auth-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    min-height: 48px;
-
-    .google-btn-render {
-      display: flex;
-      justify-content: center;
-      width: 100%;
-      overflow: hidden;
-      border-radius: $radius-md;
-
-      iframe {
-        margin: 0 auto !important;
-      }
-    }
-
-    .google-custom-btn {
-      width: 100%;
-      height: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      background: #ffffff;
-      color: #3c4043;
-      border: 1px solid #dadce0;
-      border-radius: $radius-md;
-      font-family: 'Roboto', sans-serif;
-      font-size: 0.9375rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all $transition-fast;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-
-      &:hover:not([disabled]) {
-        background: #f8f9fa;
-        border-color: #d2e3fc;
-        box-shadow: 0 2px 6px rgba(60, 64, 67, 0.15);
-      }
-
-      &[disabled] {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
-
-      .google-svg-icon {
-        flex-shrink: 0;
-      }
+      opacity: 0.5;
+      cursor: not-allowed;
     }
   }
 }
-
 
 @keyframes fadeInUp {
   from {
