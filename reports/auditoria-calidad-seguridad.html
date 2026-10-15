@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,7 +10,9 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
+    rel="stylesheet">
   <style>
     :root {
       --bg-dark: #0a0f1d;
@@ -104,8 +107,17 @@
     }
 
     @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(1.2); }
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.4;
+        transform: scale(1.2);
+      }
     }
 
     /* KPI CARDS */
@@ -141,10 +153,21 @@
       height: 3px;
     }
 
-    .kpi-card.green::before { background: linear-gradient(90deg, #10b981, #34d399); }
-    .kpi-card.blue::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
-    .kpi-card.purple::before { background: linear-gradient(90deg, #8b5cf6, #c084fc); }
-    .kpi-card.cyan::before { background: linear-gradient(90deg, #06b6d4, #22d3ee); }
+    .kpi-card.green::before {
+      background: linear-gradient(90deg, #10b981, #34d399);
+    }
+
+    .kpi-card.blue::before {
+      background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    }
+
+    .kpi-card.purple::before {
+      background: linear-gradient(90deg, #8b5cf6, #c084fc);
+    }
+
+    .kpi-card.cyan::before {
+      background: linear-gradient(90deg, #06b6d4, #22d3ee);
+    }
 
     .kpi-label {
       font-size: 0.85rem;
@@ -303,10 +326,29 @@
       font-family: 'JetBrains Mono', monospace;
     }
 
-    .tag-bd { background: rgba(139, 92, 246, 0.2); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); }
-    .tag-fe { background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.3); }
-    .tag-be { background: rgba(6, 182, 212, 0.2); color: #67e8f9; border: 1px solid rgba(6, 182, 212, 0.3); }
-    .tag-owasp { background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .tag-bd {
+      background: rgba(139, 92, 246, 0.2);
+      color: #c084fc;
+      border: 1px solid rgba(139, 92, 246, 0.3);
+    }
+
+    .tag-fe {
+      background: rgba(59, 130, 246, 0.2);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .tag-be {
+      background: rgba(6, 182, 212, 0.2);
+      color: #67e8f9;
+      border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+
+    .tag-owasp {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fcd34d;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
 
     .status-pass {
       display: inline-flex;
@@ -338,6 +380,7 @@
     }
   </style>
 </head>
+
 <body>
 
   <div class="container">
@@ -346,7 +389,8 @@
     <header class="header">
       <div class="header-info">
         <h1>🛡️ MesaLista - Auditoría Integral de Calidad & Seguridad</h1>
-        <p>Batería de Pruebas Automatizadas de Alta Intensidad: Base de Datos, Frontend, Backend y Estándar OWASP Top 10 (2025)</p>
+        <p>Batería de Pruebas Automatizadas de Alta Intensidad: Base de Datos, Frontend, Backend y Estándar OWASP Top 10
+          (2025)</p>
       </div>
       <div>
         <span class="badge-status">
@@ -415,7 +459,8 @@
     <section class="table-card">
       <div class="table-header">
         <h3>📋 Matriz Detallada de Pruebas de Calidad y Ciberseguridad</h3>
-        <span style="color: var(--text-muted); font-size: 0.85rem;">Validado con Jest 30 & Vitest 4 sobre Node.js 24.x</span>
+        <span style="color: var(--text-muted); font-size: 0.85rem;">Validado con Jest 30 & Vitest 4 sobre Node.js
+          24.x</span>
       </div>
 
       <div style="overflow-x: auto;">
@@ -514,7 +559,8 @@
               <td><span class="code-pill">FE-R01</span></td>
               <td><span class="tag tag-fe">FRONTEND / RUTAS</span></td>
               <td>Fuga de rutas: Visitante anónimo intentando ingresar a <span class="code-pill">/mesas</span></td>
-              <td><span class="code-pill">authGuard</span> intercepta y redirige a <span class="code-pill">/login</span> con returnUrl</td>
+              <td><span class="code-pill">authGuard</span> intercepta y redirige a <span class="code-pill">/login</span>
+                con returnUrl</td>
               <td><span class="status-pass">✓ INTERCEPTADO</span></td>
             </tr>
             <tr data-categoria="fe">
@@ -527,7 +573,8 @@
             <tr data-categoria="fe">
               <td><span class="code-pill">FE-R03</span></td>
               <td><span class="tag tag-fe">FRONTEND / RUTAS</span></td>
-              <td>Fuga de rutas: Visitante anónimo intentando forzar checkout en <span class="code-pill">/cliente/carrito</span></td>
+              <td>Fuga de rutas: Visitante anónimo intentando forzar checkout en <span
+                  class="code-pill">/cliente/carrito</span></td>
               <td><span class="code-pill">clienteCarritoGuard</span> bloquea y exige login vía query param</td>
               <td><span class="status-pass">✓ REDIRIGIDO</span></td>
             </tr>
@@ -535,48 +582,57 @@
               <td><span class="code-pill">FE-R05</span></td>
               <td><span class="tag tag-fe">FRONTEND / RUTAS</span></td>
               <td>Fuga de roles: Cliente autenticado intentando forzar la URL <span class="code-pill">/mesas</span></td>
-              <td><span class="code-pill">roleGuard</span> detecta rol cliente y expulsa al portal <span class="code-pill">/cliente</span></td>
+              <td><span class="code-pill">roleGuard</span> detecta rol cliente y expulsa al portal <span
+                  class="code-pill">/cliente</span></td>
               <td><span class="status-pass">✓ EXPULSADO</span></td>
             </tr>
             <tr data-categoria="fe">
               <td><span class="code-pill">FE-R06</span></td>
               <td><span class="tag tag-fe">FRONTEND / RUTAS</span></td>
               <td>Fuga de roles: Cliente autenticado intentando entrar a <span class="code-pill">/caja</span></td>
-              <td><span class="code-pill">roleGuard</span> deniega acceso y redirige a <span class="code-pill">/cliente</span></td>
+              <td><span class="code-pill">roleGuard</span> deniega acceso y redirige a <span
+                  class="code-pill">/cliente</span></td>
               <td><span class="status-pass">✓ EXPULSADO</span></td>
             </tr>
             <tr data-categoria="fe">
               <td><span class="code-pill">FE-R07</span></td>
               <td><span class="tag tag-fe">FRONTEND / RUTAS</span></td>
-              <td>Fuga de roles: Cliente intentando acceder a administración de <span class="code-pill">/usuarios</span></td>
+              <td>Fuga de roles: Cliente intentando acceder a administración de <span class="code-pill">/usuarios</span>
+              </td>
               <td><span class="code-pill">roleGuard</span> deniega acceso sin fugas de UI ni datos</td>
               <td><span class="status-pass">✓ EXPULSADO</span></td>
             </tr>
             <tr data-categoria="fe">
               <td><span class="code-pill">FE-R09</span></td>
               <td><span class="tag tag-fe">FRONTEND / RUTAS</span></td>
-              <td>Fuga de roles: Mesero intentando ingresar al módulo financiero <span class="code-pill">/caja</span></td>
-              <td><span class="code-pill">roleGuard</span> bloquea y devuelve al mesero a <span class="code-pill">/mesas</span></td>
+              <td>Fuga de roles: Mesero intentando ingresar al módulo financiero <span class="code-pill">/caja</span>
+              </td>
+              <td><span class="code-pill">roleGuard</span> bloquea y devuelve al mesero a <span
+                  class="code-pill">/mesas</span></td>
               <td><span class="status-pass">✓ BLOQUEADO</span></td>
             </tr>
             <tr data-categoria="fe">
               <td><span class="code-pill">FE-R10</span></td>
               <td><span class="tag tag-fe">FRONTEND / RUTAS</span></td>
-              <td>Fuga de roles: Mesero intentando entrar a gestión de personal en <span class="code-pill">/usuarios</span></td>
+              <td>Fuga de roles: Mesero intentando entrar a gestión de personal en <span
+                  class="code-pill">/usuarios</span></td>
               <td><span class="code-pill">roleGuard</span> bloquea y restringe a nivel de vista</td>
               <td><span class="status-pass">✓ BLOQUEADO</span></td>
             </tr>
             <tr data-categoria="fe">
               <td><span class="code-pill">FE-R12</span></td>
               <td><span class="tag tag-fe">FRONTEND / RUTAS</span></td>
-              <td>Personal operativo (mesero/cajero) entrando al portal de clientes <span class="code-pill">/cliente</span></td>
-              <td><span class="code-pill">clienteViewGuard</span> redirige al staff a su área de trabajo (<span class="code-pill">/mesas</span>)</td>
+              <td>Personal operativo (mesero/cajero) entrando al portal de clientes <span
+                  class="code-pill">/cliente</span></td>
+              <td><span class="code-pill">clienteViewGuard</span> redirige al staff a su área de trabajo (<span
+                  class="code-pill">/mesas</span>)</td>
               <td><span class="status-pass">✓ REORIENTADO</span></td>
             </tr>
             <tr data-categoria="fe">
               <td><span class="code-pill">FE-R14</span></td>
               <td><span class="tag tag-fe">FRONTEND / RUTAS</span></td>
-              <td>Fuga de roles: Cajero intentando alterar permisos de personal (<span class="code-pill">/usuarios</span>)</td>
+              <td>Fuga de roles: Cajero intentando alterar permisos de personal (<span
+                  class="code-pill">/usuarios</span>)</td>
               <td><span class="code-pill">roleGuard</span> restringe la ruta exclusivamente a 'administrador'</td>
               <td><span class="status-pass">✓ BLOQUEADO</span></td>
             </tr>
@@ -590,7 +646,8 @@
             <tr data-categoria="fe">
               <td><span class="code-pill">FE-S03</span></td>
               <td><span class="tag tag-fe">FRONTEND / SEGURIDAD</span></td>
-              <td>Inyección Cross-Site Scripting (XSS): <span class="code-pill">&lt;script&gt;alert(1)&lt;/script&gt;</span> en comanda</td>
+              <td>Inyección Cross-Site Scripting (XSS): <span
+                  class="code-pill">&lt;script&gt;alert(1)&lt;/script&gt;</span> en comanda</td>
               <td>Escape automático de nodos de texto en plantillas de Angular (cero innerHTML)</td>
               <td><span class="status-pass">✓ DESACTIVADO (XSS)</span></td>
             </tr>
@@ -598,7 +655,8 @@
               <td><span class="code-pill">FE-S04</span></td>
               <td><span class="tag tag-fe">FRONTEND / SEGURIDAD</span></td>
               <td>Saneamiento de sesión y prevención de secuestro de tokens al cerrar sesión</td>
-              <td>Purga total de <span class="code-pill">localStorage</span>, vaciado de Signals y anulación de estado</td>
+              <td>Purga total de <span class="code-pill">localStorage</span>, vaciado de Signals y anulación de estado
+              </td>
               <td><span class="status-pass">✓ SANEADO</span></td>
             </tr>
 
@@ -635,7 +693,9 @@
               <td><span class="code-pill">OW-A05</span></td>
               <td><span class="tag tag-owasp">OWASP TOP 10</span></td>
               <td>A05:2025 Injection – Ataques de asignación masiva de campos (Mass Assignment)</td>
-              <td><span class="code-pill">ValidationPipe</span> con <span class="code-pill">whitelist: true</span> y <span class="code-pill">forbidNonWhitelisted: true</span></td>
+              <td><span class="code-pill">ValidationPipe</span> con <span class="code-pill">whitelist: true</span> y
+                <span class="code-pill">forbidNonWhitelisted: true</span>
+              </td>
               <td><span class="status-pass">✓ ACREDITADO (400)</span></td>
             </tr>
             <tr data-categoria="owasp">
@@ -663,14 +723,16 @@
               <td><span class="code-pill">OW-A09</span></td>
               <td><span class="tag tag-owasp">OWASP TOP 10</span></td>
               <td>A09:2025 Security Logging & Alerting – Auditoría forense de accesos denegados</td>
-              <td>Emisión estructurada de log <span class="code-pill">[SECURITY_AUDIT]</span> sin exponer contraseñas</td>
+              <td>Emisión estructurada de log <span class="code-pill">[SECURITY_AUDIT]</span> sin exponer contraseñas
+              </td>
               <td><span class="status-pass">✓ ACREDITADO</span></td>
             </tr>
             <tr data-categoria="owasp">
               <td><span class="code-pill">OW-A10</span></td>
               <td><span class="tag tag-owasp">OWASP TOP 10</span></td>
               <td>A10:2025 Exceptional Conditions – Fuga de stack traces o esquemas internos SQL</td>
-              <td><span class="code-pill">PrismaExceptionFilter</span> traduce errores internos a HTTP semántico (404/409)</td>
+              <td><span class="code-pill">PrismaExceptionFilter</span> traduce errores internos a HTTP semántico
+                (404/409)</td>
               <td><span class="status-pass">✓ ACREDITADO</span></td>
             </tr>
 
@@ -717,8 +779,10 @@
 
     <!-- FOOTER -->
     <footer class="footer">
-      <p><strong>MesaLista POS & Ecosistema Gastronómico</strong> • Desarrollado por el Grupo Trinity • Universidad del Cauca</p>
-      <p style="margin-top: 0.35rem;">Certificación de Pruebas Automatizadas de Calidad y Ciberseguridad • Sprint 1 (2026)</p>
+      <p><strong>MesaLista POS & Ecosistema Gastronómico</strong> • Desarrollado por el Grupo Trinity • Universidad del
+        Cauca</p>
+      <p style="margin-top: 0.35rem;">Certificación de Pruebas Automatizadas de Calidad y Ciberseguridad • Sprint 1
+        (2026)</p>
     </footer>
 
   </div>
@@ -818,4 +882,5 @@
     }
   </script>
 </body>
+
 </html>

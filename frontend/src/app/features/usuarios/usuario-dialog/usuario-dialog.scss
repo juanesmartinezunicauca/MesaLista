@@ -1,17 +1,17 @@
 @use 'tokens' as *;
 
 .usuario-dialog-container {
-  padding: 4px;
-  min-width: 420px;
-  max-width: 520px;
+  padding: 0;
+  width: 100%;
   font-family: $font-family-base;
+  box-sizing: border-box;
 }
 
 .dialog-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  padding: 18px 24px 14px;
+  padding: 20px 24px;
   border-bottom: 1px solid $border-color;
   background-color: $bg-card-alt;
   border-radius: $radius-lg $radius-lg 0 0;
@@ -32,18 +32,26 @@
     align-items: center;
     justify-content: center;
     box-shadow: $shadow-blue;
+    flex-shrink: 0;
 
     &.badge-edit {
       background: linear-gradient(135deg, $brand-orange 0%, #ff8c5a 100%);
       box-shadow: $shadow-orange;
     }
+
+    mat-icon {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+    }
   }
 
   .dialog-title {
     margin: 0;
-    font-size: 1.15rem;
+    font-size: 1.18rem;
     font-weight: 700;
     color: $text-primary;
+    line-height: 1.25;
   }
 
   .dialog-subtitle {
@@ -55,8 +63,10 @@
 
   .btn-close {
     color: $text-muted;
+    flex-shrink: 0;
     &:hover {
       color: $text-primary;
+      background-color: rgba(0, 0, 0, 0.05);
     }
   }
 }
@@ -64,6 +74,7 @@
 .dialog-body {
   padding: 20px 24px !important;
   max-height: 72vh;
+  overflow-y: auto;
 }
 
 .feedback-banner {
@@ -88,39 +99,41 @@
   }
 }
 
-.oauth-delegation-info {
+.email-identity-notice {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 12px 14px;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  padding: 12px 16px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
   border-radius: $radius-md;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 
-  mat-icon {
-    font-size: 22px;
-    width: 22px;
-    height: 22px;
-    color: #16a34a;
-    flex-shrink: 0;
-    margin-top: 2px;
+  .notice-icon {
+    mat-icon {
+      font-size: 22px;
+      width: 22px;
+      height: 22px;
+      color: #2563eb;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
   }
 
-  .oauth-info-text {
-    strong {
+  .notice-body {
+    .notice-title {
       display: block;
       font-size: 0.825rem;
       font-weight: 700;
-      color: #15803d;
+      color: #1e40af;
       margin-bottom: 2px;
     }
 
-    p {
+    .notice-desc {
       margin: 0;
       font-size: 0.775rem;
-      line-height: 1.35;
-      color: #166534;
+      line-height: 1.4;
+      color: #1d4ed8;
     }
   }
 }
@@ -128,25 +141,34 @@
 .form-content {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .w-full {
   width: 100%;
+  display: block;
+
+  mat-icon[matPrefix] {
+    margin-right: 10px;
+    color: #64748b;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
 }
 
 .selected-role-trigger {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-weight: 500;
+  font-weight: 600;
   color: $text-primary;
   vertical-align: middle;
 
   .trigger-role-icon {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
+    font-size: 19px;
+    width: 19px;
+    height: 19px;
     color: $brand-blue;
     display: inline-flex;
     align-items: center;
@@ -155,6 +177,7 @@
 
   .trigger-role-name {
     line-height: 1;
+    font-size: 0.9rem;
   }
 }
 
@@ -169,6 +192,7 @@
     font-size: 20px;
     width: 20px;
     height: 20px;
+    flex-shrink: 0;
   }
 
   .option-role-text {
@@ -179,7 +203,7 @@
   .role-name {
     font-weight: 600;
     color: $text-primary;
-    font-size: 0.9rem;
+    font-size: 0.875rem;
   }
 
   .role-desc {
@@ -192,7 +216,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 14px 16px;
   border: 1px solid $border-color;
   border-radius: $radius-md;
   background-color: $bg-card-alt;
@@ -217,10 +241,11 @@
   .status-pill {
     font-size: 0.8rem;
     font-weight: 600;
-    padding: 2px 8px;
+    padding: 3px 10px;
     border-radius: $radius-full;
     background-color: #e5e7eb;
     color: $text-secondary;
+    margin-right: 8px;
 
     &.pill-active {
       background-color: $color-success-bg;
@@ -230,22 +255,27 @@
 }
 
 .dialog-actions {
-  padding: 14px 24px 18px;
+  padding: 16px 24px;
   border-top: 1px solid $border-color;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 12px;
+  background-color: $bg-card-alt;
+  border-radius: 0 0 $radius-lg $radius-lg;
 
   .btn-confirm {
     background-color: $brand-blue !important;
     color: #ffffff !important;
     border-radius: $radius-md;
     font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    padding: 0 20px;
     box-shadow: $shadow-blue;
+    transition: all 0.2s ease;
 
     &:hover:not(:disabled) {
       background-color: $brand-blue-dark !important;
+      transform: translateY(-1px);
     }
   }
 }
