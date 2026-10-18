@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -26,8 +27,35 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {
-    const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
-    this.googleClient = new OAuth2Client(clientId);
+    const clientIds = this.obtenerGoogleClientIds();
+    this.googleClient = new OAuth2Client(clientIds[0] || undefined);
+
+    // Margen de tolerancia de tiempo (clockSkew) para desincronizaciones del reloj del servidor
+    const clockSkewSegundos =
+      Number(this.configService.get('GOOGLE_CLOCK_SKEW_SECS')) || 300;
+    (OAuth2Client as any).CLOCK_SKEW_SECS_ = clockSkewSegundos;
+  }
+
+  /**
+   * Obtiene y normaliza los Google Client IDs configurados en las variables de entorno.
+   * Limpia comillas circundantes, espacios y descarta valores placeholder de plantilla.
+   */
+  private obtenerGoogleClientIds(): string[] {
+    const envVal =
+      this.configService.get<string>('GOOGLE_CLIENT_ID') ||
+      process.env.GOOGLE_CLIENT_ID ||
+      '';
+
+    const limpio = envVal.replace(/^["']|["']$/g, '').trim();
+
+    if (!limpio || limpio.includes('TU_GOOGLE_CLIENT_ID')) {
+      return [];
+    }
+
+    return limpio
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0 && !id.includes('TU_GOOGLE_CLIENT_ID'));
   }
 
   /**
@@ -111,16 +139,64 @@ export class AuthService {
    * Valida criptográficamente el ID Token con los servidores de Google.
    */
   async loginConGoogle(googleDto: GoogleLoginDto): Promise<AuthResponse> {
-    const googleClientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
+    const rawToken =
+      googleDto.idToken || googleDto.id_token || googleDto.credential;
 
+    if (!rawToken || typeof rawToken !== 'string' || rawToken.trim().length === 0) {
+      this.logger.warn(
+        '[SECURITY_AUDIT] Intento fallido de login Google: No se proporcionó el token de autenticación (idToken / id_token / credential).',
+      );
+      throw new BadRequestException(
+        'El token de autenticación de Google (ID Token) es obligatorio.',
+      );
+    }
+
+    const tokenLimpio = rawToken.trim();
+
+    // 1. Verificación de tipo de token: Asegurar que sea id_token (JWT) y no access_token (OAuth2)
+    if (tokenLimpio.startsWith('ya29.')) {
+      this.logger.warn(
+        '[SECURITY_AUDIT] Intento fallido de login Google: Se envió un access_token de Google (inicia con "ya29.") en lugar del id_token (JWT).',
+      );
+      throw new BadRequestException(
+        'Se recibió un access_token de Google en lugar de un ID Token (JWT). La verificación criptográfica con verifyIdToken requiere el id_token emitido por Google Identity Services.',
+      );
+    }
+
+    const partesJwt = tokenLimpio.split('.');
+    if (partesJwt.length !== 3) {
+      this.logger.warn(
+        `[SECURITY_AUDIT] Intento fallido de login Google: El token recibido no tiene formato JWT válido (${partesJwt.length} segmentos).`,
+      );
+      throw new UnauthorizedException(
+        'El token de Google proporcionado no tiene la estructura de un ID Token (JWT) válido.',
+      );
+    }
+
+    // 2. Obtener Client ID(s) válidos de las variables de entorno
+    const clientIds = this.obtenerGoogleClientIds();
+    if (clientIds.length === 0) {
+      this.logger.error(
+        '[SECURITY_AUDIT] Error de configuración: GOOGLE_CLIENT_ID no está configurado o contiene el valor de plantilla en el archivo .env del backend.',
+      );
+      throw new UnauthorizedException(
+        'El inicio de sesión con Google no está configurado correctamente en el servidor. Configure GOOGLE_CLIENT_ID en backend/.env.',
+      );
+    }
+
+    // 3. Verificación criptográfica con google-auth-library
     let ticket;
     try {
       ticket = await this.googleClient.verifyIdToken({
-        idToken: googleDto.idToken,
-        audience: googleClientId || undefined,
+        idToken: tokenLimpio,
+        audience: clientIds.length === 1 ? clientIds[0] : clientIds,
+        maxExpiry: 86400, // 24 horas máximo de vigencia
       });
-    } catch {
-      this.logger.warn('[SECURITY_AUDIT] Intento fallido de login Google: Token inválido o expirado.');
+    } catch (error: any) {
+      const mensajeError = error?.message || 'Token inválido o expirado';
+      this.logger.warn(
+        `[SECURITY_AUDIT] Intento fallido de login Google: ${mensajeError}`,
+      );
       throw new UnauthorizedException(
         'Token de Google inválido o expirado. Por favor intenta iniciar sesión de nuevo.',
       );

@@ -215,4 +215,53 @@ describe('AuthService', () => {
       expect(resultado).toEqual(perfilActualizadoMock);
     });
   });
+
+  describe('loginConGoogle', () => {
+    it('debe arrojar BadRequestException si se envía un access_token que inicia con ya29.', async () => {
+      await expect(
+        service.loginConGoogle({ idToken: 'ya29.a0AfH6SM...' }),
+      ).rejects.toThrow();
+    });
+
+    it('debe arrojar UnauthorizedException si el token no tiene el formato de 3 partes de un JWT', async () => {
+      await expect(
+        service.loginConGoogle({ idToken: 'token-invalido-sin-puntos' }),
+      ).rejects.toThrow();
+    });
+
+    it('debe procesar id_token válido y autenticar al usuario', async () => {
+      // Mock de verifyIdToken en el cliente de Google
+      const mockPayload = {
+        sub: 'google-sub-12345',
+        email: 'usuario.google@unicauca.edu.co',
+        name: 'Usuario Google',
+        email_verified: true,
+      };
+
+      (service as any).googleClient = {
+        verifyIdToken: jest.fn().mockResolvedValue({
+          getPayload: () => mockPayload,
+        }),
+      };
+
+      usuariosService.vincularOGuardarGoogleUsuario!.mockResolvedValue({
+        id_usuario: 10,
+        nombre: 'Usuario Google',
+        usuario: 'usuario.google',
+        email: 'usuario.google@unicauca.edu.co',
+        rol: RolUsuario.cliente,
+        estado: EstadoUsuario.activo,
+      });
+
+      jwtService.sign.mockReturnValue('jwt-google-app-token');
+
+      const res = await service.loginConGoogle({
+        id_token: 'header.payload.signature',
+      });
+
+      expect(res.accessToken).toBe('jwt-google-app-token');
+      expect(res.usuario.email).toBe('usuario.google@unicauca.edu.co');
+      expect(res.usuario.rol).toBe(RolUsuario.cliente);
+    });
+  });
 });
