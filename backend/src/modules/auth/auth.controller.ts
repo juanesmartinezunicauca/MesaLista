@@ -12,7 +12,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { CurrentUser } from '../../common/decorators';
 import { JwtAuthGuard } from '../../common/guards';
 import { AuthService } from './auth.service';
-import { GoogleLoginDto, LoginDto, UpdatePerfilDto } from './dto';
+import { GoogleLoginDto, LoginDto, MicrosoftLoginDto, UpdatePerfilDto } from './dto';
 
 @Controller('auth')
 export class AuthController {
@@ -38,6 +38,17 @@ export class AuthController {
   @UseGuards(ThrottlerGuard)
   googleLogin(@Body() googleLoginDto: GoogleLoginDto) {
     return this.authService.loginConGoogle(googleLoginDto);
+  }
+
+  /**
+   * POST /api/v1/auth/microsoft
+   * Autenticación federada mediante Microsoft / Hotmail OAuth 2.0 (ID Token).
+   */
+  @Post('microsoft')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  microsoftLogin(@Body() microsoftLoginDto: MicrosoftLoginDto) {
+    return this.authService.loginConMicrosoft(microsoftLoginDto);
   }
 
   /**

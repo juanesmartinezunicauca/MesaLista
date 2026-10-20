@@ -77,6 +77,27 @@ export class AuthService {
   }
 
   /**
+   * Envía el ID Token de Microsoft / Hotmail OAuth 2.0 al backend para autenticar al usuario
+   */
+  loginMicrosoft(idToken: string): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${this.apiUrl}/microsoft`, { idToken }).pipe(
+      tap((res) => {
+        const sesionUsuario: UsuarioSesion = {
+          id_usuario: res.usuario.id_usuario,
+          nombre: res.usuario.nombre,
+          usuario: res.usuario.usuario,
+          email: res.usuario.email,
+          rol: res.usuario.rol,
+          token: res.accessToken,
+          iniciales: this.generarIniciales(res.usuario.nombre),
+        };
+
+        this.guardarSesion(res.accessToken, sesionUsuario);
+      })
+    );
+  }
+
+  /**
    * Consulta el perfil actualizado del usuario con el token Bearer
    */
   obtenerPerfil(): Observable<Usuario> {

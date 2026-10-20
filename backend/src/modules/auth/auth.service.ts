@@ -9,8 +9,10 @@ import { JwtService } from '@nestjs/jwt';
 import { EstadoUsuario } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { OAuth2Client } from 'google-auth-library';
+import * as jwt from 'jsonwebtoken';
+import jwksRsa from 'jwks-rsa';
 import { UsuariosService } from '../usuarios/usuarios.service';
-import { GoogleLoginDto, LoginDto, UpdatePerfilDto } from './dto';
+import { GoogleLoginDto, LoginDto, MicrosoftLoginDto, UpdatePerfilDto } from './dto';
 import {
   AuthResponse,
   AuthUserResponse,
@@ -21,6 +23,12 @@ import {
 export class AuthService {
   private readonly logger = new Logger('SecurityAudit');
   private googleClient: OAuth2Client;
+  private readonly msJwksClient = jwksRsa({
+    jwksUri: 'https://login.microsoftonline.com/common/discovery/v2.0/keys',
+    cache: true,
+    rateLimit: true,
+    jwksRequestsPerMinute: 10,
+  });
 
   constructor(
     private readonly usuariosService: UsuariosService,
@@ -232,6 +240,168 @@ export class AuthService {
 
     this.logger.log(`[SECURITY_AUDIT] Inicio de sesión exitoso con Google: '${usuario.email}' (Rol: ${usuario.rol}, ID: ${usuario.id_usuario})`);
 
+    const jwtPayload: JwtPayload = {
+      sub: usuario.id_usuario,
+      usuario: usuario.usuario,
+      rol: usuario.rol,
+      nombre: usuario.nombre,
+    };
+
+    const accessToken = this.jwtService.sign(jwtPayload);
+
+    return {
+      accessToken,
+      usuario: {
+        id_usuario: usuario.id_usuario,
+        nombre: usuario.nombre,
+        usuario: usuario.usuario,
+        email: usuario.email,
+        rol: usuario.rol,
+        estado: usuario.estado,
+      },
+    };
+  }
+
+  /**
+   * Obtiene y normaliza los Microsoft Client IDs configurados en las variables de entorno.
+   */
+  private obtenerMicrosoftClientIds(): string[] {
+    const envVal =
+      this.configService.get<string>('MICROSOFT_CLIENT_ID') ||
+      process.env.MICROSOFT_CLIENT_ID ||
+      '';
+
+    const limpio = envVal.replace(/^["']|["']$/g, '').trim();
+
+    if (!limpio || limpio.includes('TU_MICROSOFT_CLIENT_ID')) {
+      return [];
+    }
+
+    return limpio
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0 && !id.includes('TU_MICROSOFT_CLIENT_ID'));
+  }
+
+  /**
+   * Valida criptográficamente el ID Token emitido por Microsoft Entra ID (Hotmail, Outlook, Office 365).
+   */
+  async loginConMicrosoft(microsoftDto: MicrosoftLoginDto): Promise<AuthResponse> {
+    const rawToken =
+      microsoftDto.idToken || microsoftDto.id_token || microsoftDto.token;
+
+    if (!rawToken || typeof rawToken !== 'string' || rawToken.trim().length === 0) {
+      this.logger.warn(
+        '[SECURITY_AUDIT] Intento fallido de login Microsoft: No se proporcionó el token de autenticación.',
+      );
+      throw new BadRequestException(
+        'El token de autenticación de Microsoft (ID Token) es obligatorio.',
+      );
+    }
+
+    const tokenLimpio = rawToken.trim();
+
+    // 1. Verificación estructural: debe ser un JWT con 3 partes
+    const partesJwt = tokenLimpio.split('.');
+    if (partesJwt.length !== 3) {
+      this.logger.warn(
+        `[SECURITY_AUDIT] Intento fallido de login Microsoft: Formato JWT inválido (${partesJwt.length} segmentos).`,
+      );
+      throw new UnauthorizedException(
+        'El token de Microsoft proporcionado no tiene la estructura de un ID Token (JWT) válido.',
+      );
+    }
+
+    // 2. Extraer kid del header sin verificar todavía
+    const decodificado = jwt.decode(tokenLimpio, { complete: true });
+    if (!decodificado || !decodificado.header || !decodificado.header.kid) {
+      this.logger.warn(
+        '[SECURITY_AUDIT] Intento fallido de login Microsoft: Header sin kid para verificación de claves.',
+      );
+      throw new UnauthorizedException(
+        'No fue posible obtener la clave de firma del token de Microsoft.',
+      );
+    }
+
+    // 3. Obtener la clave pública desde el endpoint JWKS de Microsoft
+    let signingKey: string;
+    try {
+      const key = await this.msJwksClient.getSigningKey(decodificado.header.kid);
+      signingKey = key.getPublicKey();
+    } catch (err: any) {
+      this.logger.error(
+        `[SECURITY_AUDIT] Error al consultar claves JWKS de Microsoft: ${err?.message || err}`,
+      );
+      throw new UnauthorizedException(
+        'No se pudo verificar la autenticidad del token con los servidores de Microsoft.',
+      );
+    }
+
+    // 4. Verificación criptográfica con jsonwebtoken y las llaves de Microsoft
+    const clientIds = this.obtenerMicrosoftClientIds();
+    const clockTolerance =
+      Number(this.configService.get('MICROSOFT_CLOCK_SKEW_SECS')) || 300;
+
+    const verifyOptions: jwt.VerifyOptions = {
+      algorithms: ['RS256'],
+      clockTolerance,
+    };
+
+    if (clientIds.length === 1) {
+      verifyOptions.audience = clientIds[0];
+    } else if (clientIds.length > 1) {
+      verifyOptions.audience = [clientIds[0], ...clientIds.slice(1)];
+    }
+
+    let payload: any;
+    try {
+      payload = jwt.verify(tokenLimpio, signingKey, verifyOptions);
+    } catch (error: any) {
+      const mensajeError = error?.message || 'Token inválido o expirado';
+      this.logger.warn(
+        `[SECURITY_AUDIT] Intento fallido de login Microsoft: ${mensajeError}`,
+      );
+      throw new UnauthorizedException(
+        'Token de Microsoft inválido o expirado. Por favor intenta iniciar sesión de nuevo.',
+      );
+    }
+
+    // 5. Extraer correo electrónico del payload de Microsoft (email, preferred_username, upn)
+    const rawEmail = payload.email || payload.preferred_username || payload.upn;
+    if (!rawEmail || typeof rawEmail !== 'string') {
+      this.logger.warn(
+        '[SECURITY_AUDIT] Intento fallido de login Microsoft: Token sin dirección de correo identificable.',
+      );
+      throw new UnauthorizedException(
+        'No se pudo obtener el correo electrónico desde la cuenta de Microsoft.',
+      );
+    }
+
+    const email = rawEmail.toLowerCase().trim();
+    const nombre = payload.name || email.split('@')[0];
+    const microsoftId = payload.oid || payload.sub || email;
+
+    // 6. Vincular o crear usuario en la base de datos
+    const usuario = await this.usuariosService.vincularOGuardarMicrosoftUsuario({
+      microsoftId,
+      email,
+      nombre,
+    });
+
+    if (usuario.estado !== EstadoUsuario.activo) {
+      this.logger.warn(
+        `[SECURITY_AUDIT] Acceso denegado con Microsoft: cuenta inactiva '${usuario.email}'.`,
+      );
+      throw new UnauthorizedException(
+        'El usuario se encuentra inactivo en el sistema. Contacte a la administración.',
+      );
+    }
+
+    this.logger.log(
+      `[SECURITY_AUDIT] Inicio de sesión exitoso con Microsoft: '${usuario.email}' (Rol: ${usuario.rol}, ID: ${usuario.id_usuario})`,
+    );
+
+    // 7. Emitir token propio de la plataforma MesaLista
     const jwtPayload: JwtPayload = {
       sub: usuario.id_usuario,
       usuario: usuario.usuario,

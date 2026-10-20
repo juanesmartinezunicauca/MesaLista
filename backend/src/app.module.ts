@@ -32,6 +32,8 @@ import { ImpresionModule } from './modules/impresion/impresion.module';
         PRINTER_INTERFACE: Joi.string().optional(),
         GOOGLE_CLIENT_ID: Joi.string().optional().allow(''),
         GOOGLE_CLOCK_SKEW_SECS: Joi.number().optional().default(300),
+        MICROSOFT_CLIENT_ID: Joi.string().optional().allow(''),
+        MICROSOFT_CLOCK_SKEW_SECS: Joi.number().optional().default(300),
       }),
     }),
 
