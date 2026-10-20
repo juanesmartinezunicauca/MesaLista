@@ -19,28 +19,8 @@ import {
  */
 function normalizarMedioPago(nombre?: string | null): 'efectivo' | 'tarjeta' | 'transferencia' {
   const norm = (nombre || '').toLowerCase().trim();
-  if (norm.includes('efectivo')) return 'efectivo';
-  if (
-    norm.includes('tarjeta') ||
-    norm.includes('datafono') ||
-    norm.includes('datáfono') ||
-    norm.includes('pos') ||
-    norm.includes('bold') ||
-    norm.includes('credibanco') ||
-    norm.includes('redeban')
-  ) {
-    return 'tarjeta';
-  }
-  if (
-    norm.includes('transferencia') ||
-    norm.includes('nequi') ||
-    norm.includes('daviplata') ||
-    norm.includes('bancolombia') ||
-    norm.includes('wompi') ||
-    norm.includes('pse')
-  ) {
-    return 'transferencia';
-  }
+  if (norm.includes('tarjeta')) return 'tarjeta';
+  if (norm.includes('transferencia')) return 'transferencia';
   return 'efectivo';
 }
 
@@ -364,7 +344,7 @@ export class ReportesService {
         porcentaje: totalRecaudado > 0 ? redondearMoneda((recaudadoEfectivo / totalRecaudado) * 100) : 0,
       },
       {
-        medio: 'Tarjeta / Datáfono',
+        medio: 'Tarjeta',
         total: recaudadoTarjeta,
         porcentaje: totalRecaudado > 0 ? redondearMoneda((recaudadoTarjeta / totalRecaudado) * 100) : 0,
       },
@@ -735,7 +715,7 @@ export class ReportesService {
         porcentaje_ventas: totalVentasGlobal > 0 ? redondearMoneda((totalRecaudoEfectivo / totalVentasGlobal) * 100) : 0,
       },
       {
-        medio: 'Tarjeta / Datáfono',
+        medio: 'Tarjeta',
         recaudo: totalRecaudoTarjeta,
         gastos: redondearMoneda(totalGastosOtros),
         neto: totalRecaudoTarjeta,
