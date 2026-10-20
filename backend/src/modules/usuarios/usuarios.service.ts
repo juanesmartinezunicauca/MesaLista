@@ -210,52 +210,6 @@ export class UsuariosService {
     });
   }
 
-  /**
-   * Vincula una cuenta de Microsoft OAuth existente por email,
-   * o registra un nuevo usuario con rol 'cliente' activo si no existe previamente.
-   */
-  async vincularOGuardarMicrosoftUsuario(perfil: {
-    microsoftId: string;
-    email: string;
-    nombre: string;
-  }) {
-    const emailNorm = perfil.email.trim().toLowerCase();
-
-    // 1. Buscar si ya existe por email
-    const usuario = await this.prisma.usuario.findUnique({
-      where: { email: emailNorm },
-    });
-
-    if (usuario) {
-      return usuario;
-    }
-
-    // 2. Crear usuario nuevo con rol 'cliente' y estado activo si no estaba registrado previamente
-    const baseUsername =
-      emailNorm.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 40) || 'cliente';
-    let uniqueUsername = baseUsername;
-    let counter = 1;
-
-    while (
-      await this.prisma.usuario.findUnique({
-        where: { usuario: uniqueUsername },
-      })
-    ) {
-      uniqueUsername = `${baseUsername.slice(0, 35)}_${counter++}`;
-    }
-
-    return this.prisma.usuario.create({
-      data: {
-        nombre: perfil.nombre.slice(0, 100),
-        usuario: uniqueUsername,
-        email: emailNorm,
-        googleId: `ms_${perfil.microsoftId}`.slice(0, 100),
-        rol: RolUsuario.cliente,
-        estado: EstadoUsuario.activo,
-      },
-    });
-  }
-
 
   /**
    * Actualiza datos de un usuario. Si se incluye contraseña, se re-hashea con Argon2id.

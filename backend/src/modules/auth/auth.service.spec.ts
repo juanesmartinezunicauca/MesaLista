@@ -40,7 +40,6 @@ describe('AuthService', () => {
       obtenerPorId: jest.fn(),
       actualizar: jest.fn(),
       vincularOGuardarGoogleUsuario: jest.fn(),
-      vincularOGuardarMicrosoftUsuario: jest.fn(),
     };
 
     jwtService = {
@@ -262,62 +261,6 @@ describe('AuthService', () => {
 
       expect(res.accessToken).toBe('jwt-google-app-token');
       expect(res.usuario.email).toBe('usuario.google@unicauca.edu.co');
-      expect(res.usuario.rol).toBe(RolUsuario.cliente);
-    });
-  });
-
-  describe('loginConMicrosoft', () => {
-    it('debe arrojar BadRequestException si no se envía token', async () => {
-      await expect(
-        service.loginConMicrosoft({ idToken: '' }),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('debe arrojar UnauthorizedException si el token no tiene el formato de 3 partes de un JWT', async () => {
-      await expect(
-        service.loginConMicrosoft({ idToken: 'token-invalido-sin-puntos' }),
-      ).rejects.toThrow(UnauthorizedException);
-    });
-
-    it('debe procesar token de Microsoft válido y autenticar al usuario', async () => {
-      const mockPayload = {
-        oid: 'ms-oid-98765',
-        sub: 'ms-sub-12345',
-        email: 'usuario.microsoft@unicauca.edu.co',
-        name: 'Usuario Microsoft',
-      };
-
-      // Mock de msJwksClient
-      (service as any).msJwksClient = {
-        getSigningKey: jest.fn().mockResolvedValue({
-          getPublicKey: () => 'public-key-mock',
-        }),
-      };
-
-      // Mock de jwt.decode y jwt.verify
-      const jwt = await import('jsonwebtoken');
-      jest.spyOn(jwt, 'decode').mockReturnValue({
-        header: { kid: 'ms-key-id-1' },
-      } as any);
-      jest.spyOn(jwt, 'verify').mockReturnValue(mockPayload as any);
-
-      usuariosService.vincularOGuardarMicrosoftUsuario!.mockResolvedValue({
-        id_usuario: 25,
-        nombre: 'Usuario Microsoft',
-        usuario: 'usuario.microsoft',
-        email: 'usuario.microsoft@unicauca.edu.co',
-        rol: RolUsuario.cliente,
-        estado: EstadoUsuario.activo,
-      });
-
-      jwtService.sign.mockReturnValue('jwt-microsoft-app-token');
-
-      const res = await service.loginConMicrosoft({
-        idToken: 'header.payload.signature',
-      });
-
-      expect(res.accessToken).toBe('jwt-microsoft-app-token');
-      expect(res.usuario.email).toBe('usuario.microsoft@unicauca.edu.co');
       expect(res.usuario.rol).toBe(RolUsuario.cliente);
     });
   });
