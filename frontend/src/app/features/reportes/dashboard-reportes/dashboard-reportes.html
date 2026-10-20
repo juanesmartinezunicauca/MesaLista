@@ -277,7 +277,13 @@
                   <mat-icon>show_chart</mat-icon>
                   <h3>Ventas Diarias del Periodo</h3>
                 </div>
-                <span class="chart-legend-tag">Monto acumulado ($COP)</span>
+                @if (tooltipActivo(); as tt) {
+                  <span class="chart-tooltip-badge">
+                    <strong>{{ tt.fecha | date:'dd MMM yyyy':'UTC' }}</strong>: {{ tt.monto | currency:'COP':'symbol-narrow':'1.0-0' }} ({{ tt.cuentas }} comanda{{ tt.cuentas !== 1 ? 's' : '' }})
+                  </span>
+                } @else {
+                  <span class="chart-legend-tag">Pasa el cursor por las barras para ver detalles</span>
+                }
               </div>
 
               @if (d.graficas.serie_ventas_por_dia.length === 0) {
@@ -304,7 +310,7 @@
                             </span>
                           </div>
                         </div>
-                        <span class="bar-label">{{ item.fecha | date:'dd MMM':'UTC-5' }}</span>
+                        <span class="bar-label">{{ item.fecha | date:'dd MMM':'UTC' }}</span>
                       </div>
                     }
                   </div>
@@ -1067,6 +1073,29 @@
             </div>
           </div>
 
+          <!-- DEMANDA EN COCINA (TOP PLATOS SOLICITADOS) -->
+          @if (op.top_productos_cocina && op.top_productos_cocina.length > 0) {
+            <div class="section-card">
+              <h3><mat-icon>restaurant_menu</mat-icon> Platos con Mayor Demanda en Cocina</h3>
+              <div class="kitchen-demand-grid">
+                @for (item of op.top_productos_cocina; track item.nombre; let idx = $index) {
+                  <div class="kitchen-demand-card">
+                    <span class="demand-rank">#{{ idx + 1 }}</span>
+                    <div class="demand-info">
+                      <div class="demand-header">
+                        <strong>{{ item.nombre }}</strong>
+                        <span class="demand-category">{{ item.categoria }}</span>
+                      </div>
+                      <div class="demand-count">
+                        <span class="demand-badge">{{ item.cantidad }} órdenes preparadas</span>
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
           <!-- TABLA DE AUDITORÍA DE CANCELACIONES -->
           @if (op.pedidos_cancelados_detalle.length > 0) {
             <div class="section-card">
@@ -1097,6 +1126,12 @@
                   </tbody>
                 </table>
               </div>
+            </div>
+          } @else {
+            <div class="section-card empty-audit-card">
+              <mat-icon class="text-green">verified</mat-icon>
+              <h4>Sin Comandas Canceladas</h4>
+              <p>No se registraron anulaciones ni cancelaciones de comandas en el periodo seleccionado. Operación con 100% de efectividad.</p>
             </div>
           }
         </div>

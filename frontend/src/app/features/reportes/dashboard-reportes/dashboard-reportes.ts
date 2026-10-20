@@ -170,11 +170,18 @@ export class DashboardReportesComponent implements OnInit {
   }
 
   cargarDatosSegunTab(): void {
-    this.cargando.set(true);
-    this.errorMensaje.set(null);
-
     const fInicio = this.fechaInicio() || undefined;
     const fFin = this.fechaFin() || undefined;
+
+    // Validación preventiva en cliente para fechas personalizadas
+    if (fInicio && fFin && fInicio > fFin) {
+      this.errorMensaje.set('La fecha inicial no puede ser posterior a la fecha final.');
+      this.cargando.set(false);
+      return;
+    }
+
+    this.cargando.set(true);
+    this.errorMensaje.set(null);
     const tab = this.tabActivaIndex();
 
     // Siempre cargamos dashboard si está en tab 0 o es primera vez
@@ -511,7 +518,13 @@ export class DashboardReportesComponent implements OnInit {
         p.usuario,
         p.observacion,
       ]);
-      exportarACSV('MesaLista_Reporte_Cancelaciones', encabezados, filas, 'MesaLista - Auditoría de Comandas Canceladas', periodo);
+      if (formato === 'excel') {
+        exportarAExcel('MesaLista_Reporte_Cancelaciones', encabezados, filas, 'MesaLista - Auditoría de Comandas Canceladas', periodo);
+      } else if (formato === 'pdf') {
+        exportarAPDF('MesaLista_Reporte_Cancelaciones', encabezados, filas, 'MesaLista - Auditoría de Comandas Canceladas', periodo);
+      } else {
+        exportarACSV('MesaLista_Reporte_Cancelaciones', encabezados, filas, 'MesaLista - Auditoría de Comandas Canceladas', periodo);
+      }
     }
   }
 
