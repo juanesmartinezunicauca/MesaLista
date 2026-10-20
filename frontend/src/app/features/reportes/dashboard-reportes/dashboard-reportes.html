@@ -1,0 +1,1106 @@
+<div class="reportes-container">
+  <!-- ENCABEZADO PRINCIPAL -->
+  <header class="reportes-header">
+    <div class="header-info">
+      <div class="title-row">
+        <mat-icon class="header-icon">analytics</mat-icon>
+        <h1>Reportes y Analítica</h1>
+        <span class="live-pulse">
+          <span class="pulse-dot"></span> DATOS REALES
+        </span>
+      </div>
+      <p class="subtitle">
+        Indicadores clave de desempeño, auditoría contable y toma de decisiones para Luigie's POS.
+      </p>
+    </div>
+
+    <div class="header-controls">
+      <!-- SELECTOR DE PERIODO -->
+      <div class="periodo-selector">
+        <button
+          type="button"
+          mat-button
+          [class.active]="presetSeleccionado() === 'hoy'"
+          (click)="aplicarPresetFechas('hoy')"
+        >
+          Hoy
+        </button>
+        <button
+          type="button"
+          mat-button
+          [class.active]="presetSeleccionado() === '7dias'"
+          (click)="aplicarPresetFechas('7dias')"
+        >
+          Últimos 7 días
+        </button>
+        <button
+          type="button"
+          mat-button
+          [class.active]="presetSeleccionado() === 'mes'"
+          (click)="aplicarPresetFechas('mes')"
+        >
+          Este mes
+        </button>
+        <button
+          type="button"
+          mat-button
+          [class.active]="presetSeleccionado() === 'personalizado'"
+          (click)="presetSeleccionado.set('personalizado')"
+        >
+          Personalizado
+        </button>
+      </div>
+
+      <!-- SELECTOR DE FECHAS PERSONALIZADO -->
+      @if (presetSeleccionado() === 'personalizado') {
+        <div class="custom-dates-bar">
+          <mat-form-field appearance="outline" density="compact" class="date-input">
+            <mat-label>Desde</mat-label>
+            <input matInput type="date" [ngModel]="fechaInicio()" (ngModelChange)="fechaInicio.set($event); cargarDatosSegunTab()" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" density="compact" class="date-input">
+            <mat-label>Hasta</mat-label>
+            <input matInput type="date" [ngModel]="fechaFin()" (ngModelChange)="fechaFin.set($event); cargarDatosSegunTab()" />
+          </mat-form-field>
+        </div>
+      }
+
+      <!-- ACCIONES: REFRESCAR Y EXPORTAR -->
+      <div class="action-buttons">
+        <button
+          type="button"
+          mat-stroked-button
+          class="btn-control"
+          (click)="cargarDatosSegunTab()"
+          matTooltip="Actualizar datos"
+        >
+          <mat-icon>refresh</mat-icon>
+          <span>Actualizar</span>
+        </button>
+
+        <!-- Export Buttons -->
+        <button
+          type="button"
+          mat-flat-button
+          class="btn-export"
+          (click)="exportarReporteActual('csv')"
+          matTooltip="Descargar reporte actual en formato CSV"
+        >
+          <mat-icon>file_download</mat-icon>
+          <span>Exportar CSV</span>
+        </button>
+        <button
+          type="button"
+          mat-flat-button
+          class="btn-export"
+          (click)="exportarReporteActual('excel')"
+          matTooltip="Descargar reporte actual en formato Excel"
+        >
+          <mat-icon>grid_on</mat-icon>
+          <span>Exportar Excel</span>
+        </button>
+        <button
+          type="button"
+          mat-flat-button
+          class="btn-export"
+          (click)="exportarReporteActual('pdf')"
+          matTooltip="Descargar reporte actual en formato PDF"
+        >
+          <mat-icon>picture_as_pdf</mat-icon>
+          <span>Exportar PDF</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- BANNER DE ERROR -->
+  @if (errorMensaje(); as err) {
+    <div class="error-banner">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ err }}</span>
+      <button mat-button color="warn" (click)="cargarDatosSegunTab()">Reintentar</button>
+    </div>
+  }
+
+  <!-- PESTAÑAS DE REPORTES -->
+  <mat-tab-group
+    class="reportes-tabs"
+    [selectedIndex]="tabActivaIndex()"
+    (selectedIndexChange)="cambiarTab($event)"
+    animationDuration="200ms"
+  >
+    <!-- TAB 0: DASHBOARD GENERAL -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">dashboard</mat-icon>
+        <span>Resumen General</span>
+      </ng-template>
+
+      @if (cargando()) {
+        <div class="loading-state">
+          <mat-spinner diameter="44"></mat-spinner>
+          <p>Calculando indicadores consolidados del periodo...</p>
+        </div>
+      } @else if (dashboardData(); as d) {
+        <div class="tab-content">
+          <!-- TARJETAS DE INDICADORES (KPIS) -->
+          <div class="kpi-grid">
+            <!-- 1. Ventas Totales -->
+            <div class="kpi-card highlight-orange">
+              <div class="kpi-icon-wrap orange">
+                <mat-icon>payments</mat-icon>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-label">Ventas Totales</span>
+                <span class="kpi-value">{{ d.kpis.total_ventas | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+                <div class="kpi-sub">
+                  @if (d.comparativa.variacion_ventas_porcentaje !== null) {
+                    <span
+                      class="trend-badge"
+                      [class.up]="d.comparativa.variacion_ventas_porcentaje >= 0"
+                      [class.down]="d.comparativa.variacion_ventas_porcentaje < 0"
+                    >
+                      <mat-icon>{{ d.comparativa.variacion_ventas_porcentaje >= 0 ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                      {{ d.comparativa.variacion_ventas_porcentaje | number:'1.1-1' }}%
+                    </span>
+                    <span class="sub-text">vs. periodo anterior</span>
+                  } @else {
+                    <span class="sub-text">Netas: {{ d.kpis.ventas_netas | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Cuentas Pagadas -->
+            <div class="kpi-card">
+              <div class="kpi-icon-wrap blue">
+                <mat-icon>receipt</mat-icon>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-label">Cuentas Pagadas</span>
+                <span class="kpi-value">{{ d.kpis.cuentas_pagadas }}</span>
+                <div class="kpi-sub">
+                  @if (d.comparativa.variacion_cuentas_porcentaje !== null) {
+                    <span
+                      class="trend-badge"
+                      [class.up]="d.comparativa.variacion_cuentas_porcentaje >= 0"
+                      [class.down]="d.comparativa.variacion_cuentas_porcentaje < 0"
+                    >
+                      <mat-icon>{{ d.comparativa.variacion_cuentas_porcentaje >= 0 ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                      {{ d.comparativa.variacion_cuentas_porcentaje | number:'1.1-1' }}%
+                    </span>
+                    <span class="sub-text">facturas emitidas</span>
+                  } @else {
+                    <span class="sub-text">Propinas: {{ d.kpis.total_propinas | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Ticket Promedio -->
+            <div class="kpi-card">
+              <div class="kpi-icon-wrap green">
+                <mat-icon>point_of_sale</mat-icon>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-label">Ticket Promedio</span>
+                <span class="kpi-value">{{ d.kpis.ticket_promedio | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+                <div class="kpi-sub">
+                  <span class="sub-text">Promedio por cuenta pagada</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. Gastos Registrados -->
+            <div class="kpi-card">
+              <div class="kpi-icon-wrap red">
+                <mat-icon>money_off</mat-icon>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-label">Gastos Registrados</span>
+                <span class="kpi-value">{{ d.kpis.total_gastos | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+                <div class="kpi-sub">
+                  <span class="sub-text">Balance: {{ d.kpis.balance_operativo | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 5. Inventario Crítico -->
+            <div class="kpi-card">
+              <div class="kpi-icon-wrap amber">
+                <mat-icon>inventory_2</mat-icon>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-label">Inventario Crítico</span>
+                <div class="kpi-multi-values">
+                  <span class="alert-item warn" matTooltip="Productos con stock entre 1 y 5">
+                    <strong>{{ d.kpis.productos_bajo_stock }}</strong> bajo stock
+                  </span>
+                  <span class="alert-item danger" matTooltip="Productos sin existencias">
+                    <strong>{{ d.kpis.productos_agotados }}</strong> agotados
+                  </span>
+                </div>
+                <div class="kpi-sub">
+                  <span class="sub-text">Control de existencias activo</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 6. Descuadres de Caja -->
+            <div class="kpi-card">
+              <div class="kpi-icon-wrap purple">
+                <mat-icon>account_balance_wallet</mat-icon>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-label">Arqueos de Caja</span>
+                <span class="kpi-value" [class.text-danger]="d.kpis.monto_diferencia_cajas !== 0">
+                  {{ d.kpis.monto_diferencia_cajas | currency:'COP':'symbol-narrow':'1.0-0' }}
+                </span>
+                <div class="kpi-sub">
+                  <span class="sub-text">
+                    {{ d.kpis.cajas_con_diferencia }} turno(s) con descuadre
+                  </span>
+                  @if (d.kpis.caja_activa_abierta) {
+                    <span class="badge-active">Caja #{{ d.kpis.id_caja_activa }} Abierta</span>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN DE GRÁFICAS DEL DASHBOARD -->
+          <div class="charts-grid">
+            <!-- GRÁFICA 1: TENDENCIA DE VENTAS POR DÍA -->
+            <div class="chart-card wide">
+              <div class="chart-header">
+                <div class="chart-title">
+                  <mat-icon>show_chart</mat-icon>
+                  <h3>Ventas Diarias del Periodo</h3>
+                </div>
+                <span class="chart-legend-tag">Monto acumulado ($COP)</span>
+              </div>
+
+              @if (d.graficas.serie_ventas_por_dia.length === 0) {
+                <div class="empty-chart">
+                  <mat-icon>event_busy</mat-icon>
+                  <p>No se registraron ventas en el periodo seleccionado.</p>
+                </div>
+              } @else {
+                <div class="bar-chart-container">
+                  <div class="bars-wrapper">
+                    @for (item of d.graficas.serie_ventas_por_dia; track item.fecha) {
+                      <div
+                        class="bar-column"
+                        (mouseenter)="tooltipActivo.set({ x: 0, y: 0, fecha: item.fecha, monto: item.total_ventas, cuentas: item.cuentas_pagadas })"
+                        (mouseleave)="tooltipActivo.set(null)"
+                      >
+                        <div class="bar-track">
+                          <div
+                            class="bar-fill"
+                            [style.height.%]="(item.total_ventas / obtenerMaximoVentaDia()) * 100"
+                          >
+                            <span class="bar-tooltip-val">
+                              {{ item.total_ventas | currency:'COP':'symbol-narrow':'1.0-0' }}
+                            </span>
+                          </div>
+                        </div>
+                        <span class="bar-label">{{ item.fecha | date:'dd MMM':'UTC-5' }}</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- GRÁFICA 2: DISTRIBUCIÓN POR MEDIO DE PAGO -->
+            <div class="chart-card">
+              <div class="chart-header">
+                <div class="chart-title">
+                  <mat-icon>pie_chart</mat-icon>
+                  <h3>Medios de Pago</h3>
+                </div>
+              </div>
+
+              <div class="donut-container">
+                <svg viewBox="0 0 200 200" class="donut-svg">
+                  @for (slice of calcularCoordenadasDonut(); track slice.label) {
+                    <path
+                      [attr.d]="slice.path"
+                      [attr.fill]="slice.color"
+                      class="donut-slice"
+                    ></path>
+                  }
+                  <text x="100" y="96" text-anchor="middle" class="donut-center-num">
+                    {{ d.kpis.cuentas_pagadas }}
+                  </text>
+                  <text x="100" y="112" text-anchor="middle" class="donut-center-lbl">
+                    Cuentas
+                  </text>
+                </svg>
+
+                <div class="donut-legend">
+                  @for (item of d.graficas.distribucion_medios_pago; track item.medio) {
+                    <div class="legend-row">
+                      <span class="legend-dot" [class.dot-green]="item.medio.includes('Efectivo')" [class.dot-blue]="item.medio.includes('Tarjeta')" [class.dot-amber]="item.medio.includes('Transferencia')"></span>
+                      <span class="legend-name">{{ item.medio }}</span>
+                      <span class="legend-pct">{{ item.porcentaje | number:'1.1-1' }}%</span>
+                      <span class="legend-val">{{ item.total | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- GRÁFICA 3: TOP PRODUCTOS VENDIDOS -->
+            <div class="chart-card">
+              <div class="chart-header">
+                <div class="chart-title">
+                  <mat-icon>leaderboard</mat-icon>
+                  <h3>Top 5 Productos más Vendidos</h3>
+                </div>
+              </div>
+
+              @if (d.graficas.top_productos.length === 0) {
+                <div class="empty-chart">
+                  <mat-icon>fastfood</mat-icon>
+                  <p>Sin productos registrados en este periodo.</p>
+                </div>
+              } @else {
+                <div class="top-products-list">
+                  @for (prod of d.graficas.top_productos; track prod.id_producto; let idx = $index) {
+                    <div class="ranking-item">
+                      <span class="ranking-badge rank-{{ idx + 1 }}">#{{ idx + 1 }}</span>
+                      <div class="ranking-info">
+                        <div class="ranking-row">
+                          <span class="ranking-name">{{ prod.nombre }}</span>
+                          <span class="ranking-units">{{ prod.unidades }} uds.</span>
+                        </div>
+                        <div class="ranking-progress">
+                          <div
+                            class="progress-fill"
+                            [style.width.%]="(prod.unidades / d.graficas.top_productos[0].unidades) * 100"
+                          ></div>
+                        </div>
+                        <span class="ranking-total">{{ prod.total | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+
+            <!-- GRÁFICA 4: SALÓN VS DOMICILIOS -->
+            <div class="chart-card">
+              <div class="chart-header">
+                <div class="chart-title">
+                  <mat-icon>delivery_dining</mat-icon>
+                  <h3>Salón vs. Domicilios</h3>
+                </div>
+              </div>
+
+              <div class="channel-comparison">
+                @for (ch of d.graficas.distribucion_servicio; track ch.tipo) {
+                  <div class="channel-box" [class.salon]="ch.tipo === 'salon'" [class.domi]="ch.tipo === 'domicilio'">
+                    <div class="channel-icon-wrap">
+                      <mat-icon>{{ ch.tipo === 'salon' ? 'table_restaurant' : 'moped' }}</mat-icon>
+                    </div>
+                    <div class="channel-data">
+                      <span class="channel-label">{{ ch.etiqueta }}</span>
+                      <span class="channel-total">{{ ch.total | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+                      <div class="channel-pct-bar">
+                        <div class="pct-fill" [style.width.%]="ch.porcentaje"></div>
+                      </div>
+                      <span class="channel-pct-text">{{ ch.porcentaje | number:'1.1-1' }}% del total</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    </mat-tab>
+
+    <!-- TAB 1: REPORTE DE VENTAS -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">payments</mat-icon>
+        <span>Ventas</span>
+      </ng-template>
+
+      @if (cargando()) {
+        <div class="loading-state">
+          <mat-spinner diameter="44"></mat-spinner>
+          <p>Cargando reporte detallado de ventas...</p>
+        </div>
+      } @else if (ventasData(); as v) {
+        <div class="tab-content">
+          <!-- RESUMEN FINANCIERO -->
+          <div class="summary-cards-row">
+            <div class="mini-card">
+              <span class="mini-lbl">Total Facturado</span>
+              <span class="mini-val text-orange">{{ v.resumen.total_ventas | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+            <div class="mini-card">
+              <span class="mini-lbl">Ventas Netas (Sin Propina)</span>
+              <span class="mini-val">{{ v.resumen.subtotal | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+            <div class="mini-card">
+              <span class="mini-lbl">Propinas Recaudadas</span>
+              <span class="mini-val text-green">{{ v.resumen.total_propinas | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+            <div class="mini-card">
+              <span class="mini-lbl">Cuentas Cobradas</span>
+              <span class="mini-val">{{ v.resumen.cuentas_pagadas }}</span>
+            </div>
+            <div class="mini-card">
+              <span class="mini-lbl">Ticket Promedio</span>
+              <span class="mini-val">{{ v.resumen.ticket_promedio | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+          </div>
+
+          <!-- DESGLOSE POR CATEGORÍA -->
+          <div class="section-card">
+            <h3><mat-icon>category</mat-icon> Ventas por Categoría de Producto</h3>
+            <div class="categories-grid">
+              @for (cat of v.categorias; track cat.categoria) {
+                <div class="cat-pill">
+                  <div class="cat-pill-header">
+                    <strong>{{ cat.categoria }}</strong>
+                    <span>{{ cat.unidades }} uds.</span>
+                  </div>
+                  <div class="cat-pill-bar">
+                    <div class="cat-bar-fill" [style.width.%]="cat.porcentaje"></div>
+                  </div>
+                  <div class="cat-pill-footer">
+                    <span>{{ cat.total | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+                    <span>{{ cat.porcentaje | number:'1.1-1' }}%</span>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- TABLA DETALLADA DE FACTURAS -->
+          <div class="section-card">
+            <div class="section-card-header">
+              <h3><mat-icon>receipt_long</mat-icon> Detalle de Cuentas Cobradas ({{ v.detalle_facturas.length }})</h3>
+              <div class="table-filters">
+                <mat-form-field appearance="outline" density="compact">
+                  <mat-label>Tipo Servicio</mat-label>
+                  <mat-select [ngModel]="filtroTipoServicio()" (ngModelChange)="filtroTipoServicio.set($event); cargarDatosSegunTab()">
+                    <mat-option value="">Todos</mat-option>
+                    <mat-option value="salon">Mesas / Salón</mat-option>
+                    <mat-option value="domicilio">Domicilios</mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Factura</th>
+                    <th>Fecha / Hora</th>
+                    <th>Cliente / Origen</th>
+                    <th>Servicio</th>
+                    <th>Mesa</th>
+                    <th>Subtotal</th>
+                    <th>Propina</th>
+                    <th>Total</th>
+                    <th>Medio de Pago</th>
+                    <th>Atendido Por</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (fac of v.detalle_facturas; track fac.id_venta) {
+                    <tr>
+                      <td><span class="factura-code">FAC-{{ fac.id_venta }}</span></td>
+                      <td>{{ fac.fecha_hora | date:'dd/MM/yyyy HH:mm':'UTC-5' }}</td>
+                      <td><strong>{{ fac.cliente_nombre }}</strong></td>
+                      <td>
+                        <span class="badge-service" [class.salon]="fac.tipo_servicio === 'salon'" [class.domi]="fac.tipo_servicio === 'domicilio'">
+                          {{ fac.tipo_servicio === 'salon' ? 'Salón' : 'Domicilio' }}
+                        </span>
+                      </td>
+                      <td>{{ fac.mesa_numero ? ('Mesa #' + fac.mesa_numero) : 'N/A' }}</td>
+                      <td>{{ fac.subtotal | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
+                      <td>{{ fac.propina | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
+                      <td><strong>{{ fac.total | currency:'COP':'symbol-narrow':'1.0-0' }}</strong></td>
+                      <td><span class="badge-medio">{{ fac.medios_pago }}</span></td>
+                      <td>{{ fac.atendido_por }}</td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="10" class="empty-cell">No se encontraron facturas en el periodo.</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      }
+    </mat-tab>
+
+    <!-- TAB 2: REPORTE DE CAJA Y MEDIOS DE PAGO -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">point_of_sale</mat-icon>
+        <span>Caja y Arqueos</span>
+      </ng-template>
+
+      @if (cargando()) {
+        <div class="loading-state">
+          <mat-spinner diameter="44"></mat-spinner>
+          <p>Consultando arqueos contables e historial de turnos...</p>
+        </div>
+      } @else if (cajaMediosData(); as c) {
+        <div class="tab-content">
+          <!-- RESUMEN DE MEDIOS DE PAGO -->
+          <div class="medios-summary-grid">
+            @for (m of c.desglose_medios; track m.medio) {
+              <div class="medio-stat-card">
+                <div class="medio-title-row">
+                  <mat-icon>{{ m.medio.includes('Efectivo') ? 'attach_money' : (m.medio.includes('Tarjeta') ? 'credit_card' : 'account_balance') }}</mat-icon>
+                  <h4>{{ m.medio }}</h4>
+                  <span class="pct-badge">{{ m.porcentaje_ventas | number:'1.1-1' }}%</span>
+                </div>
+                <div class="medio-stat-line">
+                  <span>Ventas Recibidas:</span>
+                  <strong>{{ m.recaudo | currency:'COP':'symbol-narrow':'1.0-0' }}</strong>
+                </div>
+                <div class="medio-stat-line">
+                  <span>Gastos Pagados:</span>
+                  <span class="text-danger">-{{ m.gastos | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+                </div>
+                <div class="medio-stat-footer">
+                  <span>Neto Disponible:</span>
+                  <strong class="text-green">{{ m.neto | currency:'COP':'symbol-narrow':'1.0-0' }}</strong>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- HISTORIAL DE TURNOS DE CAJA -->
+          <div class="section-card">
+            <h3><mat-icon>history</mat-icon> Historial de Turnos de Caja ({{ c.turnos.length }})</h3>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>ID Turno</th>
+                    <th>Estado</th>
+                    <th>Apertura</th>
+                    <th>Cierre</th>
+                    <th>Cajero</th>
+                    <th>Base Inicial</th>
+                    <th>Ventas Efectivo</th>
+                    <th>Gastos Efectivo</th>
+                    <th>Efectivo Teórico</th>
+                    <th>Efectivo Físico</th>
+                    <th>Diferencia</th>
+                    <th>Cuadre</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (t of c.turnos; track t.id_caja) {
+                    <tr>
+                      <td><strong>#CAJA-{{ t.id_caja }}</strong></td>
+                      <td>
+                        <span class="status-chip" [class.open]="t.estado === 'abierta'" [class.closed]="t.estado === 'cerrada'">
+                          {{ t.estado | uppercase }}
+                        </span>
+                      </td>
+                      <td>{{ t.fecha_apertura | date:'dd/MM/yyyy HH:mm':'UTC-5' }}</td>
+                      <td>{{ t.fecha_cierre ? (t.fecha_cierre | date:'dd/MM/yyyy HH:mm':'UTC-5') : 'En curso' }}</td>
+                      <td>{{ t.cajero_apertura }}</td>
+                      <td>{{ t.valor_inicial | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
+                      <td>{{ t.ventas_efectivo | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
+                      <td>{{ t.gastos_efectivo | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
+                      <td><strong>{{ t.valor_final_teorico | currency:'COP':'symbol-narrow':'1.0-0' }}</strong></td>
+                      <td>{{ t.valor_final_fisico !== null ? (t.valor_final_fisico | currency:'COP':'symbol-narrow':'1.0-0') : '-' }}</td>
+                      <td>
+                        @if (t.diferencia !== null) {
+                          <span [class.text-danger]="t.diferencia < 0" [class.text-green]="t.diferencia > 0">
+                            {{ t.diferencia > 0 ? '+' : '' }}{{ t.diferencia | currency:'COP':'symbol-narrow':'1.0-0' }}
+                          </span>
+                        } @else {
+                          <span>-</span>
+                        }
+                      </td>
+                      <td>
+                        <span
+                          class="cuadre-badge"
+                          [class.exacto]="t.tipo_cuadre === 'exacto'"
+                          [class.sobrante]="t.tipo_cuadre === 'sobrante'"
+                          [class.faltante]="t.tipo_cuadre === 'faltante'"
+                          [class.en-progreso]="t.tipo_cuadre === 'en_progreso'"
+                        >
+                          {{ t.tipo_cuadre | uppercase }}
+                        </span>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="12" class="empty-cell">No se encontraron turnos de caja en el rango.</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      }
+    </mat-tab>
+
+    <!-- TAB 3: REPORTE DE INVENTARIO -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">inventory_2</mat-icon>
+        <span>Inventario</span>
+      </ng-template>
+
+      @if (cargando()) {
+        <div class="loading-state">
+          <mat-spinner diameter="44"></mat-spinner>
+          <p>Consultando existencias de bodega y carta...</p>
+        </div>
+      } @else if (inventarioData(); as inv) {
+        <div class="tab-content">
+          <!-- RESUMEN DE STOCK -->
+          <div class="summary-cards-row">
+            <div class="mini-card">
+              <span class="mini-lbl">Total Productos</span>
+              <span class="mini-val">{{ inv.resumen.total_productos }}</span>
+            </div>
+            <div class="mini-card">
+              <span class="mini-lbl">Con Control de Stock</span>
+              <span class="mini-val">{{ inv.resumen.total_controlan_stock }}</span>
+            </div>
+            <div class="mini-card">
+              <span class="mini-lbl">Valorización Costo</span>
+              <span class="mini-val text-orange">{{ inv.resumen.valor_total_inventario | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+            <div class="mini-card">
+              <span class="mini-lbl">Potencial Venta</span>
+              <span class="mini-val text-green">{{ inv.resumen.valor_potencial_venta | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+            <div class="mini-card alert-warn">
+              <span class="mini-lbl">Bajo Stock (&le; 5)</span>
+              <span class="mini-val">{{ inv.resumen.total_bajo_stock }}</span>
+            </div>
+            <div class="mini-card alert-danger">
+              <span class="mini-lbl">Agotados (0)</span>
+              <span class="mini-val">{{ inv.resumen.total_agotados }}</span>
+            </div>
+          </div>
+
+          <!-- TABLA DE EXISTENCIAS -->
+          <div class="section-card">
+            <div class="section-card-header">
+              <h3><mat-icon>view_list</mat-icon> Existencias de Catálogo ({{ inventarioFiltrado().length }})</h3>
+              <div class="inventory-filters">
+                <mat-form-field appearance="outline" density="compact" class="search-field">
+                  <mat-label>Buscar producto o categoría</mat-label>
+                  <input matInput [ngModel]="filtroBusquedaInv()" (ngModelChange)="filtroBusquedaInv.set($event)" placeholder="Ej. Pizza, Cerveza..." />
+                  <mat-icon matSuffix>search</mat-icon>
+                </mat-form-field>
+
+                <mat-chip-listbox [ngModel]="filtroStock()" (ngModelChange)="filtroStock.set($event)">
+                  <mat-chip-option value="todos">Todos</mat-chip-option>
+                  <mat-chip-option value="bajo" class="chip-warn">Bajo Stock</mat-chip-option>
+                  <mat-chip-option value="agotado" class="chip-danger">Agotados</mat-chip-option>
+                </mat-chip-listbox>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Producto</th>
+                    <th>Categoría</th>
+                    <th>Controla Stock</th>
+                    <th>Stock Actual</th>
+                    <th>Estado</th>
+                    <th>Costo Unit.</th>
+                    <th>Precio Venta</th>
+                    <th>Valor en Bodega</th>
+                    <th>Carta</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (p of inventarioFiltrado(); track p.id_producto) {
+                    <tr>
+                      <td><strong>{{ p.nombre }}</strong></td>
+                      <td>{{ p.categoria }}</td>
+                      <td>
+                        <span class="badge-chip" [class.yes]="p.controla_inventario">
+                          {{ p.controla_inventario ? 'SÍ' : 'NO' }}
+                        </span>
+                      </td>
+                      <td>
+                        @if (p.controla_inventario) {
+                          <span class="stock-num" [class.danger]="p.cantidad_inventario <= 0" [class.warn]="p.cantidad_inventario > 0 && p.cantidad_inventario <= 5">
+                            {{ p.cantidad_inventario }} uds.
+                          </span>
+                        } @else {
+                          <span>Ilimitado</span>
+                        }
+                      </td>
+                      <td>
+                        <span class="stock-status-pill" [class]="p.estado_stock">
+                          {{ p.estado_stock | uppercase }}
+                        </span>
+                      </td>
+                      <td>{{ p.costo_unitario | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
+                      <td>{{ p.precio_venta | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
+                      <td>{{ p.valor_inventario | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
+                      <td>
+                        <span class="disponible-dot" [class.on]="p.disponible" [class.off]="!p.disponible" [matTooltip]="p.disponible ? 'Disponible para ordenar' : 'No disponible'"></span>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="9" class="empty-cell">No se encontraron productos con los filtros aplicados.</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- HISTORIAL DE AJUSTES RECIENTES -->
+          @if (inv.ajustes_recientes.length > 0) {
+            <div class="section-card">
+              <h3><mat-icon>tune</mat-icon> Bitácora de Ajustes de Inventario Recientes</h3>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Fecha / Hora</th>
+                      <th>Producto</th>
+                      <th>Categoría</th>
+                      <th>Tipo Ajuste</th>
+                      <th>Cantidad</th>
+                      <th>Motivo</th>
+                      <th>Responsable</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (aj of inv.ajustes_recientes; track aj.id_ajuste) {
+                      <tr>
+                        <td>{{ aj.fecha_hora | date:'dd/MM/yyyy HH:mm':'UTC-5' }}</td>
+                        <td><strong>{{ aj.producto }}</strong></td>
+                        <td>{{ aj.categoria }}</td>
+                        <td><span class="ajuste-badge {{ aj.tipo_ajuste.toLowerCase() }}">{{ aj.tipo_ajuste }}</span></td>
+                        <td><strong>{{ aj.cantidad }} uds.</strong></td>
+                        <td>{{ aj.motivo }}</td>
+                        <td>{{ aj.responsable }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </mat-tab>
+
+    <!-- TAB 4: REPORTE DE GASTOS -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">money_off</mat-icon>
+        <span>Gastos</span>
+      </ng-template>
+
+      @if (cargando()) {
+        <div class="loading-state">
+          <mat-spinner diameter="44"></mat-spinner>
+          <p>Consultando egresos y gastos menores...</p>
+        </div>
+      } @else if (gastosData(); as g) {
+        <div class="tab-content">
+          <!-- RESUMEN DE GASTOS -->
+          <div class="summary-cards-row">
+            <div class="mini-card alert-danger">
+              <span class="mini-lbl">Total Gastos</span>
+              <span class="mini-val">{{ g.resumen.total_gastos | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+            <div class="mini-card">
+              <span class="mini-lbl">Movimientos Registrados</span>
+              <span class="mini-val">{{ g.resumen.cantidad_movimientos }}</span>
+            </div>
+            <div class="mini-card">
+              <span class="mini-lbl">Gasto Promedio por Salida</span>
+              <span class="mini-val">{{ g.resumen.gasto_promedio | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+          </div>
+
+          <!-- DESGLOSE POR TIPO -->
+          <div class="section-card">
+            <h3><mat-icon>donut_small</mat-icon> Gastos por Categoría</h3>
+            <div class="categories-grid">
+              @for (tipo of g.desglose_por_tipo; track tipo.tipo) {
+                <div class="cat-pill">
+                  <div class="cat-pill-header">
+                    <strong>{{ tipo.tipo }}</strong>
+                    <span>{{ tipo.movimientos }} movs.</span>
+                  </div>
+                  <div class="cat-pill-bar">
+                    <div class="cat-bar-fill red" [style.width.%]="tipo.porcentaje"></div>
+                  </div>
+                  <div class="cat-pill-footer">
+                    <span>{{ tipo.total | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+                    <span>{{ tipo.porcentaje | number:'1.1-1' }}%</span>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- TABLA DETALLADA DE GASTOS -->
+          <div class="section-card">
+            <h3><mat-icon>receipt</mat-icon> Detalle de Gastos Registrados</h3>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Fecha / Hora</th>
+                    <th>Caja #</th>
+                    <th>Descripción</th>
+                    <th>Tipo Gasto</th>
+                    <th>Medio de Pago</th>
+                    <th>Total</th>
+                    <th>Responsable</th>
+                    <th>Observación</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (gas of g.detalle_gastos; track gas.id_gasto) {
+                    <tr>
+                      <td>{{ gas.fecha_hora | date:'dd/MM/yyyy HH:mm':'UTC-5' }}</td>
+                      <td>Caja #{{ gas.id_caja }}</td>
+                      <td><strong>{{ gas.descripcion }}</strong></td>
+                      <td><span class="badge-medio">{{ gas.tipo_gasto }}</span></td>
+                      <td>{{ gas.medio_pago }}</td>
+                      <td><strong class="text-danger">-{{ gas.total | currency:'COP':'symbol-narrow':'1.0-0' }}</strong></td>
+                      <td>{{ gas.responsable }}</td>
+                      <td>{{ gas.observacion || '-' }}</td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="8" class="empty-cell">No se registraron gastos en el periodo consultado.</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      }
+    </mat-tab>
+
+    <!-- TAB 5: REPORTE DE RENTABILIDAD POR PRODUCTO -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">trending_up</mat-icon>
+        <span>Rentabilidad</span>
+      </ng-template>
+
+      @if (cargando()) {
+        <div class="loading-state">
+          <mat-spinner diameter="44"></mat-spinner>
+          <p>Calculando ingresos, costos y márgenes brutos...</p>
+        </div>
+      } @else if (rentabilidadData(); as r) {
+        <div class="tab-content">
+          <!-- NOTA METODOLÓGICA TRANSPARENTE -->
+          <div class="info-alert-box">
+            <mat-icon>info</mat-icon>
+            <div class="alert-text">
+              <strong>Nota Metodológica de Rentabilidad:</strong>
+              <p>{{ r.nota_metodologica }}</p>
+            </div>
+          </div>
+
+          <!-- RESUMEN DE RENTABILIDAD -->
+          <div class="summary-cards-row">
+            <div class="mini-card">
+              <span class="mini-lbl">Ingresos Productos</span>
+              <span class="mini-val text-orange">{{ r.resumen.total_ingresos | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+            <div class="mini-card">
+              <span class="mini-lbl">Costos de Venta Estimados</span>
+              <span class="mini-val text-danger">{{ r.resumen.total_costos_estimados | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+            <div class="mini-card highlight-green">
+              <span class="mini-lbl">Utilidad Bruta Total</span>
+              <span class="mini-val text-green">{{ r.resumen.utilidad_bruta_total | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+            <div class="mini-card">
+              <span class="mini-lbl">Margen Bruto Ponderado</span>
+              <span class="mini-val">{{ r.resumen.margen_bruto_promedio_porcentaje | number:'1.1-1' }}%</span>
+            </div>
+          </div>
+
+          <!-- TABLA DE RENTABILIDAD POR PRODUCTO -->
+          <div class="section-card">
+            <h3><mat-icon>assessment</mat-icon> Desglose de Rentabilidad por Producto</h3>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Producto</th>
+                    <th>Categoría</th>
+                    <th>Uds. Vendidas</th>
+                    <th>Ingresos ($)</th>
+                    <th>Costo Vigente ($)</th>
+                    <th>Costo Total ($)</th>
+                    <th>Utilidad Bruta ($)</th>
+                    <th>Margen Bruto (%)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (p of r.productos; track p.id_producto) {
+                    <tr>
+                      <td><strong>{{ p.nombre }}</strong></td>
+                      <td>{{ p.categoria }}</td>
+                      <td><strong>{{ p.unidades_vendidas }}</strong></td>
+                      <td>{{ p.ingresos_totales | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
+                      <td>{{ p.costo_unitario_actual | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
+                      <td>{{ p.costo_total_estimado | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
+                      <td>
+                        <strong [class.text-green]="p.utilidad_bruta > 0" [class.text-danger]="p.utilidad_bruta < 0">
+                          {{ p.utilidad_bruta | currency:'COP':'symbol-narrow':'1.0-0' }}
+                        </strong>
+                      </td>
+                      <td>
+                        <div class="margin-cell">
+                          <div class="margin-progress">
+                            <div
+                              class="margin-fill"
+                              [style.width.%]="p.margen_bruto_porcentaje"
+                              [class.high]="p.margen_bruto_porcentaje >= 50"
+                              [class.medium]="p.margen_bruto_porcentaje >= 25 && p.margen_bruto_porcentaje < 50"
+                              [class.low]="p.margen_bruto_porcentaje < 25"
+                            ></div>
+                          </div>
+                          <span class="margin-text">{{ p.margen_bruto_porcentaje | number:'1.1-1' }}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="8" class="empty-cell">No se encontraron ventas de productos en este periodo.</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      }
+    </mat-tab>
+
+    <!-- TAB 6: REPORTE DE OPERACIÓN Y PEDIDOS -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">storefront</mat-icon>
+        <span>Operación</span>
+      </ng-template>
+
+      @if (cargando()) {
+        <div class="loading-state">
+          <mat-spinner diameter="44"></mat-spinner>
+          <p>Analizando comandería y flujo operativo...</p>
+        </div>
+      } @else if (operacionData(); as op) {
+        <div class="tab-content">
+          <!-- RESUMEN OPERATIVO -->
+          <div class="summary-cards-row">
+            <div class="mini-card">
+              <span class="mini-lbl">Total Comandas</span>
+              <span class="mini-val">{{ op.resumen.total_pedidos }}</span>
+            </div>
+            <div class="mini-card">
+              <span class="mini-lbl">Comandas Cobradas</span>
+              <span class="mini-val text-green">{{ op.resumen.pedidos_cerrados }}</span>
+            </div>
+            <div class="mini-card">
+              <span class="mini-lbl">Comandas Activas</span>
+              <span class="mini-val text-orange">{{ op.resumen.pedidos_enviados_activos }}</span>
+            </div>
+            <div class="mini-card alert-danger">
+              <span class="mini-lbl">Comandas Canceladas</span>
+              <span class="mini-val">{{ op.resumen.pedidos_cancelados }}</span>
+            </div>
+            <div class="mini-card">
+              <span class="mini-lbl">Tasa de Cancelación</span>
+              <span class="mini-val" [class.text-danger]="op.resumen.tasa_cancelacion_porcentaje > 5">
+                {{ op.resumen.tasa_cancelacion_porcentaje | number:'1.1-1' }}%
+              </span>
+            </div>
+          </div>
+
+          <!-- GRÁFICA DE DISTRIBUCIÓN HORARIA (HORAS PICO) -->
+          <div class="section-card">
+            <h3><mat-icon>schedule</mat-icon> Flujo Horario de Pedidos (Horas Pico de Atención)</h3>
+            <div class="hourly-chart-container">
+              <div class="hourly-bars">
+                @for (h of op.distribucion_horaria; track h.hora) {
+                  <div class="hourly-col">
+                    <div class="hourly-bar-track">
+                      <div
+                        class="hourly-bar-fill"
+                        [style.height.%]="(h.pedidos / obtenerMaximoHorario()) * 100"
+                        [matTooltip]="h.etiqueta + ': ' + h.pedidos + ' pedido(s)'"
+                      ></div>
+                    </div>
+                    <span class="hourly-lbl">{{ h.hora }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- TABLA DE AUDITORÍA DE CANCELACIONES -->
+          @if (op.pedidos_cancelados_detalle.length > 0) {
+            <div class="section-card">
+              <h3><mat-icon>cancel</mat-icon> Registro de Comandas Canceladas</h3>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th># Pedido</th>
+                      <th>Fecha / Hora</th>
+                      <th>Tipo Servicio</th>
+                      <th>Mesa #</th>
+                      <th>Registrado Por</th>
+                      <th>Motivo de Cancelación</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (can of op.pedidos_cancelados_detalle; track can.id_pedido) {
+                      <tr>
+                        <td><strong>#{{ can.numero_pedido }}</strong></td>
+                        <td>{{ can.fecha_hora | date:'dd/MM/yyyy HH:mm':'UTC-5' }}</td>
+                        <td>{{ can.tipo === 'salon' ? 'Salón' : 'Domicilio' }}</td>
+                        <td>{{ can.mesa_numero ? ('Mesa #' + can.mesa_numero) : 'N/A' }}</td>
+                        <td>{{ can.usuario }}</td>
+                        <td><span class="text-danger">{{ can.observacion }}</span></td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </mat-tab>
+  </mat-tab-group>
+</div>
