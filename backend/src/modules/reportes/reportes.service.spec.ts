@@ -77,9 +77,48 @@ describe('ReportesService', () => {
       expect(fin).toBeInstanceOf(Date);
       expect(inicio.getTime()).toBeLessThan(fin.getTime());
     });
+
+    it('debe limpiar espacios en blanco alrededor de las fechas', () => {
+      const { inicio, fin } = resolverRangoFechas('  2026-10-01  ', '  2026-10-05  ');
+      expect(inicio).toBeInstanceOf(Date);
+      expect(fin).toBeInstanceOf(Date);
+      expect(inicio.getTime()).toBeLessThan(fin.getTime());
+    });
   });
 
   describe('obtenerDashboard', () => {
+    it('debe clasificar correctamente pasarelas colombianas modernas (Bold, Wompi, PSE)', async () => {
+      const mockFacturas = [
+        {
+          id_venta: 2,
+          id_mesa: null,
+          valor: '80000.00',
+          propina: '0.00',
+          valor_total: '80000.00',
+          fecha_hora: new Date('2026-10-03T12:00:00-05:00'),
+          pagos: [
+            { monto: '50000.00', medioPago: { nombre: 'Bold Datáfono' } },
+            { monto: '30000.00', medioPago: { nombre: 'Wompi PSE' } },
+          ],
+          pedidos: [],
+        },
+      ];
+
+      prisma.factura.findMany
+        .mockResolvedValueOnce(mockFacturas)
+        .mockResolvedValueOnce([]);
+
+      prisma.gasto.findMany.mockResolvedValue([]);
+      prisma.producto.findMany.mockResolvedValue([]);
+      prisma.caja.findMany.mockResolvedValue([]);
+      prisma.caja.findFirst.mockResolvedValue(null);
+
+      const res = await service.obtenerDashboard({ fecha_inicio: '2026-10-01', fecha_fin: '2026-10-05' });
+      const medioTarjeta = res.graficas.distribucion_medios_pago.find((m) => m.medio.includes('Tarjeta'));
+      const medioTransf = res.graficas.distribucion_medios_pago.find((m) => m.medio.includes('Transferencia'));
+      expect(medioTarjeta?.total).toBe(50000);
+      expect(medioTransf?.total).toBe(30000);
+    });
     it('debe retornar KPIs en cero cuando no existen ventas ni gastos en el periodo', async () => {
       prisma.factura.findMany.mockResolvedValue([]);
       prisma.gasto.findMany.mockResolvedValue([]);

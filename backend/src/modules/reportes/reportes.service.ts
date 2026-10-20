@@ -20,8 +20,27 @@ import {
 function normalizarMedioPago(nombre?: string | null): 'efectivo' | 'tarjeta' | 'transferencia' {
   const norm = (nombre || '').toLowerCase().trim();
   if (norm.includes('efectivo')) return 'efectivo';
-  if (norm.includes('tarjeta') || norm.includes('datafono') || norm.includes('pos')) return 'tarjeta';
-  if (norm.includes('transferencia') || norm.includes('nequi') || norm.includes('daviplata') || norm.includes('bancolombia')) return 'transferencia';
+  if (
+    norm.includes('tarjeta') ||
+    norm.includes('datafono') ||
+    norm.includes('datáfono') ||
+    norm.includes('pos') ||
+    norm.includes('bold') ||
+    norm.includes('credibanco') ||
+    norm.includes('redeban')
+  ) {
+    return 'tarjeta';
+  }
+  if (
+    norm.includes('transferencia') ||
+    norm.includes('nequi') ||
+    norm.includes('daviplata') ||
+    norm.includes('bancolombia') ||
+    norm.includes('wompi') ||
+    norm.includes('pse')
+  ) {
+    return 'transferencia';
+  }
   return 'efectivo';
 }
 
@@ -44,11 +63,14 @@ export function resolverRangoFechas(
   let fin: Date;
   let esMesPorDefecto = false;
 
-  if (fechaInicioStr) {
-    if (fechaInicioStr.includes('T')) {
-      inicio = new Date(fechaInicioStr);
+  const inicioTrim = fechaInicioStr?.trim();
+  const finTrim = fechaFinStr?.trim();
+
+  if (inicioTrim) {
+    if (inicioTrim.includes('T')) {
+      inicio = new Date(inicioTrim);
     } else {
-      inicio = new Date(`${fechaInicioStr}T00:00:00.000-05:00`);
+      inicio = new Date(`${inicioTrim}T00:00:00.000-05:00`);
     }
   } else {
     // Si no se especifica, toma desde el 1er día del mes actual en Colombia
@@ -59,11 +81,11 @@ export function resolverRangoFechas(
     inicio = new Date(`${y}-${m}-01T00:00:00.000-05:00`);
   }
 
-  if (fechaFinStr) {
-    if (fechaFinStr.includes('T')) {
-      fin = new Date(fechaFinStr);
+  if (finTrim) {
+    if (finTrim.includes('T')) {
+      fin = new Date(finTrim);
     } else {
-      fin = new Date(`${fechaFinStr}T23:59:59.999-05:00`);
+      fin = new Date(`${finTrim}T23:59:59.999-05:00`);
     }
   } else {
     const ahoraCol = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }));
