@@ -78,15 +78,36 @@
           <span>Actualizar</span>
         </button>
 
+        <!-- Export Buttons -->
         <button
           type="button"
           mat-flat-button
           class="btn-export"
-          (click)="exportarReporteActual()"
-          matTooltip="Descargar reporte actual en formato CSV para Excel"
+          (click)="exportarReporteActual('csv')"
+          matTooltip="Descargar reporte actual en formato CSV"
         >
           <mat-icon>file_download</mat-icon>
           <span>Exportar CSV</span>
+        </button>
+        <button
+          type="button"
+          mat-flat-button
+          class="btn-export"
+          (click)="exportarReporteActual('excel')"
+          matTooltip="Descargar reporte actual en formato Excel"
+        >
+          <mat-icon>grid_on</mat-icon>
+          <span>Exportar Excel</span>
+        </button>
+        <button
+          type="button"
+          mat-flat-button
+          class="btn-export"
+          (click)="exportarReporteActual('pdf')"
+          matTooltip="Descargar reporte actual en formato PDF"
+        >
+          <mat-icon>picture_as_pdf</mat-icon>
+          <span>Exportar PDF</span>
         </button>
       </div>
     </div>

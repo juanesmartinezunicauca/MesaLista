@@ -140,8 +140,10 @@
           @if (isLoading()) {
             <mat-spinner diameter="20" class="btn-spinner"></mat-spinner>
           } @else {
-            <mat-icon class="btn-icon">key</mat-icon>
-            <span>Acceder con Contraseña Local</span>
+            <ng-container>
+              <mat-icon class="btn-icon">key</mat-icon>
+              <span>Acceder con Contraseña Local</span>
+            </ng-container>
           }
         </button>
       </form>

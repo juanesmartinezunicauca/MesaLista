@@ -5,7 +5,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
+import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 
@@ -33,6 +33,8 @@ import {
   VentasReporteResponse,
 } from '../../../core/services/api/reportes-api.service';
 import { exportarACSV } from '../../../core/utils/export-csv.util';
+import { exportarAExcel } from '../../../core/utils/export-excel.util';
+import { exportarAPDF } from '../../../core/utils/export-pdf.util';
 
 export type PeriodoPreset = 'hoy' | '7dias' | 'mes' | 'personalizado';
 
@@ -56,7 +58,6 @@ export type PeriodoPreset = 'hoy' | '7dias' | 'mes' | 'personalizado';
     CurrencyPipe,
     DatePipe,
     DecimalPipe,
-    PercentPipe,
   ],
   templateUrl: './dashboard-reportes.html',
   styleUrl: './dashboard-reportes.scss',
@@ -281,7 +282,7 @@ export class DashboardReportesComponent implements OnInit {
   }
 
   // --- EXPORTACIONES A CSV / EXCEL ---
-  exportarReporteActual(): void {
+  exportarReporteActual(formato: 'csv' | 'excel' | 'pdf' = 'csv'): void {
     const tab = this.tabActivaIndex();
     const periodo = { inicio: this.fechaInicio(), fin: this.fechaFin() };
 
@@ -302,7 +303,13 @@ export class DashboardReportesComponent implements OnInit {
         ['Cajas con Descuadre', d.kpis.cajas_con_diferencia, 'Turnos cerrados con diferencia != 0'],
         ['Monto Total Diferencia Cajas', d.kpis.monto_diferencia_cajas, 'Diferencia neta (sobrantes/faltantes)'],
       ];
-      exportarACSV('MesaLista_Resumen_Dashboard', encabezados, filas, 'MesaLista - Resumen Ejecutivo', periodo);
+      if (formato === 'excel') {
+        exportarAExcel('MesaLista_Resumen_Dashboard', encabezados, filas, 'MesaLista - Resumen Ejecutivo', periodo);
+      } else if (formato === 'pdf') {
+        exportarAPDF('MesaLista_Resumen_Dashboard', encabezados, filas, 'MesaLista - Resumen Ejecutivo', periodo);
+      } else {
+        exportarACSV('MesaLista_Resumen_Dashboard', encabezados, filas, 'MesaLista - Resumen Ejecutivo', periodo);
+      }
     } else if (tab === 1) {
       const v = this.ventasData();
       if (!v) return;
@@ -332,7 +339,13 @@ export class DashboardReportesComponent implements OnInit {
         f.atendido_por,
         f.observacion || '',
       ]);
-      exportarACSV('MesaLista_Reporte_Ventas', encabezados, filas, 'MesaLista - Reporte Detallado de Ventas', periodo);
+      if (formato === 'excel') {
+        exportarAExcel('MesaLista_Reporte_Ventas', encabezados, filas, 'MesaLista - Reporte Detallado de Ventas', periodo);
+      } else if (formato === 'pdf') {
+        exportarAPDF('MesaLista_Reporte_Ventas', encabezados, filas, 'MesaLista - Reporte Detallado de Ventas', periodo);
+      } else {
+        exportarACSV('MesaLista_Reporte_Ventas', encabezados, filas, 'MesaLista - Reporte Detallado de Ventas', periodo);
+      }
     } else if (tab === 2) {
       const c = this.cajaMediosData();
       if (!c) return;
@@ -372,7 +385,13 @@ export class DashboardReportesComponent implements OnInit {
         t.tipo_cuadre.toUpperCase(),
         t.observacion || '',
       ]);
-      exportarACSV('MesaLista_Reporte_Caja', encabezados, filas, 'MesaLista - Reporte de Caja y Arqueos', periodo);
+      if (formato === 'excel') {
+        exportarAExcel('MesaLista_Reporte_Caja', encabezados, filas, 'MesaLista - Reporte de Caja y Arqueos', periodo);
+      } else if (formato === 'pdf') {
+        exportarAPDF('MesaLista_Reporte_Caja', encabezados, filas, 'MesaLista - Reporte de Caja y Arqueos', periodo);
+      } else {
+        exportarACSV('MesaLista_Reporte_Caja', encabezados, filas, 'MesaLista - Reporte de Caja y Arqueos', periodo);
+      }
     } else if (tab === 3) {
       const inv = this.inventarioData();
       if (!inv) return;
@@ -400,7 +419,13 @@ export class DashboardReportesComponent implements OnInit {
         p.valor_inventario,
         p.disponible ? 'DISPONIBLE' : 'NO DISPONIBLE',
       ]);
-      exportarACSV('MesaLista_Reporte_Inventario', encabezados, filas, 'MesaLista - Reporte de Inventario y Existencias');
+      if (formato === 'excel') {
+        exportarAExcel('MesaLista_Reporte_Inventario', encabezados, filas, 'MesaLista - Reporte de Inventario y Existencias');
+      } else if (formato === 'pdf') {
+        exportarAPDF('MesaLista_Reporte_Inventario', encabezados, filas, 'MesaLista - Reporte de Inventario y Existencias');
+      } else {
+        exportarACSV('MesaLista_Reporte_Inventario', encabezados, filas, 'MesaLista - Reporte de Inventario y Existencias');
+      }
     } else if (tab === 4) {
       const g = this.gastosData();
       if (!g) return;
@@ -426,7 +451,13 @@ export class DashboardReportesComponent implements OnInit {
         x.responsable,
         x.observacion || '',
       ]);
-      exportarACSV('MesaLista_Reporte_Gastos', encabezados, filas, 'MesaLista - Reporte de Gastos Operativos', periodo);
+      if (formato === 'excel') {
+        exportarAExcel('MesaLista_Reporte_Gastos', encabezados, filas, 'MesaLista - Reporte de Gastos Operativos', periodo);
+      } else if (formato === 'pdf') {
+        exportarAPDF('MesaLista_Reporte_Gastos', encabezados, filas, 'MesaLista - Reporte de Gastos Operativos', periodo);
+      } else {
+        exportarACSV('MesaLista_Reporte_Gastos', encabezados, filas, 'MesaLista - Reporte de Gastos Operativos', periodo);
+      }
     } else if (tab === 5) {
       const r = this.rentabilidadData();
       if (!r) return;
@@ -452,7 +483,13 @@ export class DashboardReportesComponent implements OnInit {
         p.utilidad_bruta,
         `${p.margen_bruto_porcentaje}%`,
       ]);
-      exportarACSV('MesaLista_Reporte_Rentabilidad', encabezados, filas, 'MesaLista - Reporte de Rentabilidad por Producto', periodo);
+      if (formato === 'excel') {
+        exportarAExcel('MesaLista_Reporte_Rentabilidad', encabezados, filas, 'MesaLista - Reporte de Rentabilidad por Producto', periodo);
+      } else if (formato === 'pdf') {
+        exportarAPDF('MesaLista_Reporte_Rentabilidad', encabezados, filas, 'MesaLista - Reporte de Rentabilidad por Producto', periodo);
+      } else {
+        exportarACSV('MesaLista_Reporte_Rentabilidad', encabezados, filas, 'MesaLista - Reporte de Rentabilidad por Producto', periodo);
+      }
     } else if (tab === 6) {
       const op = this.operacionData();
       if (!op) return;
