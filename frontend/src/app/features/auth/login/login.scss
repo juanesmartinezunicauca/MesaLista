@@ -1,446 +1,153 @@
 @use 'tokens' as *;
 @use 'mixins' as *;
 
-// ========================================================
-// MESALISTA - LOGIN EXPERIENCE (GLASSMORPHISM & AMBIENT GLOW)
-// ========================================================
-
 .login-split-container {
-  position: relative;
   display: flex;
   min-height: 100vh;
   width: 100vw;
-  background-color: #080b11;
+  background-color: $bg-dark;
   font-family: $font-family-base;
   overflow: hidden;
 }
 
-// --- ORBES DE LUZ AMBIENTAL (GLOW ATMOSFÉRICO) ---
-.ambient-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(120px);
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0.6;
-}
-
-.orb-primary {
-  width: 520px;
-  height: 520px;
-  background: radial-gradient(circle, rgba(255, 107, 53, 0.32) 0%, rgba(255, 107, 53, 0) 70%);
-  top: -120px;
-  left: -80px;
-  animation: floatAmbient 16s ease-in-out infinite alternate;
-}
-
-.orb-secondary {
-  width: 620px;
-  height: 620px;
-  background: radial-gradient(circle, rgba(37, 99, 235, 0.25) 0%, rgba(37, 99, 235, 0) 70%);
-  bottom: -150px;
-  right: -100px;
-  animation: floatAmbient 20s ease-in-out infinite alternate-reverse;
-}
-
-.orb-accent {
-  width: 380px;
-  height: 380px;
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.16) 0%, rgba(139, 92, 246, 0) 70%);
-  top: 35%;
-  left: 45%;
-  animation: pulseAmbient 12s ease-in-out infinite alternate;
-}
-
-// ========================================================
-// 1. LADO IZQUIERDO: HERO VISUAL DEL RESTAURANTE (BRAND PANEL)
-// ========================================================
+// --- PANEL IZQUIERDO: HERO DE MARCA ---
 .brand-panel {
-  flex: 1.15;
+  flex: 1.1;
   position: relative;
-  z-index: 2;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 107, 53, 0.25) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(37, 99, 235, 0.15) 0%, transparent 50%),
+    linear-gradient(145deg, #141618 0%, #1A1D20 50%, #24282C 100%);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 48px 52px;
-  background: rgba(12, 16, 25, 0.55);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 48px;
 
   @include respond-to('lg') {
     display: none;
   }
 
   .brand-content {
+    position: relative;
+    z-index: 2;
     height: 100%;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    gap: 28px;
-  }
-
-  // Encabezado de Marca
-  .brand-header-group {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
   }
 
   .logo-box {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
 
-    .logo-icon-wrapper {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #ff6b35 0%, #ff8f50 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 8px 20px rgba(255, 107, 53, 0.38);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-
-      .brand-icon {
-        color: #ffffff;
-        font-size: 24px;
-        width: 24px;
-        height: 24px;
-      }
+    .brand-icon {
+      color: $brand-orange;
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
     }
 
-    .brand-title-col {
-      display: flex;
-      flex-direction: column;
-
-      .brand-name {
-        color: #ffffff;
-        font-weight: 800;
-        font-size: 1.6rem;
-        letter-spacing: -0.03em;
-        line-height: 1.1;
-      }
-
-      .brand-tag {
-        color: #94a3b8;
-        font-size: 0.775rem;
-        font-weight: 500;
-        letter-spacing: 0.02em;
-      }
+    .brand-name {
+      color: $text-light;
+      font-weight: 700;
+      font-size: 1.5rem;
+      letter-spacing: -0.5px;
     }
   }
 
-  .system-status-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(16, 185, 129, 0.12);
-    border: 1px solid rgba(16, 185, 129, 0.28);
-    color: #34d399;
-    padding: 6px 14px;
-    border-radius: 9999px;
-    font-size: 0.775rem;
-    font-weight: 600;
-    letter-spacing: 0.01em;
-
-    .pulse-dot {
-      width: 7px;
-      height: 7px;
-      background-color: #10b981;
-      border-radius: 50%;
-      box-shadow: 0 0 8px #10b981;
-      animation: statusPulse 2s infinite ease-in-out;
-    }
-  }
-
-  // Bloque Central Hero
-  .hero-text-block {
-    max-width: 500px;
-
-    .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      color: #fed7aa;
-      padding: 5px 12px;
-      border-radius: 9999px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      margin-bottom: 16px;
-
-      .sparkle-icon {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-        color: #ff6b35;
-      }
-    }
+  .hero-text {
+    max-width: 480px;
 
     h2 {
       color: #ffffff;
-      font-size: 2.35rem;
+      font-size: 2.25rem;
       font-weight: 800;
-      line-height: 1.2;
-      letter-spacing: -0.03em;
+      line-height: 1.25;
       margin-bottom: 16px;
     }
 
     p {
-      color: #94a3b8;
+      color: $text-light-muted;
       font-size: 1.05rem;
       line-height: 1.6;
     }
   }
 
-  // Grid de Módulos Operativos (Tarjetas Glassmorphism)
-  .glass-features-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
-    max-width: 520px;
-
-    .feature-card {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 14px;
-      padding: 14px 16px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-
-      &:hover {
-        background: rgba(255, 255, 255, 0.06);
-        border-color: rgba(255, 107, 53, 0.35);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
-      }
-
-      .feature-icon-badge {
-        width: 38px;
-        height: 38px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-
-        mat-icon {
-          font-size: 20px;
-          width: 20px;
-          height: 20px;
-        }
-
-        &.orange {
-          background: rgba(255, 107, 53, 0.16);
-          color: #ff8f50;
-          border: 1px solid rgba(255, 107, 53, 0.3);
-        }
-
-        &.blue {
-          background: rgba(37, 99, 235, 0.16);
-          color: #60a5fa;
-          border: 1px solid rgba(37, 99, 235, 0.3);
-        }
-
-        &.green {
-          background: rgba(16, 185, 129, 0.16);
-          color: #34d399;
-          border: 1px solid rgba(16, 185, 129, 0.3);
-        }
-
-        &.purple {
-          background: rgba(139, 92, 246, 0.16);
-          color: #c084fc;
-          border: 1px solid rgba(139, 92, 246, 0.3);
-        }
-      }
-
-      .feature-info {
-        display: flex;
-        flex-direction: column;
-
-        .feature-title {
-          color: #f1f5f9;
-          font-weight: 700;
-          font-size: 0.875rem;
-        }
-
-        .feature-desc {
-          color: #64748b;
-          font-size: 0.75rem;
-        }
-      }
-    }
-  }
-
-  // Tarjeta de Seguridad Inferior
-  .security-quote-card {
-    background: rgba(20, 26, 38, 0.65);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 16px;
-    padding: 20px 22px;
-    max-width: 520px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
-
-    .quote-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: #93c5fd;
-      font-size: 0.825rem;
-      font-weight: 700;
-      margin-bottom: 8px;
-
-      .shield-check {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-        color: #38bdf8;
-      }
-    }
+  .quote-card {
+    background: rgba(36, 40, 44, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid $border-dark;
+    border-radius: $radius-lg;
+    padding: 24px;
+    max-width: 480px;
 
     p {
-      color: #cbd5e1;
-      font-size: 0.875rem;
-      line-height: 1.5;
-      margin: 0 0 10px;
+      color: $text-light;
+      font-style: italic;
+      margin-bottom: 8px;
     }
 
-    .quote-footer {
-      .quote-author {
-        color: #ff8f50;
-        font-size: 0.775rem;
-        font-weight: 600;
-        letter-spacing: 0.02em;
-      }
+    .quote-author {
+      color: $brand-orange;
+      font-size: 0.875rem;
+      font-weight: 600;
     }
   }
 }
 
-// ========================================================
-// 2. LADO DERECHO: FORMULARIO GLASSMORPHIC ELEVADO
-// ========================================================
+// --- PANEL DERECHO: FORMULARIO DE ACCESO ---
 .form-panel {
   flex: 1;
-  position: relative;
-  z-index: 2;
+  background-color: $bg-dark;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px 24px;
+  padding: 32px 24px;
   overflow-y: auto;
 
-  .glass-login-card {
+  .form-wrapper {
     width: 100%;
-    max-width: 440px;
-    background: rgba(18, 24, 38, 0.78);
-    backdrop-filter: blur(28px);
-    -webkit-backdrop-filter: blur(28px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 24px;
-    padding: 38px 34px;
-    box-shadow:
-      0 25px 60px -15px rgba(0, 0, 0, 0.75),
-      inset 0 1px 0 rgba(255, 255, 255, 0.14);
-    animation: cardEntrance 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  // Header visible solo en móvil
-  .mobile-brand-header {
-    display: none;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-
-    @include respond-to('lg') {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .mobile-logo-box {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-
-      .mobile-icon {
-        color: #ff6b35;
-        font-size: 26px;
-        width: 26px;
-        height: 26px;
-      }
-
-      .mobile-name {
-        color: #ffffff;
-        font-weight: 800;
-        font-size: 1.35rem;
-        letter-spacing: -0.02em;
-      }
-    }
-
-    .mobile-badge {
-      background: rgba(255, 107, 53, 0.14);
-      border: 1px solid rgba(255, 107, 53, 0.28);
-      color: #ff8f50;
-      padding: 4px 10px;
-      border-radius: 9999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
+    max-width: 420px;
+    animation: fadeInUp 0.4s ease-out;
   }
 
   .form-header {
     margin-bottom: 22px;
 
     h1 {
-      color: #ffffff;
-      font-size: 1.95rem;
+      color: $text-light;
+      font-size: 1.85rem;
       font-weight: 800;
-      letter-spacing: -0.03em;
-      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
     }
 
     p {
-      color: #94a3b8;
+      color: $text-light-muted;
       font-size: 0.9rem;
       line-height: 1.4;
-      margin: 0;
     }
   }
 
-  // Banner de Error
   .login-error-banner {
     display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    background: rgba(239, 68, 68, 0.12);
-    border: 1px solid rgba(239, 68, 68, 0.35);
+    align-items: center;
+    gap: 10px;
+    background-color: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.4);
     color: #fca5a5;
-    padding: 12px 14px;
-    border-radius: 12px;
+    padding: 12px 16px;
+    border-radius: $radius-md;
     margin-bottom: 20px;
-    font-size: 0.85rem;
-    line-height: 1.45;
-    animation: fadeInShake 0.35s ease-out;
+    font-size: 0.875rem;
 
-    .error-icon-box {
+    mat-icon {
+      color: #ef4444;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
       flex-shrink: 0;
-      mat-icon {
-        color: #ef4444;
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-      }
     }
 
     .error-text {
@@ -449,72 +156,22 @@
   }
 }
 
-// ========================================================
-// 3. BLOQUE EXCLUSIVO DE ACCESO FEDERADO (SSO)
-// ========================================================
-.sso-exclusive-section {
+// --- SECCIÓN SSO (GOOGLE & INVITACIONES) ---
+.sso-primary-section {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  margin: 6px 0 16px;
-
-  .sso-info-box {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    background: rgba(59, 130, 246, 0.08);
-    border: 1px solid rgba(59, 130, 246, 0.22);
-    border-radius: 14px;
-    padding: 14px 16px;
-
-    .sso-info-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
-      background: rgba(59, 130, 246, 0.16);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #60a5fa;
-      flex-shrink: 0;
-
-      mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-      }
-    }
-
-    .sso-info-text {
-      flex: 1;
-
-      .sso-info-title {
-        display: block;
-        color: #93c5fd;
-        font-weight: 700;
-        font-size: 0.85rem;
-        margin-bottom: 4px;
-        letter-spacing: 0.01em;
-      }
-
-      p {
-        color: #94a3b8;
-        font-size: 0.8rem;
-        line-height: 1.45;
-        margin: 0;
-      }
-    }
-  }
+  gap: 14px;
+  margin-top: 10px;
 
   .invitation-toggle-box {
-    margin-bottom: 14px;
+    margin-bottom: 6px;
 
     .btn-toggle-invitation {
       width: 100%;
       background: transparent;
       border: 1px dashed rgba(148, 163, 184, 0.4);
       border-radius: 10px;
-      color: #94a3b8;
+      color: $text-light-muted;
       font-size: 0.8rem;
       font-weight: 500;
       padding: 8px 12px;
@@ -523,11 +180,11 @@
       justify-content: center;
       gap: 6px;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all $transition-fast;
 
       &:hover {
         background: rgba(255, 255, 255, 0.05);
-        color: #f1f5f9;
+        color: $text-light;
         border-color: rgba(255, 255, 255, 0.4);
       }
 
@@ -551,29 +208,23 @@
 
       .invitation-hint {
         font-size: 0.72rem;
-        color: #64748b;
+        color: #94a3b8;
         margin: 6px 0 0;
         line-height: 1.35;
       }
     }
   }
 
-  .sso-buttons-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
-
   .google-auth-container {
     width: 100%;
-    min-height: 50px;
+    min-height: 48px;
 
     .google-btn-render {
       display: flex;
       justify-content: center;
       width: 100%;
       overflow: hidden;
-      border-radius: 14px;
+      border-radius: $radius-md;
 
       iframe {
         margin: 0 auto !important;
@@ -584,29 +235,25 @@
 
   .sso-btn {
     width: 100%;
-    height: 52px;
+    height: 48px;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 12px;
-    border-radius: 14px;
-    font-size: 0.95rem;
+    border-radius: $radius-md;
+    font-size: 0.9375rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    transition: all $transition-fast;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 
     .sso-svg-icon {
       flex-shrink: 0;
     }
 
     &:hover:not([disabled]) {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-    }
-
-    &:active:not([disabled]) {
-      transform: translateY(0);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
 
     &[disabled] {
@@ -618,120 +265,33 @@
   .google-custom-btn {
     background: #ffffff;
     color: #1f2937;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid #d1d5db;
 
     &:hover:not([disabled]) {
-      background: #f8fafc;
-      box-shadow: 0 8px 25px rgba(255, 255, 255, 0.12);
-    }
-  }
-
-  .microsoft-custom-btn {
-    background: rgba(28, 34, 48, 0.9);
-    color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-
-    &:hover:not([disabled]) {
-      background: rgba(38, 46, 64, 0.98);
-      border-color: rgba(255, 255, 255, 0.32);
-      box-shadow: 0 8px 25px rgba(5, 166, 240, 0.18);
-    }
-  }
-
-  .sso-loading-indicator {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 10px 0;
-    color: #94a3b8;
-    font-size: 0.85rem;
-
-    .sso-spinner {
-      ::ng-deep circle {
-        stroke: #ff6b35 !important;
-      }
+      background: #f9fafb;
+      border-color: #9ca3af;
     }
   }
 }
 
-// Pie de Seguridad de la Tarjeta
-.login-card-footer {
+.sso-loading-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 12px;
   margin-top: 24px;
-  color: #64748b;
-  font-size: 0.775rem;
-  font-weight: 500;
-
-  .footer-icon {
-    font-size: 14px;
-    width: 14px;
-    height: 14px;
-    color: #94a3b8;
-  }
+  color: $text-light-muted;
+  font-size: 0.875rem;
 }
 
-// ========================================================
-// 6. ANIMACIONES Y KEYFRAMES
-// ========================================================
-@keyframes floatAmbient {
-  0% {
-    transform: translate(0, 0) scale(1);
-  }
-  50% {
-    transform: translate(40px, 30px) scale(1.08);
-  }
-  100% {
-    transform: translate(-30px, 50px) scale(0.96);
-  }
-}
-
-@keyframes pulseAmbient {
-  0% {
-    opacity: 0.12;
-    transform: scale(0.95);
-  }
-  100% {
-    opacity: 0.24;
-    transform: scale(1.05);
-  }
-}
-
-@keyframes statusPulse {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.4;
-    transform: scale(0.85);
-  }
-}
-
-@keyframes cardEntrance {
+@keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(20px) scale(0.98);
+    transform: translateY(12px);
   }
+
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes fadeInShake {
-  0% {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-  60% {
-    opacity: 1;
-    transform: translateY(2px);
-  }
-  100% {
     transform: translateY(0);
   }
-}
+}
