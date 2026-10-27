@@ -152,21 +152,6 @@ export class UsuariosService {
     return usuario;
   }
 
-  /**
-   * Método interno para autenticación (AuthModule).
-   * Incluye passwordHash para verificación con argon2.verify.
-   * Permite autenticar tanto por nombre de usuario como por correo electrónico.
-   */
-  async obtenerPorUsernameParaAuth(usuarioOEmail: string) {
-    return this.prisma.usuario.findFirst({
-      where: {
-        OR: [
-          { usuario: usuarioOEmail },
-          { email: usuarioOEmail },
-        ],
-      },
-    });
-  }
 
   /**
    * Vincula una cuenta de Google OAuth existente por código de invitación, googleId o email/username,
@@ -437,5 +422,25 @@ export class UsuariosService {
       tipo: 'hard-delete',
       id_usuario: id,
     };
+  }
+
+  // =========================================================================
+  // CONTINGENCIA LOCAL Y ALTA DISPONIBILIDAD (FALLBACK / DISASTER RECOVERY)
+  // Utilizado exclusivamente ante caídas de WAN/Internet o autenticación seed.
+  // =========================================================================
+
+  /**
+   * Método de contingencia para autenticación local por usuario o correo.
+   * Incluye passwordHash para verificación criptográfica mediante Argon2id.
+   */
+  async obtenerPorUsernameParaAuth(usuarioOEmail: string) {
+    return this.prisma.usuario.findFirst({
+      where: {
+        OR: [
+          { usuario: usuarioOEmail },
+          { email: usuarioOEmail },
+        ],
+      },
+    });
   }
 }

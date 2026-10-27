@@ -31,7 +31,9 @@ export class UsuariosController {
 
   /**
    * POST /api/v1/usuarios
-   * Crea un nuevo usuario en el sistema.
+   * Crea un nuevo colaborador en el sistema (gestión exclusiva de administración).
+   * - Flujo Principal (Google SSO): Genera un código de invitación unívoco (INV-XXXXXX) para enrolamiento delegado sin contraseña.
+   * - Flujo de Contingencia: Acepta opcionalmente contraseña hasheada en Argon2id para cuentas maestras o de respaldo local.
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
