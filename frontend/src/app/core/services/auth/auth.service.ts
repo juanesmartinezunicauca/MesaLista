@@ -58,8 +58,12 @@ export class AuthService {
   /**
    * Envía el ID Token de Google OAuth 2.0 al backend para autenticar al usuario
    */
-  loginGoogle(idToken: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/google`, { idToken }).pipe(
+  loginGoogle(idToken: string, codigoInvitacion?: string): Observable<AuthResponse> {
+    const payload: { idToken: string; codigoInvitacion?: string } = { idToken };
+    if (codigoInvitacion && codigoInvitacion.trim()) {
+      payload.codigoInvitacion = codigoInvitacion.trim();
+    }
+    return this.http.post<AuthResponse>(`${this.apiUrl}/google`, payload).pipe(
       tap((res) => {
         const sesionUsuario: UsuarioSesion = {
           id_usuario: res.usuario.id_usuario,

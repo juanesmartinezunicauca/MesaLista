@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mesa Lista - Matriz OWASP Top 10 y Vulnerabilidades CVSS v3.1</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-page: #f8fafc;
+      --bg-card: #ffffff;
+      --border-color: #e2e8f0;
+      --border-subtle: #edf2f7;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      
+      --badge-cumple-bg: #ecfdf5;
+      --badge-cumple-text: #065f46;
+      --badge-cumple-border: #a7f3d0;
+
+      --badge-media-bg: #fef3c7;
+      --badge-media-text: #92400e;
+      --badge-media-border: #fde68a;
+
+      --badge-baja-bg: #f1f5f9;
+      --badge-baja-text: #334155;
+      --badge-baja-border: #cbd5e1;
+
+      --badge-info-bg: #f0f9ff;
+      --badge-info-text: #075985;
+      --badge-info-border: #bae6fd;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-page);
+      color: var(--text-primary);
+      padding: 2.5rem 1.5rem;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+
+    /* HEADER */
+    .header {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 2rem 2.5rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+    }
+
+    .header-info h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.35rem;
+      letter-spacing: -0.02em;
+    }
+
+    .header-info p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    .header-info .institution {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .header-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.75rem;
+    }
+
+    .status-pill {
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 0.35rem 0.75rem;
+      background: #f1f5f9;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-secondary);
+    }
+
+    .btn-print {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.45rem 0.9rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+
+    .btn-print:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
+
+    /* SUMMARY CARDS */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .summary-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.25rem;
+    }
+
+    .summary-card .label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.4rem;
+    }
+
+    .summary-card .value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1;
+      margin-bottom: 0.25rem;
+    }
+
+    .summary-card .subtext {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* VIEW SELECTOR TABS */
+    .view-selector {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.5rem;
+    }
+
+    .tab-view-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      padding: 0.55rem 1.1rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .tab-view-btn:hover {
+      background: #f1f5f9;
+      color: var(--text-primary);
+    }
+
+    .tab-view-btn.active {
+      background: #0f172a;
+      border-color: #0f172a;
+      color: #ffffff;
+    }
+
+    /* FILTER BAR */
+    .filter-bar {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.85rem 1.25rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .filter-input {
+      flex: 1;
+      min-width: 260px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.5rem 0.85rem;
+      font-size: 0.88rem;
+      color: var(--text-primary);
+      outline: none;
+      background: #ffffff;
+    }
+
+    .filter-input:focus {
+      border-color: #94a3b8;
+    }
+
+    .filter-btn {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 0.45rem 0.85rem;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .filter-btn:hover {
+      background: #f1f5f9;
+      color: var(--text-primary);
+    }
+
+    .filter-btn.active {
+      background: #0f172a;
+      border-color: #0f172a;
+      color: #ffffff;
+    }
+
+    /* TABLE LAYOUT */
+    .table-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow-x: auto;
+      margin-bottom: 2rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.88rem;
+    }
+
+    thead {
+      background: #f8fafc;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      padding: 0.85rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border-subtle);
+      vertical-align: top;
+      color: var(--text-secondary);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background: #fcfdfe;
+    }
+
+    .col-id {
+      width: 80px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .col-title {
+      min-width: 200px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .col-status {
+      min-width: 160px;
+      white-space: nowrap;
+    }
+
+    .col-scope {
+      min-width: 130px;
+      font-size: 0.82rem;
+    }
+
+    .col-cvss {
+      min-width: 110px;
+      white-space: nowrap;
+    }
+
+    .col-desc {
+      min-width: 300px;
+      line-height: 1.45;
+    }
+
+    .col-solution {
+      min-width: 300px;
+      line-height: 1.45;
+      color: #1e293b;
+    }
+
+    /* BADGES */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.2rem 0.55rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: 1px solid transparent;
+    }
+
+    .badge-cumple {
+      background: var(--badge-cumple-bg);
+      color: var(--badge-cumple-text);
+      border-color: var(--badge-cumple-border);
+    }
+
+    .badge-media {
+      background: var(--badge-media-bg);
+      color: var(--badge-media-text);
+      border-color: var(--badge-media-border);
+    }
+
+    .badge-baja {
+      background: var(--badge-baja-bg);
+      color: var(--badge-baja-text);
+      border-color: var(--badge-baja-border);
+    }
+
+    .badge-info {
+      background: var(--badge-info-bg);
+      color: var(--badge-info-text);
+      border-color: var(--badge-info-border);
+    }
+
+    .badge-scope {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid var(--border-color);
+      font-size: 0.73rem;
+      font-weight: 500;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+    }
+
+    .score-cvss {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .score-zero {
+      color: #059669;
+    }
+
+    .score-media {
+      color: #b45309;
+    }
+
+    .score-baja {
+      color: #475569;
+    }
+
+    .tag-cwe {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      color: #475569;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+    }
+
+    .tag-owasp-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      color: #92400e;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+    }
+
+    .tag-owasp-safe {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      color: #065f46;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+    }
+
+    /* EXPLANATION BOX */
+    .note-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .note-box h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.75rem;
+    }
+
+    .note-box p {
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 0.75rem;
+    }
+
+    .note-box p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* FOOTER */
+    .footer {
+      text-align: center;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+
+    @media print {
+      body {
+        padding: 0;
+        background: #ffffff;
+      }
+      .filter-bar, .header-actions, .view-selector {
+        display: none !important;
+      }
+      .container {
+        max-width: 100%;
+      }
+      .table-container {
+        border: 1px solid #ccc;
+      }
+      th, td {
+        padding: 0.5rem;
+        font-size: 0.75rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <!-- HEADER -->
+    <header class="header">
+      <div class="header-info">
+        <h1>Informe de Seguridad y Cumplimiento OWASP Top 10</h1>
+        <p><strong>Mesa Lista</strong> — Sistema de Pedidos y Gestión Gastronómica | Auditoría DAST OWASP ZAP v2.17.0</p>
+        <p class="institution">Facultad de Ingeniería Electrónica y Telecomunicaciones — Universidad del Cauca</p>
+      </div>
+      <div class="header-actions">
+        <span class="status-pill">Puntaje Máximo: 5.4 (Severidad Media)</span>
+        <button class="btn-print" onclick="window.print()">Imprimir / Guardar PDF</button>
+      </div>
+    </header>
+
+    <!-- SUMMARY CARDS -->
+    <section class="summary-grid">
+      <div class="summary-card">
+        <div class="label">Categorías Evaluadas</div>
+        <div class="value">10 / 10</div>
+        <div class="subtext">100% OWASP Top 10 cubierto</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Cumplimiento Conforme</div>
+        <div class="value">8 / 10</div>
+        <div class="subtext">80% Protegido o Conforme</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Requiere Atención</div>
+        <div class="value">2 / 10</div>
+        <div class="subtext">Mitigable (Cabeceras Vercel)</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Puntaje CVSS Máximo</div>
+        <div class="value">5.4</div>
+        <div class="subtext">Severidad Media Controlada</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Vulnerabilidades Críticas</div>
+        <div class="value">0</div>
+        <div class="subtext">0% del total evaluado</div>
+      </div>
+    </section>
+
+    <!-- VIEW SELECTOR TABS -->
+    <div class="view-selector">
+      <button id="tabBtnOwasp" class="tab-view-btn active" onclick="switchView('owasp')">Matriz OWASP Top 10 (A01 - A10)</button>
+      <button id="tabBtnZap" class="tab-view-btn" onclick="switchView('zap')">Desglose Técnico de Alertas ZAP (13)</button>
+    </div>
+
+    <!-- FILTER BAR -->
+    <div class="filter-bar">
+      <input type="text" id="searchInput" class="filter-input" placeholder="Buscar por categoría, control, CWE o palabra clave..." onkeyup="filterRows()">
+      <div id="filterButtonsContainer">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- TABLE CONTAINER -->
+    <div class="table-container">
+      <table id="mainTable">
+        <thead id="tableHead">
+          <!-- Rendered dynamically -->
+        </thead>
+        <tbody id="tableBody">
+          <!-- Rendered dynamically -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- EXPLANATION NOTE BOX -->
+    <section class="note-box">
+      <h3>Nota Técnica: Correspondencia OWASP Top 10 y Cero Inyecciones (A05)</h3>
+      <p>
+        <strong>1. ¿Por qué la categoría A05:2025 (Inyecciones) registra CERO vulnerabilidades?</strong><br>
+        Durante la auditoría dinámica con OWASP ZAP se ejecutaron cientos de vectores de prueba de inyección SQL clásica (<code>' OR 1=1 --</code>), inyección ciega y caracteres de escape. El sistema cuenta con cumplimiento total (CVSS 0.0) debido a que <strong>Prisma ORM</strong> traduce todas las interacciones con la base de datos PostgreSQL a consultas fuertemente tipadas y parametrizadas automáticamente ($1, $2), imposibilitando la concatenación maliciosa. Adicionalmente, el <strong>ValidationPipe</strong> global de NestJS descarta propiedades no autorizadas en el cuerpo de las peticiones (Mass Assignment).
+      </p>
+      <p>
+        <strong>2. Correspondencia entre versiones OWASP 2021 vs OWASP 2025:</strong><br>
+        En el estándar <strong>OWASP Top 10:2021</strong>, las fallas de cabeceras HTTP defensivas (CSP, nosniff, Clickjacking) se agrupaban bajo el identificador <strong>A05:2021 (Security Misconfiguration)</strong>. En la actualización <strong>OWASP Top 10:2025</strong>, esta categoría pasó a ser <strong>A02:2025</strong>, reservando <strong>A05:2025</strong> para <strong>Inyecciones</strong>. Ambas nomenclaturas están reflejadas en este informe para evitar cualquier discrepancia de criterio.
+      </p>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+      <p>Mesa Lista — Auditoría de Calidad y Seguridad Informática | Informe de Cumplimiento OWASP Top 10 y CVSS v3.1</p>
+    </footer>
+
+  </div>
+
+  <script>
+    const owaspData = [
+  {
+    "id": "A01",
+    "owasp2025": "A01:2025",
+    "owasp2021": "A01:2021",
+    "name": "Broken Access Control (Control de Acceso e IDOR)",
+    "status": "cumple_obs",
+    "statusLabel": "Cumple con Observaciones",
+    "cvss": "5.4",
+    "severity": "Media",
+    "alertCount": "1 tipo / 1 inst.",
+    "scope": "Frontend / API",
+    "cwe": "CWE-264",
+    "diagnosis": "El backend implementa RolesGuard y verifica propiedad en pedidos (id_usuario === usuarioAuth.id_usuario), denegando accesos no autorizados con HTTP 403 (Forbidden). En el frontend de Vercel se detectó política CORS en recursos estáticos sin delimitar orígenes autorizados.",
+    "recommendation": "Restringir la cabecera Access-Control-Allow-Origin exclusivamente a los dominios autorizados de la aplicación e incorporar la cabecera Vary: Origin."
+  },
+  {
+    "id": "A02",
+    "owasp2025": "A02:2025",
+    "owasp2021": "A05:2021",
+    "name": "Security Misconfiguration (Configuración Insegura)",
+    "status": "atencion",
+    "statusLabel": "Requiere Atención",
+    "cvss": "5.4",
+    "severity": "Media",
+    "alertCount": "7 tipos / 42 inst.",
+    "scope": "Frontend Vercel",
+    "cwe": "CWE-693",
+    "diagnosis": "El backend cuenta con middleware Helmet activo. Sin embargo, en la capa de entrega del frontend estático desplegado en Vercel se omitieron cabeceras HTTP defensivas críticas como Content-Security-Policy (CSP), X-Frame-Options (anti-clickjacking) y X-Content-Type-Options (nosniff).",
+    "recommendation": "Declarar las cabeceras Content-Security-Policy, X-Frame-Options: SAMEORIGIN y X-Content-Type-Options: nosniff en la configuración de cabeceras de la plataforma de despliegue."
+  },
+  {
+    "id": "A03",
+    "owasp2025": "A03:2025",
+    "owasp2021": "A06:2021",
+    "name": "Software Supply Chain Failures / Outdated Components",
+    "status": "cumple",
+    "statusLabel": "CUMPLE",
+    "cvss": "3.1",
+    "severity": "Baja",
+    "alertCount": "1 tipo / 1 inst.",
+    "scope": "Dependencias / Frontend",
+    "cwe": "CWE-829",
+    "diagnosis": "Árbol de dependencias depurado y verificado mediante auditoría continua con npm audit (0 vulnerabilidades críticas o altas). La alerta de ZAP obedeció a la carga del script oficial de Google Sign-In desde servidores externos de Google.",
+    "recommendation": "Limitar la carga de scripts de terceros exclusivamente a proveedores de identidad certificados y compilar el resto de librerías dentro del paquete local de la aplicación."
+  },
+  {
+    "id": "A04",
+    "owasp2025": "A04:2025",
+    "owasp2021": "A02:2021",
+    "name": "Cryptographic Failures (Fallas Criptográficas)",
+    "status": "cumple",
+    "statusLabel": "CUMPLE",
+    "cvss": "3.1",
+    "severity": "Baja",
+    "alertCount": "2 tipos / 5 inst.",
+    "scope": "Mesa Lista / CDNs",
+    "cwe": "CWE-319",
+    "diagnosis": "Contraseñas hasheadas mediante Argon2id con 64 MB de memoria y sal criptográfica única por usuario. Sesiones autenticadas mediante tokens JWT firmados criptográficamente. Alertas en ZAP corresponden a servicios auxiliares y CDNs externas.",
+    "recommendation": "Habilitar el encabezado Strict-Transport-Security (HSTS) en dominios propios con vigencia mínima de un año y forzar atributos Secure, HttpOnly y SameSite en cookies."
+  },
+  {
+    "id": "A05",
+    "owasp2025": "A05:2025",
+    "owasp2021": "A03:2021",
+    "name": "Injection (Inyecciones SQL, NoSQL y Comandos)",
+    "status": "cumple_prot",
+    "statusLabel": "CUMPLE (PROTEGIDO)",
+    "cvss": "0.0",
+    "severity": "Seguro",
+    "alertCount": "0 vulnerabilidades",
+    "scope": "Backend / PostgreSQL",
+    "cwe": "CWE-89",
+    "diagnosis": "Cumplimiento verificado al 100%. Prisma ORM genera consultas fuertemente tipadas y parametrizadas automáticamente ($1, $2), neutralizando intentos de inyección SQL. ValidationPipe global en NestJS rechaza atributos maliciosos no autorizados en los DTOs.",
+    "recommendation": "Mantener la política de desarrollo que prohíbe el uso de consultas SQL crudas concatenadas ($queryRawUnsafe) y conservar activas las validaciones de esquema en todos los DTOs de entrada."
+  },
+  {
+    "id": "A06",
+    "owasp2025": "A06:2025",
+    "owasp2021": "A04:2021",
+    "name": "Insecure Design (Diseño Inseguro y Consistencia Lógica)",
+    "status": "cumple_prot",
+    "statusLabel": "CUMPLE (PROTEGIDO)",
+    "cvss": "0.0",
+    "severity": "Seguro",
+    "alertCount": "0 vulnerabilidades",
+    "scope": "Arquitectura Transaccional",
+    "cwe": "CWE-1059",
+    "diagnosis": "Cumplimiento verificado al 100%. Se aplican transacciones atómicas de base de datos (prisma.$transaction) para pedidos, pagos e inventario, evitando condiciones de carrera. El precio unitario se congela de forma inmutable en el servidor al momento del pedido.",
+    "recommendation": "Continuar aplicando el principio de diseño defensivo y ejecutar modelado de amenazas previo a la integración de nuevas pasarelas de pago o flujos comerciales."
+  },
+  {
+    "id": "A07",
+    "owasp2025": "A07:2025",
+    "owasp2021": "A07:2021",
+    "name": "Identification and Authentication Failures (Fallas de Autenticación)",
+    "status": "cumple_prot",
+    "statusLabel": "CUMPLE (PROTEGIDO)",
+    "cvss": "0.0",
+    "severity": "Seguro",
+    "alertCount": "0 vulnerabilidades",
+    "scope": "Módulo de Cuentas / JWT",
+    "cwe": "CWE-287",
+    "diagnosis": "Cumplimiento verificado al 100%. Directiva de contraseñas robustas (mínimo 8 caracteres con combinación alfanumérica), bloqueo de usuarios inactivos y expiración de tokens JWT. Respuestas de error neutras que no revelan existencia de cuentas.",
+    "recommendation": "Integrar limitación de tasa de intentos (rate-limiting) en la ruta de inicio de sesión para mitigar ataques automatizados de fuerza bruta y soportar revocación centralizada de sesiones."
+  },
+  {
+    "id": "A08",
+    "owasp2025": "A08:2025",
+    "owasp2021": "A08:2021",
+    "name": "Software and Data Integrity Failures (Integridad de Software y Datos)",
+    "status": "cumple_obs",
+    "statusLabel": "Cumple con Observaciones",
+    "cvss": "4.2",
+    "severity": "Media",
+    "alertCount": "1 tipo / 1 inst.",
+    "scope": "Frontend Mesa Lista",
+    "cwe": "CWE-345",
+    "diagnosis": "Validación de firmas asimétricas con google-auth-library para autenticación federada. La alerta de ZAP reporta ausencia de hash de integridad de subrecurso (SRI) en estilos o librerías cargadas desde CDNs externas.",
+    "recommendation": "Incorporar los atributos integrity (con hash SHA-384 o SHA-512) y crossorigin en etiquetas que carguen recursos externos, o empaquetarlos directamente en el build local."
+  },
+  {
+    "id": "A09",
+    "owasp2025": "A09:2025",
+    "owasp2021": "A09:2021",
+    "name": "Security Logging and Monitoring Failures (Registro y Monitoreo)",
+    "status": "cumple_prot",
+    "statusLabel": "CUMPLE (PROTEGIDO)",
+    "cvss": "0.0",
+    "severity": "Seguro",
+    "alertCount": "0 vulnerabilidades",
+    "scope": "Auditoría Backend",
+    "cwe": "CWE-778",
+    "diagnosis": "Cumplimiento verificado al 100%. Registro estructurado con Winston y prefijo [SECURITY_AUDIT] ante accesos denegados por rol (403), fallos de inicio de sesión y anulaciones de pedidos, protegiendo datos sensibles al no registrar contraseñas ni tokens.",
+    "recommendation": "Conectar la salida de registros a una herramienta de agregación de logs en la nube con alertas automatizadas ante picos inusuales de peticiones denegadas."
+  },
+  {
+    "id": "A10",
+    "owasp2025": "A10:2025",
+    "owasp2021": "A10:2021",
+    "name": "Mishandling of Exceptional Conditions / SSRF (Manejo de Errores)",
+    "status": "cumple_prot",
+    "statusLabel": "CUMPLE (PROTEGIDO)",
+    "cvss": "0.0",
+    "severity": "Seguro",
+    "alertCount": "0 vulnerabilidades",
+    "scope": "Servidor NestJS",
+    "cwe": "CWE-755",
+    "diagnosis": "Cumplimiento verificado al 100%. PrismaExceptionFilter captura excepciones de persistencia (P2002, P2025) traduciéndolas a respuestas HTTP semánticas limpias, impidiendo la fuga de stack traces. No se procesan peticiones arbitrarias hacia URLs externas (SSRF mitigado).",
+    "recommendation": "Mantener el manejo centralizado de excepciones y realizar pruebas periódicas para verificar que ningún endpoint de depuración quede expuesto en el entorno de producción."
+  }
+];
+    const zapData = [
+  {
+    "id": "01",
+    "name": "Configuración Cross-Domain (CORS) Permisiva",
+    "owasp": "A01:2025",
+    "owasp2021": "A01:2021",
+    "scope": "Mesa Lista (Frontend)",
+    "isMesa": true,
+    "cvss": "5.4",
+    "severity": "Media",
+    "cwe": "CWE-264",
+    "zapRisk": "Medio",
+    "description": "Respuestas de recursos estáticos en la plataforma carecen de restricción estricta de dominios autorizados.",
+    "recommendation": "Delimitar Access-Control-Allow-Origin exclusivamente a dominios autorizados de la aplicación e incluir Vary: Origin."
+  },
+  {
+    "id": "02",
+    "name": "Ausencia de Cabecera Content Security Policy (CSP)",
+    "owasp": "A02:2025",
+    "owasp2021": "A05:2021",
+    "scope": "Mesa Lista (Frontend)",
+    "isMesa": true,
+    "cvss": "5.4",
+    "severity": "Media",
+    "cwe": "CWE-693",
+    "zapRisk": "Medio",
+    "description": "El navegador no cuenta con una lista explícita de orígenes autorizados para scripts o estilos.",
+    "recommendation": "Declarar directiva Content-Security-Policy restringiendo orígenes al propio dominio y APIs autorizadas."
+  },
+  {
+    "id": "03",
+    "name": "Falta de Cabecera Anti-Clickjacking (X-Frame-Options)",
+    "owasp": "A02:2025",
+    "owasp2021": "A05:2021",
+    "scope": "Mesa Lista (Frontend)",
+    "isMesa": true,
+    "cvss": "4.3",
+    "severity": "Media",
+    "cwe": "CWE-1021",
+    "zapRisk": "Medio",
+    "description": "La aplicación permite ser embebida dentro de iframes externos, posibilitando ataques de clic involuntario.",
+    "recommendation": "Configurar encabezado X-Frame-Options con SAMEORIGIN y directiva frame-ancestors en la CSP."
+  },
+  {
+    "id": "04",
+    "name": "Políticas CSP Permisivas en Terceros (Google Identity)",
+    "owasp": "A02:2025",
+    "owasp2021": "A05:2021",
+    "scope": "Google Identity (Externo)",
+    "isMesa": false,
+    "cvss": "4.2",
+    "severity": "Media",
+    "cwe": "CWE-693",
+    "zapRisk": "Medio",
+    "description": "El widget externo de autenticación de Google emplea directivas permisivas requeridas para su flujo de inicio de sesión.",
+    "recommendation": "Restringir en la aplicación local la carga de scripts exclusivamente a los endpoints oficiales de Google Identity."
+  },
+  {
+    "id": "05",
+    "name": "Divulgación Menor de Información de Reconocimiento",
+    "owasp": "A02:2025",
+    "owasp2021": "A05:2021",
+    "scope": "Microsoft / Google (Externo)",
+    "isMesa": false,
+    "cvss": "3.7",
+    "severity": "Baja",
+    "cwe": "CWE-497",
+    "zapRisk": "Bajo",
+    "description": "Respuestas de servicios en la nube exponen marcas de tiempo Unix o cabeceras con nombre de software.",
+    "recommendation": "Ocultar cabeceras de identificación del servidor web y estandarizar marcas temporales en ISO 8601."
+  },
+  {
+    "id": "06",
+    "name": "Falta de Encabezado X-Content-Type-Options",
+    "owasp": "A02:2025",
+    "owasp2021": "A05:2021",
+    "scope": "Mesa Lista (Frontend)",
+    "isMesa": true,
+    "cvss": "3.1",
+    "severity": "Baja",
+    "cwe": "CWE-693",
+    "zapRisk": "Bajo",
+    "description": "Sin este encabezado, navegadores desactualizados podrían interpretar archivos de texto como ejecutables (MIME sniffing).",
+    "recommendation": "Enviar la cabecera X-Content-Type-Options con el valor nosniff en todas las respuestas HTTP."
+  },
+  {
+    "id": "07",
+    "name": "Parámetros Extensos en URL y Comentarios Residuales",
+    "owasp": "A02:2025",
+    "owasp2021": "A05:2021",
+    "scope": "Google / Bing (Externo)",
+    "isMesa": false,
+    "cvss": "3.1",
+    "severity": "Informativo",
+    "cwe": "CWE-598",
+    "zapRisk": "Info",
+    "description": "Peticiones de telemetría externa transmiten parámetros extensos en URL y contienen comentarios en librerías minificadas.",
+    "recommendation": "Evitar el paso de credenciales o tokens por URL mediante métodos GET, priorizando cabeceras o cuerpo POST."
+  },
+  {
+    "id": "08",
+    "name": "Directivas Incompletas de Control de Caché en Recursos",
+    "owasp": "A02:2025",
+    "owasp2021": "A05:2021",
+    "scope": "Mesa Lista (Frontend)",
+    "isMesa": true,
+    "cvss": "2.1",
+    "severity": "Baja",
+    "cwe": "CWE-525",
+    "zapRisk": "Info",
+    "description": "Respuestas HTTP de recursos web no especifican de forma explícita directivas de retención en la caché del navegador.",
+    "recommendation": "Configurar caché pública inmutable para archivos versionados y directiva no-store para endpoints con datos de usuario."
+  },
+  {
+    "id": "09",
+    "name": "Inclusión de Scripts JavaScript Externos",
+    "owasp": "A03:2025",
+    "owasp2021": "A06:2021",
+    "scope": "Mesa Lista (Frontend)",
+    "isMesa": true,
+    "cvss": "3.1",
+    "severity": "Baja",
+    "cwe": "CWE-829",
+    "zapRisk": "Bajo",
+    "description": "La plataforma carga en tiempo real la librería oficial de Google Sign-In desde servidores externos.",
+    "recommendation": "Mantener únicamente scripts externos de proveedores certificados y compilar el resto localmente."
+  },
+  {
+    "id": "10",
+    "name": "Falta de Cabecera HSTS en Dominios Auxiliares",
+    "owasp": "A04:2025",
+    "owasp2021": "A02:2021",
+    "scope": "CDNs Externos (Google Fonts)",
+    "isMesa": false,
+    "cvss": "3.1",
+    "severity": "Baja",
+    "cwe": "CWE-319",
+    "zapRisk": "Bajo",
+    "description": "No se fuerza al navegador a comunicarse exclusivamente mediante canales cifrados HTTPS en dominios de soporte.",
+    "recommendation": "Habilitar Strict-Transport-Security con período de validez de un año y aplicación a subdominios."
+  },
+  {
+    "id": "11",
+    "name": "Cookies de Telemetría Externa sin Flags de Seguridad",
+    "owasp": "A04:2025",
+    "owasp2021": "A02:2021",
+    "scope": "Bing / Vercel Live (Externo)",
+    "isMesa": false,
+    "cvss": "3.1",
+    "severity": "Baja",
+    "cwe": "CWE-1004",
+    "zapRisk": "Bajo",
+    "description": "Cookies de telemetría de servicios de soporte carecen de atributos para bloquear lectura desde JavaScript o forzar HTTPS.",
+    "recommendation": "Si se emplean cookies de sesión en la aplicación, configurar siempre los atributos Secure, HttpOnly y SameSite en modo Strict."
+  },
+  {
+    "id": "12",
+    "name": "Falta de Integridad SRI en Recursos de Red (CDN)",
+    "owasp": "A08:2025",
+    "owasp2021": "A08:2021",
+    "scope": "Mesa Lista (Frontend)",
+    "isMesa": true,
+    "cvss": "4.2",
+    "severity": "Media",
+    "cwe": "CWE-345",
+    "zapRisk": "Medio",
+    "description": "Se cargan hojas de estilo o scripts externos sin un hash criptográfico de integridad que asegure que no fueron alterados.",
+    "recommendation": "Empaquetar recursos localmente en el build o añadir atributos integrity y crossorigin a etiquetas externas."
+  },
+  {
+    "id": "13",
+    "name": "Detección de Arquitectura SPA y Gestión de Sesión",
+    "owasp": "Informativo",
+    "owasp2021": "Informativo",
+    "scope": "Mesa Lista (Arquitectura)",
+    "isMesa": true,
+    "cvss": "0.0",
+    "severity": "Informativo",
+    "cwe": "N/A",
+    "zapRisk": "Info",
+    "description": "El escáner constató positivamente el diseño como aplicación de página única (SPA) desacoplada con gestión de sesión HTTP.",
+    "recommendation": "No requiere intervención técnica; corresponde a la confirmación del diseño moderno y seguro de la plataforma."
+  }
+];
+
+    let currentView = 'owasp'; // 'owasp' | 'zap'
+    let currentFilter = 'all';
+
+    function switchView(view) {
+      currentView = view;
+      currentFilter = 'all';
+      document.getElementById('searchInput').value = '';
+
+      document.getElementById('tabBtnOwasp').className = 'tab-view-btn ' + (view === 'owasp' ? 'active' : '');
+      document.getElementById('tabBtnZap').className = 'tab-view-btn ' + (view === 'zap' ? 'active' : '');
+
+      renderFilterButtons();
+      renderTable();
+    }
+
+    function renderFilterButtons() {
+      const container = document.getElementById('filterButtonsContainer');
+      if (currentView === 'owasp') {
+        container.innerHTML = `
+          <button class="filter-btn ${currentFilter === 'all' ? 'active' : ''}" onclick="setFilter('all')">Todos (10)</button>
+          <button class="filter-btn ${currentFilter === 'cumple' ? 'active' : ''}" onclick="setFilter('cumple')">Solo Cumple (8)</button>
+          <button class="filter-btn ${currentFilter === 'atencion' ? 'active' : ''}" onclick="setFilter('atencion')">Requiere Atención (2)</button>
+        `;
+      } else {
+        container.innerHTML = `
+          <button class="filter-btn ${currentFilter === 'all' ? 'active' : ''}" onclick="setFilter('all')">Todos (13)</button>
+          <button class="filter-btn ${currentFilter === 'mesa' ? 'active' : ''}" onclick="setFilter('mesa')">Mesa Lista (7)</button>
+          <button class="filter-btn ${currentFilter === 'media' ? 'active' : ''}" onclick="setFilter('media')">Severidad Media (5)</button>
+          <button class="filter-btn ${currentFilter === 'baja' ? 'active' : ''}" onclick="setFilter('baja')">Severidad Baja (5)</button>
+          <button class="filter-btn ${currentFilter === 'info' ? 'active' : ''}" onclick="setFilter('info')">Informativos (3)</button>
+        `;
+      }
+    }
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      renderFilterButtons();
+      renderTable();
+    }
+
+    function renderTable() {
+      const thead = document.getElementById('tableHead');
+      const tbody = document.getElementById('tableBody');
+      const search = (document.getElementById('searchInput').value || '').toLowerCase();
+
+      if (currentView === 'owasp') {
+        thead.innerHTML = `
+          <tr>
+            <th class="col-id">Cat. OWASP</th>
+            <th class="col-title">Control / Categoría</th>
+            <th class="col-status">Estado de Cumplimiento</th>
+            <th class="col-cvss">CVSS v3.1</th>
+            <th>Hallazgos ZAP</th>
+            <th class="col-scope">Ámbito</th>
+            <th class="col-desc">Diagnóstico y Mecanismo de Defensa</th>
+            <th class="col-solution">Recomendación Breve</th>
+          </tr>
+        `;
+
+        let filtered = owaspData.filter(item => {
+          if (currentFilter === 'cumple' && !item.status.startsWith('cumple')) return false;
+          if (currentFilter === 'atencion' && item.status !== 'atencion') return false;
+
+          if (search) {
+            const rowText = (item.id + ' ' + item.owasp2025 + ' ' + item.owasp2021 + ' ' + item.name + ' ' + item.statusLabel + ' ' + item.cwe + ' ' + item.diagnosis + ' ' + item.recommendation).toLowerCase();
+            return rowText.includes(search);
+          }
+          return true;
+        });
+
+        tbody.innerHTML = filtered.map(item => {
+          let badgeClass = 'badge-cumple';
+          if (item.status === 'atencion') badgeClass = 'badge-media';
+          else if (item.status === 'cumple_obs') badgeClass = 'badge-media';
+
+          let scoreClass = 'score-zero';
+          if (parseFloat(item.cvss) >= 4.0) scoreClass = 'score-media';
+          else if (parseFloat(item.cvss) > 0.0) scoreClass = 'score-baja';
+
+          return `
+            <tr>
+              <td class="col-id">
+                <span class="${item.cvss === '0.0' ? 'tag-owasp-safe' : 'tag-owasp-pill'}">${item.owasp2025}</span><br>
+                <span style="font-size: 0.7rem; color: var(--text-muted)">(${item.owasp2021})</span>
+              </td>
+              <td class="col-title">
+                ${item.name}<br>
+                <span class="tag-cwe">${item.cwe}</span>
+              </td>
+              <td class="col-status">
+                <span class="badge ${badgeClass}">${item.statusLabel}</span>
+              </td>
+              <td class="col-cvss">
+                <span class="score-cvss ${scoreClass}">${item.cvss}</span> 
+                <span style="font-size: 0.75rem; color: var(--text-muted)">(${item.severity})</span>
+              </td>
+              <td>${item.alertCount}</td>
+              <td class="col-scope"><span class="badge-scope">${item.scope}</span></td>
+              <td class="col-desc">${item.diagnosis}</td>
+              <td class="col-solution">${item.recommendation}</td>
+            </tr>
+          `;
+        }).join('');
+
+      } else {
+        thead.innerHTML = `
+          <tr>
+            <th class="col-id">#</th>
+            <th class="col-title">Vulnerabilidad / Alerta ZAP</th>
+            <th class="col-id">OWASP</th>
+            <th class="col-scope">Ámbito</th>
+            <th class="col-cvss">CVSS v3.1</th>
+            <th>Riesgo ZAP</th>
+            <th>CWE</th>
+            <th class="col-desc">Descripción Breve</th>
+            <th class="col-solution">Recomendación Breve</th>
+          </tr>
+        `;
+
+        let filtered = zapAlerts.filter(item => {
+          if (currentFilter === 'mesa' && !item.isMesa) return false;
+          if (currentFilter === 'media' && item.severity !== 'Media') return false;
+          if (currentFilter === 'baja' && item.severity !== 'Baja') return false;
+          if (currentFilter === 'info' && item.severity !== 'Informativo') return false;
+
+          if (search) {
+            const rowText = (item.id + ' ' + item.name + ' ' + item.owasp + ' ' + item.cwe + ' ' + item.scope + ' ' + item.description + ' ' + item.recommendation).toLowerCase();
+            return rowText.includes(search);
+          }
+          return true;
+        });
+
+        tbody.innerHTML = filtered.map(item => {
+          let badgeClass = 'badge-baja';
+          if (item.severity === 'Media') badgeClass = 'badge-media';
+          else if (item.severity === 'Informativo') badgeClass = 'badge-info';
+
+          let scoreClass = 'score-baja';
+          if (parseFloat(item.cvss) >= 4.0) scoreClass = 'score-media';
+          else if (parseFloat(item.cvss) === 0.0) scoreClass = 'score-zero';
+
+          return `
+            <tr>
+              <td class="col-id">${item.id}</td>
+              <td class="col-title">${item.name}</td>
+              <td class="col-id"><span class="tag-owasp-pill">${item.owasp}</span></td>
+              <td class="col-scope"><span class="badge-scope">${item.scope}</span></td>
+              <td class="col-cvss">
+                <span class="score-cvss ${scoreClass}">${item.cvss}</span>
+                <span style="font-size: 0.75rem; color: var(--text-muted)">(${item.severity})</span>
+              </td>
+              <td><span class="badge ${badgeClass}">${item.zapRisk}</span></td>
+              <td><span class="tag-cwe">${item.cwe}</span></td>
+              <td class="col-desc">${item.description}</td>
+              <td class="col-solution">${item.recommendation}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    function filterRows() {
+      renderTable();
+    }
+
+    // Initial render
+    renderFilterButtons();
+    renderTable();
+  </script>
+</body>
+
+</html>

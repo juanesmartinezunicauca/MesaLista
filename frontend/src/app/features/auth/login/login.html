@@ -8,8 +8,13 @@
       </div>
 
       <div class="hero-text">
-        <h2>Gestión inteligente para tu restaurante.</h2>
-        <p>Control integral de mesas, pedidos, cocina, domicilios, caja y facturación en una sola plataforma moderna.</p>
+        <h2>El motor operativo para tu restaurante moderno.</h2>
+        <p>Control unificado de comandería, mesas interactivas, cocina KDS, domicilios y facturación en tiempo real.</p>
+      </div>
+
+      <div class="quote-card">
+        <p>"Agilidad en el servicio, control total en la caja y una experiencia gastronómica superior."</p>
+        <span class="quote-author">MesaLista Cloud POS</span>
       </div>
     </div>
   </div>
@@ -22,15 +27,52 @@
         <p>Accede de forma rápida y segura con tu cuenta de Google autorizada</p>
       </div>
 
+      <!-- Banner de Error Elegante -->
       @if (errorMessage()) {
         <div class="login-error-banner" role="alert">
           <mat-icon>error_outline</mat-icon>
-          <span>{{ errorMessage() }}</span>
+          <span class="error-text">{{ errorMessage() }}</span>
         </div>
       }
 
-      <!-- Acceso con Google OAuth 2.0 -->
+      <!-- Acceso con Google OAuth 2.0 y Enrolamiento -->
       <div class="sso-primary-section">
+        <!-- Código de Invitación para Nuevos Colaboradores -->
+        <div class="invitation-toggle-box">
+          <button
+            type="button"
+            class="btn-toggle-invitation"
+            (click)="mostrarCajaInvitacion.set(!mostrarCajaInvitacion())"
+          >
+            <mat-icon class="icon-toggle">{{ mostrarCajaInvitacion() ? 'expand_less' : 'vpn_key' }}</mat-icon>
+            <span>{{ mostrarCajaInvitacion() ? 'Ocultar código de invitación' : '¿Eres nuevo colaborador? Ingresa tu código' }}</span>
+          </button>
+
+          @if (mostrarCajaInvitacion()) {
+            <div class="invitation-input-container">
+              <mat-form-field appearance="outline" class="w-full" subscriptSizing="dynamic">
+                <mat-label>Código de Invitación (ej. INV-821943)</mat-label>
+                <input
+                  matInput
+                  [value]="codigoInvitacion()"
+                  (input)="onCodigoInvitacionInput($event)"
+                  placeholder="INV-XXXXXX"
+                  autocomplete="off"
+                >
+                <mat-icon matPrefix>key</mat-icon>
+                @if (codigoInvitacion()) {
+                  <button matSuffix mat-icon-button type="button" (click)="codigoInvitacion.set('')">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                }
+              </mat-form-field>
+              <p class="invitation-hint">
+                Escribe tu código y luego pulsa el botón de Google para vincular tu cuenta de empleado de forma privada.
+              </p>
+            </div>
+          }
+        </div>
+
         <div class="google-auth-container">
           <div id="google-btn-container" class="google-btn-render"></div>
           @if (!googleInitialized()) {

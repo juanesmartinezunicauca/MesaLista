@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../prisma/prisma.service';
@@ -25,29 +26,34 @@ export class UsuariosService {
     email: true,
     rol: true,
     estado: true,
+    codigoInvitacion: true,
   } as const;
 
   /**
    * Registra un nuevo usuario con contraseña hasheada mediante Argon2id (OWASP).
    */
   async crear(createUsuarioDto: CreateUsuarioDto) {
-    const emailNormalizado = createUsuarioDto.email.trim().toLowerCase();
+    const emailNormalizado = createUsuarioDto.email ? createUsuarioDto.email.trim().toLowerCase() : null;
 
-    // Validar si el email ya existe
-    const emailExistente = await this.prisma.usuario.findUnique({
-      where: { email: emailNormalizado },
-    });
+    // Validar si el email ya existe (si fue provisto)
+    if (emailNormalizado) {
+      const emailExistente = await this.prisma.usuario.findUnique({
+        where: { email: emailNormalizado },
+      });
 
-    if (emailExistente) {
-      throw new ConflictException(
-        `El correo electrónico '${emailNormalizado}' ya está registrado.`,
-      );
+      if (emailExistente) {
+        throw new ConflictException(
+          `El correo electrónico '${emailNormalizado}' ya está registrado.`,
+        );
+      }
     }
 
-    // Resolver username: si no viene especificado, se deriva del email
+    // Resolver username: si no viene especificado, se deriva del email o del nombre
     let finalUsername = createUsuarioDto.usuario?.trim();
     if (!finalUsername) {
-      const base = emailNormalizado.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 40) || 'usuario';
+      const base = emailNormalizado
+        ? emailNormalizado.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 40)
+        : createUsuarioDto.nombre.trim().toLowerCase().replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 40) || 'colaborador';
       finalUsername = base;
       let counter = 1;
       while (await this.prisma.usuario.findUnique({ where: { usuario: finalUsername } })) {
@@ -63,6 +69,13 @@ export class UsuariosService {
           `El nombre de usuario '${finalUsername}' ya está en uso.`,
         );
       }
+    }
+
+    // Generar código de invitación seguro para roles operativos
+    let codigoInvitacion: string | null = null;
+    if (createUsuarioDto.rol !== RolUsuario.cliente) {
+      const randDigits = Math.floor(100000 + Math.random() * 900000);
+      codigoInvitacion = `INV-${randDigits}`;
     }
 
     // Hashear contraseña solo si se especificó explícitamente (cuenta tradicional)
@@ -83,6 +96,7 @@ export class UsuariosService {
         usuario: finalUsername,
         email: emailNormalizado,
         passwordHash,
+        codigoInvitacion,
         rol: createUsuarioDto.rol,
         estado: createUsuarioDto.estado ?? EstadoUsuario.activo,
       },
@@ -162,8 +176,9 @@ export class UsuariosService {
     googleId: string;
     email: string;
     nombre: string;
+    codigoInvitacion?: string;
   }) {
-    // 1. Buscar si ya existe por googleId
+    // 1. Buscar si ya existe por googleId (empleados previamente vinculados y clientes recurrentes)
     let usuario = await this.prisma.usuario.findUnique({
       where: { googleId: perfil.googleId },
     });
@@ -172,19 +187,45 @@ export class UsuariosService {
       return usuario;
     }
 
-    // 2. Si no existe por googleId, buscar si ya existe un usuario con ese correo electrónico
-    usuario = await this.prisma.usuario.findUnique({
-      where: { email: perfil.email },
-    });
+    // 2. Si se suministró un código de invitación, validar y vincular al colaborador
+    if (perfil.codigoInvitacion && perfil.codigoInvitacion.trim()) {
+      const codigoNormalizado = perfil.codigoInvitacion.trim().toUpperCase();
+      usuario = await this.prisma.usuario.findUnique({
+        where: { codigoInvitacion: codigoNormalizado },
+      });
 
-    if (usuario) {
+      if (!usuario) {
+        throw new UnauthorizedException(
+          'El código de invitación ingresado es inválido o ya ha sido utilizado.',
+        );
+      }
+
+      // Vincular el googleId y quemar el código de invitación de un solo uso
       return this.prisma.usuario.update({
         where: { id_usuario: usuario.id_usuario },
-        data: { googleId: perfil.googleId },
+        data: {
+          googleId: perfil.googleId,
+          codigoInvitacion: null, // Token de un solo uso consumido
+          ...(usuario.email ? {} : { email: perfil.email }),
+        },
       });
     }
 
-    // 3. Crear usuario nuevo con rol 'cliente' y estado activo si no estaba registrado previamente
+    // 3. Si no existe por googleId ni código, buscar si ya existe un usuario con ese correo electrónico (retrocompatibilidad)
+    if (perfil.email) {
+      usuario = await this.prisma.usuario.findUnique({
+        where: { email: perfil.email },
+      });
+
+      if (usuario) {
+        return this.prisma.usuario.update({
+          where: { id_usuario: usuario.id_usuario },
+          data: { googleId: perfil.googleId },
+        });
+      }
+    }
+
+    // 4. Crear usuario nuevo con rol 'cliente' y estado activo si no estaba registrado previamente
     const baseUsername =
       perfil.email.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 40) || 'cliente';
     let uniqueUsername = baseUsername;

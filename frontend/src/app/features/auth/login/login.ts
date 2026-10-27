@@ -7,6 +7,8 @@ import { environment } from '../../../../environments/environment';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 
 import { AuthService } from '../../../core/services/auth/auth.service';
 
@@ -18,6 +20,8 @@ import { AuthService } from '../../../core/services/auth/auth.service';
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatFormFieldModule,
+    MatInputModule,
   ],
   templateUrl: './login.html',
   styleUrl: './login.scss',
@@ -31,6 +35,13 @@ export class LoginComponent implements AfterViewInit {
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
   googleInitialized = signal<boolean>(false);
+  mostrarCajaInvitacion = signal<boolean>(false);
+  codigoInvitacion = signal<string>('');
+
+  onCodigoInvitacionInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.codigoInvitacion.set(input.value.toUpperCase());
+  }
 
   ngAfterViewInit(): void {
     this.initGoogleAuth();
@@ -113,7 +124,8 @@ export class LoginComponent implements AfterViewInit {
     this.errorMessage.set(null);
     this.isLoading.set(true);
 
-    this.authService.loginGoogle(response.credential).subscribe({
+    const codigo = this.codigoInvitacion().trim() || undefined;
+    this.authService.loginGoogle(response.credential, codigo).subscribe({
       next: () => {
         this.isLoading.set(false);
         this.redirigirSegunRol();

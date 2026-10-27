@@ -56,11 +56,12 @@ describe('UsuarioDialogComponent', () => {
     vi.clearAllMocks();
   });
 
-  it('debe inicializar el formulario exigiendo correo y permitiendo contraseña vacía (delegación OAuth)', async () => {
+  it('debe inicializar el formulario exigiendo nombre y rol, con correo opcional para delegación OAuth', async () => {
     await configureTestBed();
 
-    expect(component.usuarioForm.get('email')?.valid).toBe(false); // requerido
-    expect(component.usuarioForm.get('password')?.valid).toBe(true); // opcional
+    expect(component.usuarioForm.get('nombre')?.valid).toBe(false); // nombre es obligatorio
+    expect(component.usuarioForm.get('email')?.valid).toBe(true); // correo es opcional
+    expect(component.usuarioForm.contains('password')).toBe(false); // sin contraseña local
 
     component.usuarioForm.patchValue({
       nombre: 'Carlos Mesero',

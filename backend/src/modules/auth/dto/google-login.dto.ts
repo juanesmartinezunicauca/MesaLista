@@ -12,4 +12,8 @@ export class GoogleLoginDto {
   @IsOptional()
   @IsString({ message: 'La credencial de Google debe ser una cadena de texto.' })
   credential?: string;
+
+  @IsOptional()
+  @IsString({ message: 'El código de invitación debe ser una cadena de texto' })
+  codigoInvitacion?: string;
 }

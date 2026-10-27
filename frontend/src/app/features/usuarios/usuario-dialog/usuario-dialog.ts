@@ -41,7 +41,6 @@ export class UsuarioDialogComponent {
   esEdicion = signal<boolean>(!!this.data?.usuario);
   guardando = signal<boolean>(false);
   errorMensaje = signal<string | null>(null);
-  mostrarPassword = signal<boolean>(false);
 
   rolesDisponibles: { valor: RolUsuario; label: string; icon: string; desc: string }[] = [
     {
@@ -71,6 +70,9 @@ export class UsuarioDialogComponent {
   ];
 
   usuarioForm: FormGroup;
+  invitacionGenerada = signal<string | null>(null);
+  usuarioRecienCreado = signal<Usuario | null>(null);
+  copiado = signal<boolean>(false);
 
   constructor() {
     const u = this.data?.usuario;
@@ -85,18 +87,10 @@ export class UsuarioDialogComponent {
           Validators.pattern(/^[a-zA-Z0-9._-]+$/),
         ],
       ],
-      email: [u?.email || '', [Validators.required, Validators.email]],
-      password: [
-        '',
-        [Validators.minLength(8), Validators.maxLength(100), Validators.pattern(/^(?=.*[a-zA-Z])(?=.*\d)/)],
-      ],
+      email: [u?.email || '', [Validators.email]],
       rol: [u?.rol || 'mesero', [Validators.required]],
       estado: [u?.estado ? u.estado === 'activo' : true],
     });
-  }
-
-  toggleMostrarPassword(): void {
-    this.mostrarPassword.update((v) => !v);
   }
 
   tieneError(campo: string, error: string): boolean {
@@ -107,6 +101,20 @@ export class UsuarioDialogComponent {
   getRolSeleccionado(): { valor: RolUsuario; label: string; icon: string; desc: string } | undefined {
     const rolActual = this.usuarioForm?.get('rol')?.value;
     return this.rolesDisponibles.find((r) => r.valor === rolActual);
+  }
+
+  copiarCodigo(): void {
+    const cod = this.invitacionGenerada();
+    if (cod && typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(cod).then(() => {
+        this.copiado.set(true);
+        setTimeout(() => this.copiado.set(false), 2500);
+      });
+    }
+  }
+
+  cerrarConExito(): void {
+    this.dialogRef.close({ accion: 'creado', usuario: this.usuarioRecienCreado() });
   }
 
   guardar(): void {
@@ -132,10 +140,6 @@ export class UsuarioDialogComponent {
         payload.usuario = val.usuario.trim();
       }
 
-      if (val.password && val.password.trim()) {
-        payload.password = val.password.trim();
-      }
-
       this.usuariosApi.actualizar(this.data.usuario.id_usuario, payload).subscribe({
         next: (usuarioActualizado) => {
           this.guardando.set(false);
@@ -150,23 +154,25 @@ export class UsuarioDialogComponent {
         },
       });
     } else {
-      const email = val.email.trim().toLowerCase();
+      const email = val.email?.trim() ? val.email.trim().toLowerCase() : undefined;
+      const baseUsuario = val.usuario?.trim() || (email ? email.split('@')[0] : val.nombre.trim().toLowerCase().replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 30));
       const payload: CreateUsuarioPayload = {
         nombre: val.nombre.trim(),
         email: email,
-        usuario: val.usuario?.trim() || email.split('@')[0],
+        usuario: baseUsuario,
         rol: val.rol,
         estado: val.estado ? ('activo' as EstadoUsuario) : ('inactivo' as EstadoUsuario),
       };
 
-      if (val.password && val.password.trim()) {
-        payload.password = val.password.trim();
-      }
-
       this.usuariosApi.crear(payload).subscribe({
         next: (nuevoUsuario) => {
           this.guardando.set(false);
-          this.dialogRef.close({ accion: 'creado', usuario: nuevoUsuario });
+          if (nuevoUsuario.codigoInvitacion) {
+            this.invitacionGenerada.set(nuevoUsuario.codigoInvitacion);
+            this.usuarioRecienCreado.set(nuevoUsuario);
+          } else {
+            this.dialogRef.close({ accion: 'creado', usuario: nuevoUsuario });
+          }
         },
         error: (err) => {
           this.guardando.set(false);
