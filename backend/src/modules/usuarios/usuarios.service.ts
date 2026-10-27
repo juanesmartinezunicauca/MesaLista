@@ -169,8 +169,9 @@ export class UsuariosService {
   }
 
   /**
-   * Vincula una cuenta de Google OAuth existente por googleId o email,
-   * o registra un nuevo usuario con rol 'mesero' activo si no existe previamente.
+   * Vincula una cuenta de Google OAuth existente por código de invitación, googleId o email/username,
+   * garantizando que los colaboradores operativos registrados mantengan su rol correspondiente.
+   * Si no existe registro previo, registra un nuevo usuario con rol 'cliente'.
    */
   async vincularOGuardarGoogleUsuario(perfil: {
     googleId: string;
@@ -178,56 +179,110 @@ export class UsuariosService {
     nombre: string;
     codigoInvitacion?: string;
   }) {
-    // 1. Buscar si ya existe por googleId (empleados previamente vinculados y clientes recurrentes)
-    let usuario = await this.prisma.usuario.findUnique({
-      where: { googleId: perfil.googleId },
-    });
+    const emailNorm = perfil.email.trim().toLowerCase();
 
-    if (usuario) {
-      return usuario;
-    }
-
-    // 2. Si se suministró un código de invitación, validar y vincular al colaborador
+    // 1. Si se suministró un código de invitación, validar y vincular prioritariamente al colaborador
     if (perfil.codigoInvitacion && perfil.codigoInvitacion.trim()) {
       const codigoNormalizado = perfil.codigoInvitacion.trim().toUpperCase();
-      usuario = await this.prisma.usuario.findUnique({
+      const usuarioInvitado = await this.prisma.usuario.findFirst({
         where: { codigoInvitacion: codigoNormalizado },
       });
 
-      if (!usuario) {
+      if (!usuarioInvitado) {
         throw new UnauthorizedException(
           'El código de invitación ingresado es inválido o ya ha sido utilizado.',
         );
       }
 
+      // Liberar googleId de cualquier cuenta previa para evitar conflicto de unicidad en PostgreSQL
+      await this.prisma.usuario.updateMany({
+        where: {
+          googleId: perfil.googleId,
+          id_usuario: { not: usuarioInvitado.id_usuario },
+        },
+        data: { googleId: null },
+      });
+
       // Vincular el googleId y quemar el código de invitación de un solo uso
       return this.prisma.usuario.update({
-        where: { id_usuario: usuario.id_usuario },
+        where: { id_usuario: usuarioInvitado.id_usuario },
         data: {
           googleId: perfil.googleId,
           codigoInvitacion: null, // Token de un solo uso consumido
-          ...(usuario.email ? {} : { email: perfil.email }),
+          ...(usuarioInvitado.email ? {} : { email: emailNorm }),
         },
       });
     }
 
-    // 3. Si no existe por googleId ni código, buscar si ya existe un usuario con ese correo electrónico (retrocompatibilidad)
-    if (perfil.email) {
-      usuario = await this.prisma.usuario.findUnique({
-        where: { email: perfil.email },
+    // 2. PRIORIDAD MÁXIMA PARA COLABORADORES REGISTRADOS:
+    // Buscar si existe un empleado operativo (administrador, cajero, mesero, cocina) por correo,
+    // nombre de usuario o googleId, de manera insensible a mayúsculas/minúsculas.
+    const empleadoOperativo = await this.prisma.usuario.findFirst({
+      where: {
+        rol: { not: RolUsuario.cliente },
+        OR: [
+          { email: { equals: emailNorm, mode: 'insensitive' } },
+          { usuario: { equals: emailNorm, mode: 'insensitive' } },
+          { googleId: perfil.googleId },
+        ],
+      },
+    });
+
+    if (empleadoOperativo) {
+      // Si el googleId estaba asociado a una cuenta temporal o de cliente, liberarlo
+      await this.prisma.usuario.updateMany({
+        where: {
+          googleId: perfil.googleId,
+          id_usuario: { not: empleadoOperativo.id_usuario },
+        },
+        data: { googleId: null },
       });
 
-      if (usuario) {
+      return this.prisma.usuario.update({
+        where: { id_usuario: empleadoOperativo.id_usuario },
+        data: {
+          googleId: perfil.googleId,
+          ...(empleadoOperativo.email ? {} : { email: emailNorm }),
+        },
+      });
+    }
+
+    // 3. Buscar si ya existe un usuario registrado (cliente recurrente) por googleId, email o usuario
+    const usuarioExistente = await this.prisma.usuario.findFirst({
+      where: {
+        OR: [
+          { googleId: perfil.googleId },
+          { email: { equals: emailNorm, mode: 'insensitive' } },
+          { usuario: { equals: emailNorm, mode: 'insensitive' } },
+        ],
+      },
+    });
+
+    if (usuarioExistente) {
+      if (usuarioExistente.googleId !== perfil.googleId || !usuarioExistente.email) {
+        // Liberar si otra cuenta tenía este googleId
+        await this.prisma.usuario.updateMany({
+          where: {
+            googleId: perfil.googleId,
+            id_usuario: { not: usuarioExistente.id_usuario },
+          },
+          data: { googleId: null },
+        });
+
         return this.prisma.usuario.update({
-          where: { id_usuario: usuario.id_usuario },
-          data: { googleId: perfil.googleId },
+          where: { id_usuario: usuarioExistente.id_usuario },
+          data: {
+            googleId: perfil.googleId,
+            ...(usuarioExistente.email ? {} : { email: emailNorm }),
+          },
         });
       }
+      return usuarioExistente;
     }
 
     // 4. Crear usuario nuevo con rol 'cliente' y estado activo si no estaba registrado previamente
     const baseUsername =
-      perfil.email.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 40) || 'cliente';
+      emailNorm.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 40) || 'cliente';
     let uniqueUsername = baseUsername;
     let counter = 1;
 
@@ -243,7 +298,7 @@ export class UsuariosService {
       data: {
         nombre: perfil.nombre.slice(0, 100),
         usuario: uniqueUsername,
-        email: perfil.email,
+        email: emailNorm,
         googleId: perfil.googleId,
         rol: RolUsuario.cliente,
         estado: EstadoUsuario.activo,

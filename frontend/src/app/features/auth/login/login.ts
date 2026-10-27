@@ -161,6 +161,8 @@ export class LoginComponent implements AfterViewInit {
 
     if (rol === 'cliente') {
       this.router.navigateByUrl(returnUrl && returnUrl.startsWith('/cliente') ? returnUrl : '/cliente');
+    } else if (rol === 'cocina') {
+      this.router.navigateByUrl(returnUrl && !returnUrl.startsWith('/cliente') ? returnUrl : '/cocina');
     } else {
       if (!returnUrl || returnUrl === '/cliente' || returnUrl === '/') {
         returnUrl = '/mesas';
