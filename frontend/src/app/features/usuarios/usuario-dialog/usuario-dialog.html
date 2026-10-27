@@ -1,173 +1,193 @@
 <div class="usuario-dialog-container">
-  <form [formGroup]="usuarioForm" (ngSubmit)="guardar()">
-    <!-- Encabezado del Modal -->
-    <div class="dialog-header">
-      <div class="dialog-title-group">
-        <div class="header-icon-badge" [class.badge-edit]="esEdicion()">
-          <mat-icon>{{ esEdicion() ? 'manage_accounts' : 'person_add' }}</mat-icon>
-        </div>
-        <div>
-          <h2 class="dialog-title">{{ esEdicion() ? 'Editar Colaborador' : 'Nuevo Colaborador' }}</h2>
-          <span class="dialog-subtitle">
-            {{ esEdicion() ? 'Actualiza permisos y datos del perfil operativo' : 'Asigna rol y permisos para el sistema POS' }}
-          </span>
-        </div>
+  @if (invitacionGenerada()) {
+    <!-- Pantalla de Éxito: Código de Invitación Generado -->
+    <div class="invitation-success-card">
+      <div class="success-icon-badge">
+        <mat-icon>vpn_key</mat-icon>
       </div>
-      <button type="button" mat-icon-button (click)="cerrar()" class="btn-close" aria-label="Cerrar modal">
-        <mat-icon>close</mat-icon>
-      </button>
-    </div>
+      <h2>¡Colaborador Registrado!</h2>
+      <p class="success-subtitle">
+        Se ha creado la ficha de <strong>{{ usuarioRecienCreado()?.nombre }}</strong> (@{{ usuarioRecienCreado()?.usuario }}).
+        Entrega este código de vinculación único para su primer inicio de sesión con Google:
+      </p>
 
-    <!-- Cuerpo del Modal -->
-    <mat-dialog-content class="dialog-body">
-      @if (errorMensaje()) {
-        <div class="feedback-banner error-banner">
-          <mat-icon>error_outline</mat-icon>
-          <span>{{ errorMensaje() }}</span>
-        </div>
+      <div class="code-display-box">
+        <span class="invitation-code-text">{{ invitacionGenerada() }}</span>
+        <button type="button" mat-icon-button (click)="copiarCodigo()" class="btn-copy-code" aria-label="Copiar código">
+          <mat-icon>{{ copiado() ? 'check' : 'content_copy' }}</mat-icon>
+        </button>
+      </div>
+      @if (copiado()) {
+        <span class="copy-success-hint">¡Código copiado al portapapeles!</span>
       }
 
-      <!-- Banner Informativo: El correo como Identificador Principal -->
-      <div class="email-identity-notice">
-        <div class="notice-icon">
-          <mat-icon>verified_user</mat-icon>
-        </div>
-        <div class="notice-body">
-          <span class="notice-title">Identificador de Acceso: Correo Electrónico</span>
-          <p class="notice-desc">
-            El colaborador accederá al sistema con este correo (Google OAuth 2.0 / SSO). La seguridad, contraseñas y doble factor son gestionados por Google.
-          </p>
-        </div>
+      <p class="privacy-note">
+        El colaborador ingresará este código en la pantalla de inicio de sesión y vinculará su cuenta de Google. Su correo personal permanecerá completamente privado y nunca será visible en comandas ni facturas.
+      </p>
+
+      <div class="success-dialog-actions">
+        <button type="button" mat-flat-button color="primary" class="btn-confirm" (click)="cerrarConExito()">
+          Finalizar y Cerrar
+        </button>
       </div>
-
-      <div class="form-content">
-        <!-- 1. Correo Electrónico (Identificador Primario) -->
-        <mat-form-field appearance="outline" class="w-full" subscriptSizing="dynamic">
-          <mat-label>Correo Electrónico (Identificador de acceso) *</mat-label>
-          <input
-            matInput
-            type="email"
-            formControlName="email"
-            placeholder="colaborador@unicauca.edu.co o gmail.com"
-            autocomplete="email"
-          >
-          <mat-icon matPrefix>mail</mat-icon>
-          @if (tieneError('email', 'required')) {
-            <mat-error>El correo electrónico es obligatorio como identificador.</mat-error>
-          }
-          @if (tieneError('email', 'email')) {
-            <mat-error>Ingresa un formato de correo electrónico válido.</mat-error>
-          }
-        </mat-form-field>
-
-        <!-- 2. Nombre Completo -->
-        <mat-form-field appearance="outline" class="w-full" subscriptSizing="dynamic">
-          <mat-label>Nombre Completo del Colaborador *</mat-label>
-          <input
-            matInput
-            type="text"
-            formControlName="nombre"
-            placeholder="Ej. Carlos Mendoza"
-            autocomplete="name"
-          >
-          <mat-icon matPrefix>badge</mat-icon>
-          @if (tieneError('nombre', 'required')) {
-            <mat-error>El nombre del colaborador es obligatorio.</mat-error>
-          }
-          @if (tieneError('nombre', 'minlength')) {
-            <mat-error>Debe tener al menos 2 caracteres.</mat-error>
-          }
-        </mat-form-field>
-
-        <!-- 3. Rol / Perfil Operativo -->
-        <mat-form-field appearance="outline" class="w-full" subscriptSizing="dynamic">
-          <mat-label>Rol / Perfil Operativo *</mat-label>
-          <mat-select formControlName="rol">
-            <mat-select-trigger>
-              @if (getRolSeleccionado(); as rol) {
-                <span class="selected-role-trigger">
-                  <mat-icon class="trigger-role-icon">{{ rol.icon }}</mat-icon>
-                  <span class="trigger-role-name">{{ rol.label }}</span>
-                </span>
-              }
-            </mat-select-trigger>
-            @for (r of rolesDisponibles; track r.valor) {
-              <mat-option [value]="r.valor">
-                <div class="role-option-item">
-                  <mat-icon class="option-role-icon">{{ r.icon }}</mat-icon>
-                  <div class="option-role-text">
-                    <span class="role-name">{{ r.label }}</span>
-                    <span class="role-desc">{{ r.desc }}</span>
-                  </div>
-                </div>
-              </mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-
-        <!-- 4. Contraseña de Acceso Local (Opcional) -->
-        <mat-form-field appearance="outline" class="w-full" subscriptSizing="dynamic">
-          <mat-label>{{ esEdicion() ? 'Nueva Contraseña Local (Opcional)' : 'Contraseña de Respaldo Local (Opcional)' }}</mat-label>
-          <input
-            matInput
-            [type]="mostrarPassword() ? 'text' : 'password'"
-            formControlName="password"
-            placeholder="Dejar vacía para acceso exclusivo con Google"
-            autocomplete="new-password"
-          >
-          <mat-icon matPrefix>lock</mat-icon>
-          <button
-            type="button"
-            mat-icon-button
-            matSuffix
-            (click)="toggleMostrarPassword()"
-            [attr.aria-label]="mostrarPassword() ? 'Ocultar contraseña' : 'Ver contraseña'"
-          >
-            <mat-icon>{{ mostrarPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
-          </button>
-          @if (tieneError('password', 'minlength')) {
-            <mat-error>La contraseña debe tener al menos 8 caracteres.</mat-error>
-          }
-          @if (tieneError('password', 'pattern')) {
-            <mat-error>Debe contener al menos una letra y un número.</mat-error>
-          }
-        </mat-form-field>
-
-        <!-- 5. Estado Activo / Inactivo -->
-        <div class="status-toggle-card">
-          <div class="toggle-info">
-            <span class="toggle-title">Estado de la cuenta</span>
-            <span class="toggle-desc">
-              {{ usuarioForm.get('estado')?.value ? 'El colaborador puede operar en el sistema POS' : 'Acceso deshabilitado temporalmente' }}
+    </div>
+  } @else {
+    <form [formGroup]="usuarioForm" (ngSubmit)="guardar()">
+      <!-- Encabezado del Modal -->
+      <div class="dialog-header">
+        <div class="dialog-title-group">
+          <div class="header-icon-badge" [class.badge-edit]="esEdicion()">
+            <mat-icon>{{ esEdicion() ? 'manage_accounts' : 'person_add' }}</mat-icon>
+          </div>
+          <div>
+            <h2 class="dialog-title">{{ esEdicion() ? 'Editar Colaborador' : 'Nuevo Colaborador' }}</h2>
+            <span class="dialog-subtitle">
+              {{ esEdicion() ? 'Actualiza permisos y datos del perfil operativo' : 'Asigna rol y genera código de vinculación para el sistema POS' }}
             </span>
           </div>
-          <mat-slide-toggle formControlName="estado" color="primary">
-            <span class="status-pill" [class.pill-active]="usuarioForm.get('estado')?.value">
-              {{ usuarioForm.get('estado')?.value ? 'Activo' : 'Inactivo' }}
-            </span>
-          </mat-slide-toggle>
         </div>
+        <button type="button" mat-icon-button (click)="cerrar()" class="btn-close" aria-label="Cerrar modal">
+          <mat-icon>close</mat-icon>
+        </button>
       </div>
-    </mat-dialog-content>
 
-    <!-- Acciones del Modal -->
-    <mat-dialog-actions align="end" class="dialog-actions">
-      <button type="button" mat-button (click)="cerrar()" [disabled]="guardando()">
-        Cancelar
-      </button>
-      <button
-        type="submit"
-        mat-flat-button
-        color="primary"
-        class="btn-confirm"
-        [disabled]="guardando() || usuarioForm.invalid"
-      >
-        @if (guardando()) {
-          <span>Guardando...</span>
-        } @else {
-          <span>{{ esEdicion() ? 'Guardar Cambios' : 'Registrar Colaborador' }}</span>
+      <!-- Cuerpo del Modal -->
+      <mat-dialog-content class="dialog-body">
+        @if (errorMensaje()) {
+          <div class="feedback-banner error-banner">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ errorMensaje() }}</span>
+          </div>
         }
-      </button>
-    </mat-dialog-actions>
-  </form>
+
+        <!-- Banner Informativo: Enrolamiento Seguro por Código -->
+        <div class="email-identity-notice">
+          <div class="notice-icon">
+            <mat-icon>vpn_key</mat-icon>
+          </div>
+          <div class="notice-body">
+            <span class="notice-title">Enrolamiento Seguro por Código de Invitación</span>
+            <p class="notice-desc">
+              Al guardar, el sistema generará un código único para que el colaborador vincule su cuenta de Google de forma privada, sin exponer su correo personal.
+            </p>
+          </div>
+        </div>
+
+        <div class="form-content">
+          <!-- 1. Nombre Completo -->
+          <mat-form-field appearance="outline" class="w-full" subscriptSizing="dynamic">
+            <mat-label>Nombre Completo del Colaborador *</mat-label>
+            <input
+              matInput
+              type="text"
+              formControlName="nombre"
+              placeholder="Ej. Carlos Mendoza"
+              autocomplete="name"
+            >
+            <mat-icon matPrefix>badge</mat-icon>
+            @if (tieneError('nombre', 'required')) {
+              <mat-error>El nombre del colaborador es obligatorio.</mat-error>
+            }
+            @if (tieneError('nombre', 'minlength')) {
+              <mat-error>Debe tener al menos 2 caracteres.</mat-error>
+            }
+          </mat-form-field>
+
+          <!-- 2. Nombre de Usuario / Alias Operativo -->
+          <mat-form-field appearance="outline" class="w-full" subscriptSizing="dynamic">
+            <mat-label>Identificador Operativo / Alias (ej. mesero1)</mat-label>
+            <input
+              matInput
+              type="text"
+              formControlName="usuario"
+              placeholder="Ej. mesero_carlos (opcional)"
+              autocomplete="username"
+            >
+            <mat-icon matPrefix>alternate_email</mat-icon>
+            <mat-hint>Visible en comandas y reportes internos</mat-hint>
+            @if (tieneError('usuario', 'pattern')) {
+              <mat-error>Solo letras, números, puntos y guiones.</mat-error>
+            }
+          </mat-form-field>
+
+          <!-- 3. Rol / Perfil Operativo -->
+          <mat-form-field appearance="outline" class="w-full" subscriptSizing="dynamic">
+            <mat-label>Rol / Perfil Operativo *</mat-label>
+            <mat-select formControlName="rol">
+              <mat-select-trigger>
+                @if (getRolSeleccionado(); as rol) {
+                  <span class="selected-role-trigger">
+                    <mat-icon class="trigger-role-icon">{{ rol.icon }}</mat-icon>
+                    <span class="trigger-role-name">{{ rol.label }}</span>
+                  </span>
+                }
+              </mat-select-trigger>
+              @for (r of rolesDisponibles; track r.valor) {
+                <mat-option [value]="r.valor">
+                  <div class="role-option-item">
+                    <mat-icon class="option-role-icon">{{ r.icon }}</mat-icon>
+                    <div class="option-role-text">
+                      <span class="role-name">{{ r.label }}</span>
+                      <span class="role-desc">{{ r.desc }}</span>
+                    </div>
+                  </div>
+                </mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <!-- 4. Correo Electrónico (Opcional) -->
+          <mat-form-field appearance="outline" class="w-full" subscriptSizing="dynamic">
+            <mat-label>Correo Electrónico (Opcional - Notificaciones)</mat-label>
+            <input
+              matInput
+              type="email"
+              formControlName="email"
+              placeholder="Opcional: colaborador@correo.com"
+              autocomplete="email"
+            >
+            <mat-icon matPrefix>mail</mat-icon>
+            @if (tieneError('email', 'email')) {
+              <mat-error>Ingresa un formato de correo válido.</mat-error>
+            }
+          </mat-form-field>
+
+          <!-- 5. Estado Activo / Inactivo -->
+          <div class="status-toggle-card">
+            <div class="toggle-info">
+              <span class="toggle-title">Estado de la cuenta</span>
+              <span class="toggle-desc">
+                {{ usuarioForm.get('estado')?.value ? 'El colaborador puede operar en el sistema POS' : 'Acceso deshabilitado temporalmente' }}
+              </span>
+            </div>
+            <mat-slide-toggle formControlName="estado" color="primary">
+              <span class="status-pill" [class.pill-active]="usuarioForm.get('estado')?.value">
+                {{ usuarioForm.get('estado')?.value ? 'Activo' : 'Inactivo' }}
+              </span>
+            </mat-slide-toggle>
+          </div>
+        </div>
+      </mat-dialog-content>
+
+      <!-- Acciones del Modal -->
+      <mat-dialog-actions align="end" class="dialog-actions">
+        <button type="button" mat-button (click)="cerrar()" [disabled]="guardando()">
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          mat-flat-button
+          color="primary"
+          class="btn-confirm"
+          [disabled]="guardando() || usuarioForm.invalid"
+        >
+          @if (guardando()) {
+            <span>Guardando...</span>
+          } @else {
+            <span>{{ esEdicion() ? 'Guardar Cambios' : 'Registrar Colaborador' }}</span>
+          }
+        </button>
+      </mat-dialog-actions>
+    </form>
+  }
 </div>

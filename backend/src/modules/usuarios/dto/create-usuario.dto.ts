@@ -18,10 +18,10 @@ export class CreateUsuarioDto {
   })
   usuario?: string;
 
-  @IsNotEmpty({ message: 'El correo electrónico es obligatorio para la autenticación delegada con Google OAuth.' })
+  @IsOptional()
   @IsEmail({}, { message: 'El correo electrónico no tiene un formato válido' })
   @Length(5, 100, { message: 'El correo electrónico debe tener entre 5 y 100 caracteres' })
-  email!: string;
+  email?: string;
 
   @IsOptional()
   @IsString({ message: 'La contraseña debe ser una cadena de texto' })

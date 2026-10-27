@@ -13,7 +13,7 @@ export interface QueryUsuarioParams {
 export interface CreateUsuarioPayload {
   nombre: string;
   usuario?: string;
-  email: string;
+  email?: string;
   password?: string;
   rol: RolUsuario;
   estado?: EstadoUsuario;

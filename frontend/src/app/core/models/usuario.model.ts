@@ -6,6 +6,7 @@ export interface Usuario {
   nombre: string;
   usuario: string;
   email?: string;
+  codigoInvitacion?: string;
   rol: RolUsuario;
   estado: EstadoUsuario;
 }

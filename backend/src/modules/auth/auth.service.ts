@@ -145,6 +145,7 @@ export class AuthService {
       googleId: payload.sub,
       email: payload.email,
       nombre: payload.name || payload.email.split('@')[0],
+      codigoInvitacion: googleDto.codigoInvitacion,
     });
 
     if (usuario.estado !== EstadoUsuario.activo) {

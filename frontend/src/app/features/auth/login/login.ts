@@ -45,6 +45,13 @@ export class LoginComponent implements AfterViewInit {
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
   googleInitialized = signal<boolean>(false);
+  mostrarCajaInvitacion = signal<boolean>(false);
+  codigoInvitacion = signal<string>('');
+
+  onCodigoInvitacionInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.codigoInvitacion.set(input.value.toUpperCase());
+  }
 
   ngAfterViewInit(): void {
     this.initGoogleAuth();
@@ -142,7 +149,8 @@ export class LoginComponent implements AfterViewInit {
     this.errorMessage.set(null);
     this.isLoading.set(true);
 
-    this.authService.loginGoogle(response.credential).subscribe({
+    const codigo = this.codigoInvitacion().trim() || undefined;
+    this.authService.loginGoogle(response.credential, codigo).subscribe({
       next: () => {
         this.isLoading.set(false);
         this.redirigirSegunRol();

@@ -63,8 +63,9 @@ model Usuario {
   usuario      String        @unique @db.VarChar(50)
   email        String?       @unique @db.VarChar(100)
   googleId     String?       @unique @map("google_id") @db.VarChar(100)
-  passwordHash String?       @map("password_hash") @db.VarChar(255)
-  rol          RolUsuario
+  passwordHash     String?       @map("password_hash") @db.VarChar(255)
+  codigoInvitacion String?       @unique @map("codigo_invitacion") @db.VarChar(50)
+  rol              RolUsuario
   estado       EstadoUsuario @default(activo)
 
   ajustesInventario AjusteInventario[]
