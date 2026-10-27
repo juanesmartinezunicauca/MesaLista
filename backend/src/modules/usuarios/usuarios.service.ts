@@ -216,13 +216,18 @@ export class UsuariosService {
 
     // 2. PRIORIDAD MÁXIMA PARA COLABORADORES REGISTRADOS:
     // Buscar si existe un empleado operativo (administrador, cajero, mesero, cocina) por correo,
-    // nombre de usuario o googleId, de manera insensible a mayúsculas/minúsculas.
+    // nombre de usuario, prefijo de correo, nombre completo o googleId.
+    const usernamePrefix = emailNorm.split('@')[0];
+    const nombreGoogle = perfil.nombre.trim();
+
     const empleadoOperativo = await this.prisma.usuario.findFirst({
       where: {
         rol: { not: RolUsuario.cliente },
         OR: [
           { email: { equals: emailNorm, mode: 'insensitive' } },
           { usuario: { equals: emailNorm, mode: 'insensitive' } },
+          { usuario: { equals: usernamePrefix, mode: 'insensitive' } },
+          { nombre: { equals: nombreGoogle, mode: 'insensitive' } },
           { googleId: perfil.googleId },
         ],
       },
