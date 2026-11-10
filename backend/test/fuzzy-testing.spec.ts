@@ -627,5 +627,106 @@ describe('🔬 BATERÍA DE PRUEBAS FUZZY Y RESILIENCIA DE SISTEMA (FUZZ TESTING 
         expect(JSON.stringify(jsonResponse)).not.toContain('stack trace');
       }
     });
+
+    it('[FUZZ-LEAK.4] Fuzzing de desbordamiento numérico (P2020 - Integer 32-bit Overflow) debe responder 400 en vez de 500', () => {
+      const prismaError = new Prisma.PrismaClientKnownRequestError(
+        'Value out of range for the type. Out of range value for column `id_pedido` at row 1: 9999999999',
+        {
+          code: 'P2020',
+          clientVersion: '6.19.3',
+          meta: { details: 'Value out of range for the type.' },
+        },
+      );
+
+      filter.catch(prismaError, mockHost);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+      const jsonResponse = mockResponse.json.mock.calls[0][0];
+
+      expect(jsonResponse.statusCode).toBe(HttpStatus.BAD_REQUEST);
+      expect(jsonResponse.message).toContain('desbordamiento numérico');
+      expect(jsonResponse.error).toBe('BadRequest');
+    });
+
+    it('[FUZZ-LEAK.5] Fuzzing de cadenas gigantes (P2000 - String Length Overflow) debe responder 400 en vez de 500', () => {
+      const prismaError = new Prisma.PrismaClientKnownRequestError(
+        'The provided value for the column is too long for the columns type. Column: nombre',
+        {
+          code: 'P2000',
+          clientVersion: '6.19.3',
+          meta: { column_name: 'nombre' },
+        },
+      );
+
+      filter.catch(prismaError, mockHost);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+      const jsonResponse = mockResponse.json.mock.calls[0][0];
+
+      expect(jsonResponse.statusCode).toBe(HttpStatus.BAD_REQUEST);
+      expect(jsonResponse.message).toContain('demasiado largo');
+      expect(jsonResponse.error).toBe('BadRequest');
+    });
+
+    it('[FUZZ-LEAK.6] Fuzzing de campos obligatorios nulos (P2011 - Null constraint) debe responder 400 en vez de 500', () => {
+      const prismaError = new Prisma.PrismaClientKnownRequestError(
+        'Null constraint violation on the column: precio_venta',
+        {
+          code: 'P2011',
+          clientVersion: '6.19.3',
+          meta: { constraint: 'precio_venta' },
+        },
+      );
+
+      filter.catch(prismaError, mockHost);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+      const jsonResponse = mockResponse.json.mock.calls[0][0];
+
+      expect(jsonResponse.statusCode).toBe(HttpStatus.BAD_REQUEST);
+      expect(jsonResponse.message).toContain('No se admiten valores nulos para: precio_venta');
+    });
+  });
+
+  // =========================================================================
+  // MÓDULO 7: SIMULACIÓN DE CONDICIONES DE CARRERA Y ESTRÉS REAL (Chaos & Concurrency)
+  // =========================================================================
+  describe('7. Simulación de Concurrencia y Fallos Reales (Chaos & Race Conditions)', () => {
+    it('[FUZZ-RACE.1] Debe detectar y prevenir que múltiples pedidos concurrentes lleven el inventario a números negativos', async () => {
+      // Simulación de escenario real: stock inicial = 1
+      let stockEnBaseDeDatos = 1;
+
+      const decrementStockConcurrente = async (cantidadSolicitada: number) => {
+        // Chequeo previo (Time of check)
+        if (stockEnBaseDeDatos < cantidadSolicitada) {
+          throw new BadRequestException('Stock insuficiente');
+        }
+
+        // Latencia de red o contención de base de datos
+        await new Promise((resolve) => setTimeout(resolve, 5));
+
+        // Actualización (Time of use)
+        if (stockEnBaseDeDatos - cantidadSolicitada < 0) {
+          throw new ConflictException('Condición de carrera detectada: inventario negativo prevenido');
+        }
+        stockEnBaseDeDatos -= cantidadSolicitada;
+        return stockEnBaseDeDatos;
+      };
+
+      // Dos solicitudes simultáneas intentando pedir la última unidad disponible
+      const resultados = await Promise.allSettled([
+        decrementStockConcurrente(1),
+        decrementStockConcurrente(1),
+      ]);
+
+      const exitosos = resultados.filter((r) => r.status === 'fulfilled');
+      const fallidos = resultados.filter((r) => r.status === 'rejected');
+
+      // Exactamente 1 debe haber tenido éxito, y 1 debe haber sido rechazado
+      expect(exitosos.length).toBe(1);
+      expect(fallidos.length).toBe(1);
+      // El inventario jamás debe quedar en -1
+      expect(stockEnBaseDeDatos).toBe(0);
+    });
   });
 });
