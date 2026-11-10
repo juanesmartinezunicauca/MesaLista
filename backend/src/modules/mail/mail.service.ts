@@ -33,8 +33,9 @@ export class MailService {
   ): Promise<EnvioMailResultado> {
     const emailNormalizado = destinatario.trim().toLowerCase();
     const asunto = `🔐 Tu Código de Registro e Invitación - MesaLista POS (Restaurante Luigie's)`;
-    const contenidoHtml = this.generarPlantillaHtml(datos);
-    const contenidoTexto = this.generarTextoPlano(datos);
+    const enlaceActivacion = this.generarEnlaceActivacion(datos.codigo);
+    const contenidoHtml = this.generarPlantillaHtml(datos, enlaceActivacion);
+    const contenidoTexto = this.generarTextoPlano(datos, enlaceActivacion);
 
     const resendApiKey = this.configService.get<string>('RESEND_API_KEY');
     const smtpHost = this.configService.get<string>('SMTP_HOST');
@@ -127,7 +128,7 @@ export class MailService {
   /**
    * Genera el HTML enriquecido del correo electrónico con el diseño visual de MesaLista
    */
-  private generarPlantillaHtml(datos: EnviarCodigoOptions): string {
+  private generarPlantillaHtml(datos: EnviarCodigoOptions, enlaceActivacion: string): string {
     const rolFormateado = datos.rol.toUpperCase();
     return `
 <!DOCTYPE html>
@@ -266,7 +267,7 @@ export class MailService {
         <div class="badge">PERFIL ASIGNADO: ${rolFormateado}</div>
         
         <p style="color: #cbd5e1; font-size: 14px; line-height: 1.5;">
-          Has sido registrado como colaborador en <strong>MesaLista POS</strong>. Para acceder a la plataforma por primera vez, debes vincular tu cuenta de Google utilizando el siguiente código de registro único:
+          Has sido registrado como colaborador en <strong>MesaLista POS</strong>. Para acceder a la plataforma por primera vez, pulsa el botón a continuación para ingresar directamente con tu código precargado:
         </p>
 
         <div class="code-container">
@@ -274,13 +275,22 @@ export class MailService {
           <div class="code-value">${datos.codigo}</div>
         </div>
 
+        <!-- Botón de Activación Directa en 1 Clic -->
+        <div style="text-align: center; margin: 28px 0 24px;">
+          <a href="${enlaceActivacion}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #ff6b35; background-image: linear-gradient(135deg, #ff6b35 0%, #ea580c 100%); color: #ffffff !important; text-decoration: none; font-size: 16px; font-weight: 700; padding: 14px 28px; border-radius: 12px; box-shadow: 0 4px 14px rgba(255, 107, 53, 0.4); letter-spacing: 0.3px;">
+            🚀 Ir a MesaLista y Activar Mi Cuenta
+          </a>
+          <p style="margin: 10px 0 0; font-size: 12px; color: #94a3b8;">
+            (El enlace abrirá la aplicación web y completará tu código automáticamente)
+          </p>
+        </div>
+
         <div class="steps">
           <h3>📌 Instrucciones para ingresar:</h3>
           <ol>
-            <li>Ingresa a la aplicación web de <strong>MesaLista</strong>.</li>
-            <li>En la pantalla de inicio de sesión, pulsa la pestaña <strong>"Nuevo Empleado"</strong>.</li>
-            <li>Escribe tu código <strong>${datos.codigo}</strong> en el recuadro.</li>
-            <li>Presiona <strong>"Continuar con Google"</strong> e inicia sesión con tu cuenta personal o corporativa.</li>
+            <li>Haz clic en el botón superior <strong>"Ir a MesaLista y Activar Mi Cuenta"</strong>.</li>
+            <li>La pantalla se abrirá automáticamente en la pestaña <strong>"Nuevo Empleado"</strong> con tu código <strong>${datos.codigo}</strong> precargado.</li>
+            <li>Presiona <strong>"Continuar con Google"</strong> e inicia sesión con tu cuenta personal de Google.</li>
             <li>¡Listo! Tu cuenta quedará vinculada automáticamente a tu cargo y el código se consumirá.</li>
           </ol>
         </div>
@@ -302,7 +312,7 @@ export class MailService {
   /**
    * Genera la versión en texto plano para clientes de correo sin soporte HTML
    */
-  private generarTextoPlano(datos: EnviarCodigoOptions): string {
+  private generarTextoPlano(datos: EnviarCodigoOptions, enlaceActivacion: string): string {
     return `
 ======================================================
 MesaLista POS — Restaurante Luigie's
@@ -316,16 +326,49 @@ Has sido registrado como colaborador en MesaLista con el rol: ${datos.rol.toUppe
 TU CÓDIGO DE REGISTRO TEMPORAL:
 >>> ${datos.codigo} <<<
 
+ENLACE DE ACTIVACIÓN DIRECTA (CÓDIGO INCLUIDO):
+${enlaceActivacion}
+
 INSTRUCCIONES PARA INGRESAR:
-1. Ingresa a la aplicación web de MesaLista POS.
-2. En la pantalla de inicio de sesión, pulsa la pestaña "Nuevo Empleado".
-3. Escribe tu código: ${datos.codigo}
-4. Presiona "Continuar con Google" e inicia sesión con tu cuenta personal o corporativa.
-5. Tu cuenta quedará vinculada y el código se quemará de inmediato.
+1. Haz clic en el enlace de activación directa o ingresa a la aplicación web.
+2. Si usas el enlace, tu código ${datos.codigo} ya estará listo en pantalla.
+3. Presiona "Continuar con Google" e inicia sesión con tu cuenta personal o corporativa.
+4. Tu cuenta quedará vinculada y el código se quemará de inmediato.
 
 AVISO DE PRIVACIDAD:
 Este correo electrónico se utilizó únicamente para la entrega de este mensaje y NO se almacena en la base de datos del sistema.
 `;
+  }
+
+  /**
+   * Construye el enlace de activación directa con el código precargado
+   */
+  private generarEnlaceActivacion(codigo: string): string {
+    const customFrontend = this.configService.get<string>('FRONTEND_URL');
+    let baseUrl = 'http://localhost:4200';
+
+    if (customFrontend && customFrontend.trim()) {
+      baseUrl = customFrontend.trim();
+    } else {
+      const corsOrigin = this.configService.get<string>('CORS_ORIGIN');
+      if (corsOrigin) {
+        const origins = corsOrigin.split(',').map((o) => o.trim());
+        const vercel = origins.find((o) => o.includes('vercel.app'));
+        if (vercel) {
+          baseUrl = vercel;
+        } else {
+          const remote = origins.find((o) => !o.includes('localhost') && !o.includes('127.0.0.1'));
+          if (remote) {
+            baseUrl = remote;
+          } else if (origins[0]) {
+            baseUrl = origins[0];
+          }
+        }
+      }
+    }
+
+    const cleanBase = baseUrl.replace(/\/+$/, '');
+    return `${cleanBase}/login?codigo=${encodeURIComponent(codigo)}`;
   }
 
   /**
