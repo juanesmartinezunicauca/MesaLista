@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { EstadoCaja, EstadoFactura, EstadoPedido, TipoAjuste, TipoPedido } from '@prisma/client';
+import { EstadoCaja, EstadoFactura } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReportesService, resolverRangoFechas } from './reportes.service';
 

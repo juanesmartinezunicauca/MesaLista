@@ -13,7 +13,6 @@
  */
 import { Logger, UnauthorizedException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import * as crypto from 'node:crypto';
 import * as net from 'node:net';
 import { MailService } from '../../src/modules/mail/mail.service';
 import { UsuariosService } from '../../src/modules/usuarios/usuarios.service';

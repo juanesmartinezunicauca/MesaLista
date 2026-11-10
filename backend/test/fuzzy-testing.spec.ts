@@ -2,25 +2,21 @@ import {
   BadRequestException,
   ConflictException,
   ExecutionContext,
-  ForbiddenException,
   HttpStatus,
   NotFoundException,
   UnauthorizedException,
   ValidationPipe,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { EstadoCaja, EstadoPedido, EstadoUsuario, Prisma, RolUsuario, TipoPedido } from '@prisma/client';
+import { EstadoCaja, EstadoPedido, Prisma, RolUsuario, TipoPedido } from '@prisma/client';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { PrismaExceptionFilter } from '../src/common/filters/prisma-exception.filter';
-import { AuthService } from '../src/modules/auth/auth.service';
 import { AbrirCajaDto, CerrarCajaDto } from '../src/modules/caja/dto';
 import { CajaService } from '../src/modules/caja/caja.service';
 import { DomiciliosService } from '../src/modules/domicilios/domicilios.service';
-import { DespacharDomiDto } from '../src/modules/domicilios/dto';
 import { CreatePedidoDto } from '../src/modules/pedidos/dto';
-import { PedidosService } from '../src/modules/pedidos/pedidos.service';
-import { CreateUsuarioDto, EnviarCodigoDto } from '../src/modules/usuarios/dto';
+import { CreateUsuarioDto } from '../src/modules/usuarios/dto';
 import { UsuariosService } from '../src/modules/usuarios/usuarios.service';
 
 /**
@@ -102,14 +98,15 @@ describe('🔬 BATERÍA DE PRUEBAS FUZZY Y RESILIENCIA DE SISTEMA (FUZZ TESTING 
   // MÓDULO 1: FUZZING DE DTOs Y VALIDACIÓN DE ENTRADA (ValidationPipe / Class-Validator)
   // =========================================================================
   describe('1. Fuzzing de DTOs y Validación de Frontera (Validation Boundaries)', () => {
-    let validationPipe: ValidationPipe;
+    let _validationPipe: ValidationPipe;
 
     beforeAll(() => {
-      validationPipe = new ValidationPipe({
+      _validationPipe = new ValidationPipe({
         whitelist: true,
         forbidNonWhitelisted: true,
         transform: true,
       });
+      expect(_validationPipe).toBeDefined();
     });
 
     it('[FUZZ-DTO.1] CreateUsuarioDto: Debe rechazar robustamente mutaciones anómalas en el campo email sin arrojar error 500', async () => {
@@ -369,6 +366,7 @@ describe('🔬 BATERÍA DE PRUEBAS FUZZY Y RESILIENCIA DE SISTEMA (FUZZ TESTING 
         nombre: 'Mesero Legítimo',
         codigoInvitacion: 'INV-482910',
       });
+      expect(resultado).toBeDefined();
 
       // Verifica que se liberó googleId de cualquier otra cuenta previa
       expect(mockPrisma.usuario.updateMany).toHaveBeenCalledWith({

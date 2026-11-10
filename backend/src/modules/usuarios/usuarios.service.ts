@@ -24,10 +24,10 @@ import {
  */
 function generarCodigoInvitacionSeguro(): string {
   const ALFABETO = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-  const bytes = crypto.randomBytes(8);
   let codigo = '';
   for (let i = 0; i < 8; i++) {
-    codigo += ALFABETO[bytes[i] % ALFABETO.length];
+    const idx = crypto.randomInt(0, ALFABETO.length);
+    codigo += ALFABETO[idx];
   }
   return `INV-${codigo}`;
 }
@@ -438,17 +438,6 @@ export class UsuariosService {
     ) {
       uniqueUsername = `${baseUsername.slice(0, 35)}_${counter++}`;
     }
-
-    return this.prisma.usuario.create({
-      data: {
-        nombre: perfil.nombre.slice(0, 100),
-        usuario: uniqueUsername,
-        email: emailNorm,
-        googleId: perfil.googleId,
-        rol: RolUsuario.cliente,
-        estado: EstadoUsuario.activo,
-      },
-    });
 
     return this.prisma.usuario.create({
       data: {

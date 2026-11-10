@@ -57,13 +57,15 @@ export class MailService {
         
         let fromEmail = rawFrom.trim();
         let fromName = this.configService.get<string>('SMTP_FROM_NAME') || 'MesaLista POS';
-        
-        const match = rawFrom.match(/^(.*?)\s*<([^>]+)>$/);
-        if (match) {
-          if (match[1]?.trim()) {
-            fromName = match[1].trim().replace(/^["']|["']$/g, '');
+
+        const ltIndex = rawFrom.indexOf('<');
+        const gtIndex = rawFrom.indexOf('>', ltIndex);
+        if (ltIndex !== -1 && gtIndex > ltIndex) {
+          const possibleName = rawFrom.slice(0, ltIndex).trim().replace(/^["']|["']$/g, '');
+          if (possibleName) {
+            fromName = possibleName;
           }
-          fromEmail = match[2]?.trim() || fromEmail;
+          fromEmail = rawFrom.slice(ltIndex + 1, gtIndex).trim();
         }
 
         const response = await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -401,10 +403,17 @@ export class MailService {
   }
 
   /**
-   * Sanitiza texto plano eliminando etiquetas HTML
+   * Sanitiza texto plano eliminando etiquetas HTML y delimitadores
    */
   private limpiarTextoPlano(str: string): string {
-    return (str || '').replace(/<[^>]*>?/gm, '');
+    if (!str) return '';
+    let anterior = '';
+    let limpio = str;
+    while (limpio !== anterior) {
+      anterior = limpio;
+      limpio = limpio.replace(/<[^>]*>/g, '');
+    }
+    return limpio.replace(/[<>]/g, '');
   }
 
   /**
@@ -466,7 +475,10 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
       }
     }
 
-    const cleanBase = baseUrl.replace(/\/+$/, '');
+    let cleanBase = baseUrl.trim();
+    while (cleanBase.endsWith('/')) {
+      cleanBase = cleanBase.slice(0, -1);
+    }
     return `${cleanBase}/login?codigo=${encodeURIComponent(codigo)}`;
   }
 
@@ -495,7 +507,8 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
 
     // Respetar explícitamente SMTP_PORT: si se define 587, port = 587 (TLS: false)
     // Si se define 465 o por defecto Gmail sin puerto, port = 465 (TLS: true)
-    const port = parsedPort > 0 ? parsedPort : (host.includes('gmail.com') ? 465 : 587);
+    const isGmailHost = host === 'smtp.gmail.com' || host.endsWith('.gmail.com');
+    const port = parsedPort > 0 ? parsedPort : (isGmailHost ? 465 : 587);
     const useTls = port === 465;
 
     const from =
