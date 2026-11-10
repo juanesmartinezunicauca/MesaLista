@@ -23,38 +23,11 @@
   <div class="form-panel">
     <div class="form-wrapper">
 
-      <!-- Selector de Modo con Pestañas Segmentadas -->
-      <div class="auth-mode-tabs" role="tablist">
-        <button
-          type="button"
-          class="tab-btn"
-          [class.active]="modo() === 'acceso'"
-          (click)="setModo('acceso')"
-          role="tab"
-          [attr.aria-selected]="modo() === 'acceso'"
-        >
-          <mat-icon>login</mat-icon>
-          <span>Acceso Habitual</span>
-        </button>
-
-        <button
-          type="button"
-          class="tab-btn"
-          [class.active]="modo() === 'registro'"
-          (click)="setModo('registro')"
-          role="tab"
-          [attr.aria-selected]="modo() === 'registro'"
-        >
-          <mat-icon>badge</mat-icon>
-          <span>Nuevo Empleado</span>
-        </button>
-      </div>
-
       <!-- Encabezado Dinámico -->
       @if (modo() === 'acceso') {
         <div class="form-header">
           <h1>Bienvenido a MesaLista</h1>
-          <p>Inicia sesión con tu cuenta de Google autorizada para acceder a tu estación de trabajo</p>
+          <p>Inicia sesión con tu cuenta de Google para acceder a tu estación de trabajo</p>
         </div>
       } @else {
         <div class="form-header registro-header">
@@ -63,7 +36,7 @@
             <span>Activación de Personal</span>
           </div>
           <h1>Activar Perfil de Empleado</h1>
-          <p>Ingresa el código que te asignó la administración para vincular tu cuenta con tu cargo</p>
+          <p>Ingresa el código que te asignó la administración para vincular tu cargo</p>
         </div>
       }
 
@@ -144,21 +117,16 @@
 
         <!-- Opciones Inferiores según Modo -->
         @if (modo() === 'acceso') {
-          <div class="new-employee-callout" (click)="setModo('registro')">
-            <div class="callout-icon">
-              <mat-icon>person_add_alt</mat-icon>
-            </div>
-            <div class="callout-content">
-              <strong>¿Es tu primer día en el equipo?</strong>
-              <span>Pulsa aquí para activar tu cuenta con tu código de invitación</span>
-            </div>
-            <mat-icon class="callout-arrow">chevron_right</mat-icon>
+          <div class="register-employee-action">
+            <button type="button" class="btn-register-employee" (click)="setModo('registro')">
+              ¿Eres nuevo en el equipo? <span>Registrarse como empleado</span>
+            </button>
           </div>
         } @else {
           <div class="switch-back-row">
             <button type="button" class="btn-switch-back" (click)="setModo('acceso')">
               <mat-icon>arrow_back</mat-icon>
-              <span>Ya tengo mi cuenta vinculada · Volver a inicio habitual</span>
+              <span>Volver a iniciar sesión</span>
             </button>
           </div>
         }
