@@ -1,10 +1,12 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import * as argon2 from 'argon2';
+import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CreateUsuarioDto,
@@ -16,7 +18,10 @@ import {
 
 @Injectable()
 export class UsuariosService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mailService: MailService,
+  ) {}
 
   // Proyección que excluye deliberadamente el hash de contraseña de las respuestas
   private readonly usuarioSelectSinPassword = {
@@ -30,29 +35,43 @@ export class UsuariosService {
   } as const;
 
   /**
-   * Registra un nuevo usuario con contraseña hasheada mediante Argon2id (OWASP).
+   * Registra un nuevo colaborador en el sistema.
+   * REGLA DE PRIVACIDAD OBLIGATORIA:
+   * El correo suministrado para la entrega del código de registro (correoEnvioCodigo o email de colaborador)
+   * se utiliza EXCLUSIVAMENTE para enviar el código por correo y NO se persiste en la base de datos (queda en null).
    */
   async crear(createUsuarioDto: CreateUsuarioDto) {
-    const emailNormalizado = createUsuarioDto.email ? createUsuarioDto.email.trim().toLowerCase() : null;
+    const esColaboradorOperativo = createUsuarioDto.rol !== RolUsuario.cliente;
 
-    // Validar si el email ya existe (si fue provisto)
-    if (emailNormalizado) {
+    // Correo efímero para envío del código
+    const correoParaDespacho = (
+      createUsuarioDto.correoEnvioCodigo ||
+      (esColaboradorOperativo ? createUsuarioDto.email : undefined)
+    )?.trim().toLowerCase() || null;
+
+    // Si es colaborador operativo, el email en base de datos NO se guarda (null) para preservar su privacidad
+    const emailAGuardar = esColaboradorOperativo
+      ? null
+      : (createUsuarioDto.email ? createUsuarioDto.email.trim().toLowerCase() : null);
+
+    // Validar si el email a guardar ya existe (solo cuando aplica guardar)
+    if (emailAGuardar) {
       const emailExistente = await this.prisma.usuario.findUnique({
-        where: { email: emailNormalizado },
+        where: { email: emailAGuardar },
       });
 
       if (emailExistente) {
         throw new ConflictException(
-          `El correo electrónico '${emailNormalizado}' ya está registrado.`,
+          `El correo electrónico '${emailAGuardar}' ya está registrado.`,
         );
       }
     }
 
-    // Resolver username: si no viene especificado, se deriva del email o del nombre
+    // Resolver username: si no viene especificado, se deriva del correo efímero o del nombre
     let finalUsername = createUsuarioDto.usuario?.trim();
     if (!finalUsername) {
-      const base = emailNormalizado
-        ? emailNormalizado.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 40)
+      const base = correoParaDespacho
+        ? correoParaDespacho.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 40)
         : createUsuarioDto.nombre.trim().toLowerCase().replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 40) || 'colaborador';
       finalUsername = base;
       let counter = 1;
@@ -73,13 +92,12 @@ export class UsuariosService {
 
     // Generar código de invitación seguro para roles operativos
     let codigoInvitacion: string | null = null;
-    if (createUsuarioDto.rol !== RolUsuario.cliente) {
+    if (esColaboradorOperativo) {
       const randDigits = Math.floor(100000 + Math.random() * 900000);
       codigoInvitacion = `INV-${randDigits}`;
     }
 
     // Hashear contraseña solo si se especificó explícitamente (cuenta tradicional)
-    // De lo contrario, queda tercerizado exclusivamente a Google OAuth (passwordHash: null)
     let passwordHash: string | null = null;
     if (createUsuarioDto.password && createUsuarioDto.password.trim()) {
       passwordHash = await argon2.hash(createUsuarioDto.password, {
@@ -90,11 +108,11 @@ export class UsuariosService {
       });
     }
 
-    return this.prisma.usuario.create({
+    const nuevoUsuario = await this.prisma.usuario.create({
       data: {
         nombre: createUsuarioDto.nombre.trim(),
         usuario: finalUsername,
-        email: emailNormalizado,
+        email: emailAGuardar, // NULL para colaboradores operativos: ¡NO SE GUARDA EN BD!
         passwordHash,
         codigoInvitacion,
         rol: createUsuarioDto.rol,
@@ -102,6 +120,59 @@ export class UsuariosService {
       },
       select: this.usuarioSelectSinPassword,
     });
+
+    // Despacho del código por correo si se especificó destinatario
+    let despachoMail: any = null;
+    if (correoParaDespacho && codigoInvitacion) {
+      despachoMail = await this.mailService.enviarCodigoInvitacion(correoParaDespacho, {
+        nombre: nuevoUsuario.nombre,
+        rol: nuevoUsuario.rol,
+        codigo: codigoInvitacion,
+      });
+    }
+
+    return {
+      ...nuevoUsuario,
+      correoEnviado: Boolean(despachoMail?.enviado),
+      correoDestino: correoParaDespacho,
+      guardadoEnBaseDeDatos: false, // Declaración explícita para auditoría
+    };
+  }
+
+  /**
+   * Envía (o reenvía) el código de invitación de un usuario al correo electrónico suministrado.
+   * GARANTÍA DE PRIVACIDAD: El correo de destino NO se almacena en la base de datos.
+   */
+  async enviarCodigoPorCorreo(idUsuario: number, correoDestino: string) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id_usuario: idUsuario },
+    });
+
+    if (!usuario) {
+      throw new NotFoundException(`Usuario con ID #${idUsuario} no encontrado.`);
+    }
+
+    if (!usuario.codigoInvitacion) {
+      throw new BadRequestException(
+        `El colaborador '${usuario.nombre}' ya ha vinculado su cuenta o no tiene un código de registro activo.`,
+      );
+    }
+
+    const emailNorm = correoDestino.trim().toLowerCase();
+
+    const resultado = await this.mailService.enviarCodigoInvitacion(emailNorm, {
+      nombre: usuario.nombre,
+      rol: usuario.rol,
+      codigo: usuario.codigoInvitacion,
+    });
+
+    return {
+      success: true,
+      mensaje: `Código de registro ${usuario.codigoInvitacion} enviado a '${emailNorm}'.`,
+      destinatario: emailNorm,
+      guardadoEnBaseDeDatos: false,
+      transport: resultado.transport,
+    };
   }
 
   /**
@@ -152,9 +223,8 @@ export class UsuariosService {
     return usuario;
   }
 
-
   /**
-   * Vincula una cuenta de Google OAuth existente por código de invitación, googleId o email/username,
+   * Vincula una cuenta de Google OAuth existente por código de invitación, googleId ,
    * garantizando que los colaboradores operativos registrados mantengan su rol correspondiente.
    * Si no existe registro previo, registra un nuevo usuario con rol 'cliente'.
    */
@@ -295,7 +365,6 @@ export class UsuariosService {
       },
     });
   }
-
 
   /**
    * Actualiza datos de un usuario. Si se incluye contraseña, se re-hashea con Argon2id.

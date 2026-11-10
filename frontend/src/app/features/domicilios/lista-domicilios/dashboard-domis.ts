@@ -13,6 +13,8 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { NewDeliveryDialogComponent } from '../nuevo-domicilio/nuevo-domi-modal';
 import { DetalleDomiDialogComponent } from '../detalle-domicilio/detalle-domi-dialog';
+import { GestionarDomisDialogComponent } from '../gestionar-domis/gestionar-domis-dialog';
+import { DespacharDomiDialogComponent } from '../despachar-domi/despachar-domi-dialog';
 import { FacturaDialogComponent } from '../../mesas/dialogs/factura-dialog';
 import { DomiciliosApiService } from '../../../core/services/api/domicilios-api.service';
 import { FacturacionApiService } from '../../../core/services/api/facturacion-api.service';
@@ -307,31 +309,29 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
       });
   }
 
-  solicitarDespachoConRepartidor(pedido: Domicilio): void {
-    let nombre: string | null = null;
-    let telefono: string | null = null;
+  abrirGestionRepartidores(): void {
+    this.dialog.open(GestionarDomisDialogComponent, {
+      width: '600px',
+      maxWidth: '95vw',
+    });
+  }
 
-    try {
-      nombre = prompt(
-        `Nombre del repartidor para pedido #${pedido.numero_pedido} (opcional, presiona Aceptar para continuar):`,
-        pedido.repartidor?.nombre || ''
-      );
-      // Si ingresó nombre, solicitar teléfono
-      if (nombre && nombre.trim()) {
-        telefono = prompt(
-          `Teléfono del repartidor (opcional):`,
-          pedido.repartidor?.telefono || ''
+  solicitarDespachoConRepartidor(pedido: Domicilio): void {
+    const dialogRef = this.dialog.open(DespacharDomiDialogComponent, {
+      data: { pedido },
+      width: '540px',
+      maxWidth: '95vw',
+    });
+
+    dialogRef.afterClosed().subscribe((resultado) => {
+      if (resultado) {
+        this.despachar(
+          pedido,
+          resultado.nombre?.trim() || undefined,
+          resultado.telefono?.trim() || undefined
         );
       }
-    } catch {
-      // Si el navegador bloquea los prompts nativos, continuar con despacho estándar
-    }
-
-    this.despachar(
-      pedido,
-      nombre?.trim() || undefined,
-      telefono?.trim() || undefined
-    );
+    });
   }
 
   regresarAPreparacion(pedido: Domicilio): void {

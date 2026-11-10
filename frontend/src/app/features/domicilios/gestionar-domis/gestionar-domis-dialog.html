@@ -1,0 +1,146 @@
+<div class="gestionar-domis-modal">
+  <div class="modal-header">
+    <div class="header-left">
+      <div class="header-icon-box">
+        <mat-icon>sports_motorsports</mat-icon>
+      </div>
+      <div>
+        <h2>Directorio de Domiciliarios</h2>
+        <p class="subtitle">Personal operativo para despacho (sin roles ni credenciales de usuario)</p>
+      </div>
+    </div>
+    <button mat-icon-button class="btn-close" (click)="cerrar()" aria-label="Cerrar">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-divider></mat-divider>
+
+  <!-- Formulario Rápido de Registro -->
+  <div class="add-driver-form">
+    <span class="form-title">
+      <mat-icon>person_add</mat-icon>
+      <span>Registrar Nuevo Domiciliario</span>
+    </span>
+
+    <div class="form-grid">
+      <div class="field-item">
+        <label>Nombre Completo *</label>
+        <div class="input-wrapper">
+          <mat-icon>person</mat-icon>
+          <input
+            type="text"
+            placeholder="Ej. Carlos Rodríguez"
+            [value]="nombre()"
+            (input)="nombre.set($any($event.target).value)"
+            (keydown.enter)="guardar()"
+          />
+        </div>
+      </div>
+
+      <div class="field-item">
+        <label>Teléfono / Celular *</label>
+        <div class="input-wrapper">
+          <mat-icon>phone</mat-icon>
+          <input
+            type="tel"
+            placeholder="Ej. 314 567 8901"
+            [value]="telefono()"
+            (input)="telefono.set($any($event.target).value)"
+            (keydown.enter)="guardar()"
+          />
+        </div>
+      </div>
+
+      <div class="field-item">
+        <label>Vehículo / Placa (Opcional)</label>
+        <div class="input-wrapper">
+          <mat-icon>two_wheeler</mat-icon>
+          <input
+            type="text"
+            placeholder="Ej. Moto Suzuki AX - ABC-12D"
+            [value]="vehiculo()"
+            (input)="vehiculo.set($any($event.target).value)"
+            (keydown.enter)="guardar()"
+          />
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button
+          mat-flat-button
+          color="primary"
+          class="btn-save-driver"
+          (click)="guardar()"
+          [disabled]="guardando()"
+        >
+          <mat-icon>{{ guardando() ? 'hourglass_top' : 'save' }}</mat-icon>
+          <span>{{ guardando() ? 'Guardando...' : 'Guardar Domiciliario' }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <mat-divider></mat-divider>
+
+  <!-- Lista de Repartidores Registrados -->
+  <div class="drivers-list-container">
+    <div class="list-header">
+      <span class="count-badge">
+        <mat-icon>badge</mat-icon>
+        <span>Domiciliarios Activos ({{ repartidores().length }})</span>
+      </span>
+      <span class="hint-text">Disponibles para selección inmediata al despachar</span>
+    </div>
+
+    @if (cargando()) {
+      <div class="loading-box">
+        <mat-spinner diameter="32"></mat-spinner>
+        <span>Cargando domiciliarios...</span>
+      </div>
+    } @else {
+      <div class="drivers-grid">
+        @for (rep of repartidores(); track rep.id) {
+          <div class="driver-card">
+            <div class="driver-avatar">
+              <mat-icon>two_wheeler</mat-icon>
+            </div>
+            <div class="driver-details">
+              <strong class="driver-name">{{ rep.nombre }}</strong>
+              <div class="detail-row phone">
+                <mat-icon>call</mat-icon>
+                <span>{{ rep.telefono }}</span>
+              </div>
+              @if (rep.vehiculo) {
+                <div class="detail-row vehicle">
+                  <mat-icon>pedal_bike</mat-icon>
+                  <span>{{ rep.vehiculo }}</span>
+                </div>
+              }
+            </div>
+            <button
+              mat-icon-button
+              class="btn-delete"
+              (click)="eliminar(rep)"
+              matTooltip="Eliminar del directorio"
+            >
+              <mat-icon>delete_outline</mat-icon>
+            </button>
+          </div>
+        } @empty {
+          <div class="empty-drivers">
+            <mat-icon>sports_motorsports</mat-icon>
+            <p>No hay domiciliarios registrados aún. Usa el formulario de arriba para agregar el primero.</p>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="modal-footer">
+    <button mat-stroked-button (click)="cerrar()">
+      <span>Cerrar</span>
+    </button>
+  </div>
+</div>
+

@@ -1,0 +1,163 @@
+<div class="despachar-domi-modal">
+  <!-- Encabezado del Modal -->
+  <div class="modal-header">
+    <div class="header-left">
+      <div class="header-icon-box">
+        <mat-icon>delivery_dining</mat-icon>
+      </div>
+      <div>
+        <h2>Despachar Domicilio #{{ pedido.numero_pedido }}</h2>
+        <p class="subtitle">Asigna el domiciliario que llevará el pedido al cliente</p>
+      </div>
+    </div>
+    <button mat-icon-button class="btn-close" (click)="cancelar()" aria-label="Cerrar">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-divider></mat-divider>
+
+  <!-- Tarjeta de Resumen del Destino -->
+  <div class="destination-card">
+    <div class="card-row">
+      <div class="info-block">
+        <span class="label">CLIENTE</span>
+        <span class="value">{{ pedido.cliente.nombre }}</span>
+      </div>
+      <div class="info-block phone">
+        <span class="label">TELÉFONO</span>
+        <span class="value">{{ pedido.cliente.telefono || 'Sin teléfono' }}</span>
+      </div>
+    </div>
+
+    <div class="card-row address-row">
+      <div class="info-block full">
+        <span class="label">DIRECCIÓN DE ENTREGA</span>
+        <span class="value address">
+          <mat-icon>location_on</mat-icon>
+          <span>{{ pedido.cliente.direccion }}</span>
+        </span>
+      </div>
+    </div>
+
+    <div class="card-row footer-row">
+      <span class="items-count">{{ pedido.items.length }} producto(s) en comanda</span>
+      <strong class="total-amount">$ {{ pedido.totalCalculado | number:'1.0-0' }} COP</strong>
+    </div>
+  </div>
+
+  <!-- Selector de Domiciliarios Guardados -->
+  <div class="drivers-selection-section">
+    <div class="section-header">
+      <span class="section-title">
+        <mat-icon>sports_motorsports</mat-icon>
+        <span>Domiciliarios Registrados</span>
+      </span>
+      <button
+        type="button"
+        mat-button
+        class="btn-manage-link"
+        (click)="abrirGestionRepartidores()"
+      >
+        <mat-icon>settings</mat-icon>
+        <span>Gestionar Directorio</span>
+      </button>
+    </div>
+
+    @if (cargando()) {
+      <div class="loading-drivers">
+        <mat-spinner diameter="24"></mat-spinner>
+        <span>Cargando domiciliarios...</span>
+      </div>
+    } @else {
+      <div class="drivers-picker-list">
+        @for (rep of repartidores(); track rep.id) {
+          <div
+            class="driver-option-card"
+            [class.selected]="modoSeleccion() === 'lista' && repartidorSeleccionadoId() === rep.id"
+            (click)="seleccionarRepartidor(rep.id)"
+          >
+            <div class="radio-indicator">
+              <span class="dot"></span>
+            </div>
+            <div class="driver-info">
+              <strong class="driver-name">{{ rep.nombre }}</strong>
+              <div class="driver-meta">
+                <span class="phone">
+                  <mat-icon>call</mat-icon>
+                  <span>{{ rep.telefono }}</span>
+                </span>
+                @if (rep.vehiculo) {
+                  <span class="vehicle">
+                    <mat-icon>two_wheeler</mat-icon>
+                    <span>{{ rep.vehiculo }}</span>
+                  </span>
+                }
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Opción Manual -->
+        <div
+          class="driver-option-card manual-option"
+          [class.selected]="modoSeleccion() === 'manual'"
+          (click)="activarManual()"
+        >
+          <div class="radio-indicator">
+            <span class="dot"></span>
+          </div>
+          <div class="driver-info">
+            <strong class="driver-name">Otro Domiciliario (Ingreso Manual)</strong>
+            <span class="manual-sub">Ingresa un nombre y teléfono diferente para esta entrega</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Campos de texto si elige Manual -->
+      @if (modoSeleccion() === 'manual') {
+        <div class="manual-inputs-box">
+          <div class="field-item">
+            <label>Nombre del Domiciliario *</label>
+            <div class="input-wrapper">
+              <mat-icon>person</mat-icon>
+              <input
+                type="text"
+                placeholder="Ej. Juan Pérez"
+                [value]="nombreManual()"
+                (input)="nombreManual.set($any($event.target).value)"
+              />
+            </div>
+          </div>
+
+          <div class="field-item">
+            <label>Teléfono de Contacto (Opcional)</label>
+            <div class="input-wrapper">
+              <mat-icon>call</mat-icon>
+              <input
+                type="tel"
+                placeholder="Ej. 312 000 0000"
+                [value]="telefonoManual()"
+                (input)="telefonoManual.set($any($event.target).value)"
+              />
+            </div>
+          </div>
+        </div>
+      }
+    }
+  </div>
+
+  <mat-divider></mat-divider>
+
+  <!-- Acciones del Modal -->
+  <div class="modal-actions">
+    <button mat-stroked-button (click)="cancelar()">
+      <span>Cancelar</span>
+    </button>
+    <button mat-flat-button color="accent" class="btn-dispatch-confirm" (click)="confirmarDespacho()">
+      <mat-icon>delivery_dining</mat-icon>
+      <span>Confirmar y Despachar Pedido</span>
+    </button>
+  </div>
+</div>
+

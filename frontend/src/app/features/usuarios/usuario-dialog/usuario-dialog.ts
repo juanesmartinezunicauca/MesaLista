@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -9,7 +9,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { EstadoUsuario, RolUsuario, Usuario } from '../../../core/models/usuario.model';
-import { CreateUsuarioPayload, UpdateUsuarioPayload, UsuariosApiService } from '../../../core/services/api/usuarios-api.service';
+import {
+  CreateUsuarioPayload,
+  UpdateUsuarioPayload,
+  UsuariosApiService,
+} from '../../../core/services/api/usuarios-api.service';
 
 export interface UsuarioDialogData {
   usuario?: Usuario;
@@ -74,6 +78,12 @@ export class UsuarioDialogComponent {
   usuarioRecienCreado = signal<Usuario | null>(null);
   copiado = signal<boolean>(false);
 
+  // Estados para envío y reenvío por correo efímero (sin persistencia en BD)
+  correoEnviadoExitoso = signal<string | null>(null);
+  enviandoCorreoManual = signal<boolean>(false);
+  mensajeEnvioManual = signal<{ tipo: 'exito' | 'error'; texto: string } | null>(null);
+  correoReenvioControl = new FormControl('', [Validators.required, Validators.email]);
+
   constructor() {
     const u = this.data?.usuario;
 
@@ -87,6 +97,9 @@ export class UsuarioDialogComponent {
           Validators.pattern(/^[a-zA-Z0-9._-]+$/),
         ],
       ],
+      // Correo efímero para envío del código (no se almacena en base de datos)
+      correoEnvioCodigo: ['', [Validators.email]],
+      // Solo relevante si es edición de un usuario existente
       email: [u?.email || '', [Validators.email]],
       rol: [u?.rol || 'mesero', [Validators.required]],
       estado: [u?.estado ? u.estado === 'activo' : true],
@@ -111,6 +124,47 @@ export class UsuarioDialogComponent {
         setTimeout(() => this.copiado.set(false), 2500);
       });
     }
+  }
+
+  /**
+   * Despacha el código de invitación a un correo solicitado manualmente.
+   * NOTA: Este correo no queda registrado en la base de datos.
+   */
+  enviarCodigoPorCorreo(): void {
+    this.mensajeEnvioManual.set(null);
+
+    if (this.correoReenvioControl.invalid) {
+      this.correoReenvioControl.markAsTouched();
+      return;
+    }
+
+    const destino = this.correoReenvioControl.value?.trim().toLowerCase();
+    const usuario = this.usuarioRecienCreado();
+
+    if (!destino || !usuario) return;
+
+    this.enviandoCorreoManual.set(true);
+    this.usuariosApi.enviarCodigoPorCorreo(usuario.id_usuario, destino).subscribe({
+      next: (res) => {
+        this.enviandoCorreoManual.set(false);
+        this.correoEnviadoExitoso.set(destino);
+        this.mensajeEnvioManual.set({
+          tipo: 'exito',
+          texto: `¡Código despachado a ${destino}! (El correo no ha sido guardado en la base de datos).`,
+        });
+        this.correoReenvioControl.reset();
+      },
+      error: (err) => {
+        this.enviandoCorreoManual.set(false);
+        const msg =
+          err.error?.message ||
+          (Array.isArray(err.error?.message) ? err.error.message.join('. ') : 'Error al enviar el correo.');
+        this.mensajeEnvioManual.set({
+          tipo: 'error',
+          texto: msg,
+        });
+      },
+    });
   }
 
   cerrarConExito(): void {
@@ -154,12 +208,18 @@ export class UsuarioDialogComponent {
         },
       });
     } else {
-      const email = val.email?.trim() ? val.email.trim().toLowerCase() : undefined;
-      const baseUsuario = val.usuario?.trim() || (email ? email.split('@')[0] : val.nombre.trim().toLowerCase().replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 30));
+      const correoEnvio = val.correoEnvioCodigo?.trim() ? val.correoEnvioCodigo.trim().toLowerCase() : undefined;
+      const baseUsuario =
+        val.usuario?.trim() ||
+        (correoEnvio
+          ? correoEnvio.split('@')[0].slice(0, 30)
+          : val.nombre.trim().toLowerCase().replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 30));
+
       const payload: CreateUsuarioPayload = {
         nombre: val.nombre.trim(),
-        email: email,
         usuario: baseUsuario,
+        correoEnvioCodigo: correoEnvio, // Se envía para el despacho del correo
+        // email NO se envía: en BD se guardará en null para colaboradores con código
         rol: val.rol,
         estado: val.estado ? ('activo' as EstadoUsuario) : ('inactivo' as EstadoUsuario),
       };
@@ -170,6 +230,9 @@ export class UsuarioDialogComponent {
           if (nuevoUsuario.codigoInvitacion) {
             this.invitacionGenerada.set(nuevoUsuario.codigoInvitacion);
             this.usuarioRecienCreado.set(nuevoUsuario);
+            if (nuevoUsuario.correoEnviado && nuevoUsuario.correoDestino) {
+              this.correoEnviadoExitoso.set(nuevoUsuario.correoDestino);
+            }
           } else {
             this.dialogRef.close({ accion: 'creado', usuario: nuevoUsuario });
           }

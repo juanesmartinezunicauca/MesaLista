@@ -195,13 +195,13 @@
                 <span>${{ carritoService.totalPrecio() | number:'1.0-0' }} COP</span>
               </div>
               <div class="sum-row">
-                <span>Costo de envío a domicilio:</span>
-                <span class="free-shipping">Gratis</span>
+                <span>Costo de envío ({{ zonaSeleccionada().nombre.split(':')[0] }}):</span>
+                <span class="shipping-charge">+${{ costoEnvio() | number:'1.0-0' }} COP</span>
               </div>
               <mat-divider></mat-divider>
               <div class="sum-row total-highlight">
                 <span>Total a Pagar:</span>
-                <span class="total-number">${{ carritoService.totalPrecio() | number:'1.0-0' }} COP</span>
+                <span class="total-number">${{ totalConEnvio() | number:'1.0-0' }} COP</span>
               </div>
             </div>
           </div>
@@ -264,6 +264,28 @@
                     (input)="direccionEntrega.set($any($event.target).value)"
                   />
                 </div>
+              </div>
+
+              <div class="input-field-group">
+                <label>Zona de Entrega en Popayán (Cálculo automático de tarifa) *</label>
+                <div class="field-with-icon select-wrapper">
+                  <mat-icon>near_me</mat-icon>
+                  <select
+                    class="native-zone-select"
+                    [value]="zonaSeleccionada().id"
+                    (change)="cambiarZona($any($event.target).value)"
+                  >
+                    @for (z of zonasPopayan; track z.id) {
+                      <option [value]="z.id">
+                        {{ z.nombre }} — ${{ z.tarifa | number:'1.0-0' }} COP
+                      </option>
+                    }
+                  </select>
+                </div>
+                <span class="zone-desc-hint">
+                  <mat-icon>info</mat-icon>
+                  <span>Cobertura: {{ zonaSeleccionada().descripcion }}</span>
+                </span>
               </div>
 
               <div class="input-field-group">

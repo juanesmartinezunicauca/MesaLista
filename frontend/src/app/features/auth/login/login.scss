@@ -96,10 +96,14 @@
   }
 }
 
-// --- PANEL DERECHO: FORMULARIO DE ACCESO ---
+// --- PANEL DERECHO: FORMULARIO DE ACCESO & ACTIVACIÓN ---
 .form-panel {
   flex: 1;
-  background-color: $bg-dark;
+  background-color: #0d1117;
+  background:
+    radial-gradient(circle at 90% 10%, rgba(255, 107, 53, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 10% 90%, rgba(37, 99, 235, 0.08) 0%, transparent 40%),
+    linear-gradient(180deg, #0e1217 0%, #13171e 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -108,28 +112,102 @@
 
   .form-wrapper {
     width: 100%;
-    max-width: 420px;
+    max-width: 430px;
     animation: fadeInUp 0.4s ease-out;
   }
 
-  .form-header {
-    margin-bottom: 22px;
+  // Pestañas Segmentadas Superiores
+  .auth-mode-tabs {
+    display: flex;
+    background: rgba(30, 41, 59, 0.6);
+    padding: 4px;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    margin-bottom: 24px;
 
-    h1 {
-      color: $text-light;
-      font-size: 1.85rem;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      margin-bottom: 6px;
-    }
+    .tab-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border: none;
+      background: transparent;
+      color: #94a3b8;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
-    p {
-      color: $text-light-muted;
-      font-size: 0.9rem;
-      line-height: 1.4;
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        transition: transform 0.2s ease;
+      }
+
+      &:hover:not(.active) {
+        color: #f1f5f9;
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      &.active {
+        background: #ffffff;
+        color: #0f172a;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+
+        mat-icon {
+          color: #ea580c;
+        }
+      }
     }
   }
 
+  // Encabezado
+  .form-header {
+    margin-bottom: 24px;
+
+    h1 {
+      color: #f8fafc;
+      font-size: 1.85rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin: 0 0 8px;
+    }
+
+    p {
+      color: #94a3b8;
+      font-size: 0.9rem;
+      line-height: 1.45;
+      margin: 0;
+    }
+
+    &.registro-header {
+      .badge-role-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(234, 88, 12, 0.15);
+        color: #fb923c;
+        border: 1px solid rgba(234, 88, 12, 0.3);
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        margin-bottom: 12px;
+
+        mat-icon {
+          font-size: 15px;
+          width: 15px;
+          height: 15px;
+        }
+      }
+    }
+  }
+
+  // Banner de Errores
   .login-error-banner {
     display: flex;
     align-items: center;
@@ -138,9 +216,10 @@
     border: 1px solid rgba(239, 68, 68, 0.4);
     color: #fca5a5;
     padding: 12px 16px;
-    border-radius: $radius-md;
+    border-radius: 10px;
     margin-bottom: 20px;
     font-size: 0.875rem;
+    animation: shake 0.3s ease;
 
     mat-icon {
       color: #ef4444;
@@ -156,66 +235,143 @@
   }
 }
 
-// --- SECCIÓN SSO (GOOGLE & INVITACIONES) ---
+// --- SECCIÓN PRINCIPAL SSO ---
 .sso-primary-section {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  margin-top: 10px;
+  gap: 16px;
 
-  .invitation-toggle-box {
-    margin-bottom: 6px;
+  // Tarjeta de Código para Nuevo Colaborador
+  .code-activation-card {
+    background: rgba(15, 23, 42, 0.7);
+    border: 1.5px solid rgba(234, 88, 12, 0.35);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: 0 4px 20px rgba(234, 88, 12, 0.08);
 
-    .btn-toggle-invitation {
-      width: 100%;
-      background: transparent;
-      border: 1px dashed rgba(148, 163, 184, 0.4);
-      border-radius: 10px;
-      color: $text-light-muted;
-      font-size: 0.8rem;
-      font-weight: 500;
-      padding: 8px 12px;
+    .code-card-header {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      justify-content: center;
-      gap: 6px;
-      cursor: pointer;
-      transition: all $transition-fast;
 
-      &:hover {
-        background: rgba(255, 255, 255, 0.05);
-        color: $text-light;
-        border-color: rgba(255, 255, 255, 0.4);
+      .code-label {
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.8px;
+        color: #94a3b8;
       }
 
-      .icon-toggle {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
+      .badge-code-ready {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: #22c55e;
+        font-size: 0.75rem;
+        font-weight: 700;
+
+        mat-icon {
+          font-size: 15px;
+          width: 15px;
+          height: 15px;
+        }
       }
     }
 
-    .invitation-input-container {
-      margin-top: 10px;
-      background: rgba(15, 23, 42, 0.6);
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      border-radius: 12px;
-      padding: 12px;
+    .code-input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #0f172a;
+      border: 1.5px solid #334155;
+      border-radius: 10px;
+      padding: 10px 14px;
+      transition: all 0.2s ease;
 
-      mat-form-field {
-        width: 100%;
+      .input-icon-box {
+        color: #64748b;
+        display: flex;
+        align-items: center;
+
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
       }
 
-      .invitation-hint {
-        font-size: 0.72rem;
-        color: #94a3b8;
-        margin: 6px 0 0;
-        line-height: 1.35;
+      .code-input {
+        border: none;
+        outline: none;
+        background: transparent;
+        color: #ffffff;
+        font-family: $font-family-mono, monospace;
+        font-size: 1.15rem;
+        font-weight: 800;
+        letter-spacing: 2px;
+        width: 100%;
+
+        &::placeholder {
+          color: #475569;
+          font-weight: 500;
+          letter-spacing: 1px;
+        }
+      }
+
+      .btn-clear-code {
+        background: transparent;
+        border: none;
+        color: #64748b;
+        cursor: pointer;
+        padding: 0;
+        display: flex;
+        align-items: center;
+
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+        }
+
+        &:hover {
+          color: #ef4444;
+        }
+      }
+
+      &:focus-within,
+      &.focused-val {
+        border-color: #ea580c;
+        box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.2);
+
+        .input-icon-box {
+          color: #ea580c;
+        }
+      }
+    }
+
+    .code-helper-text {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      color: #94a3b8;
+      font-size: 0.75rem;
+      line-height: 1.4;
+
+      mat-icon {
+        font-size: 15px;
+        width: 15px;
+        height: 15px;
+        color: #3b82f6;
+        margin-top: 1px;
+        flex-shrink: 0;
       }
     }
   }
 
-  .google-auth-container {
+  // Contenedor de Botón de Google
+  .google-auth-box {
     width: 100%;
     min-height: 48px;
 
@@ -224,7 +380,7 @@
       justify-content: center;
       width: 100%;
       overflow: hidden;
-      border-radius: $radius-md;
+      border-radius: 10px;
 
       iframe {
         margin: 0 auto !important;
@@ -233,6 +389,7 @@
     }
   }
 
+  // Botón Custom de Google (cuando el SDK aún carga o modo offline)
   .sso-btn {
     width: 100%;
     height: 48px;
@@ -240,12 +397,12 @@
     align-items: center;
     justify-content: center;
     gap: 12px;
-    border-radius: $radius-md;
-    font-size: 0.9375rem;
-    font-weight: 600;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 700;
     cursor: pointer;
-    transition: all $transition-fast;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 
     .sso-svg-icon {
       flex-shrink: 0;
@@ -253,7 +410,7 @@
 
     &:hover:not([disabled]) {
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
     }
 
     &[disabled] {
@@ -268,8 +425,115 @@
     border: 1px solid #d1d5db;
 
     &:hover:not([disabled]) {
-      background: #f9fafb;
+      background: #f8fafc;
       border-color: #9ca3af;
+    }
+  }
+
+  // Callout para Nuevo Empleado (en modo acceso habitual)
+  .new-employee-callout {
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: rgba(30, 41, 59, 0.85);
+      border-color: rgba(234, 88, 12, 0.5);
+      transform: translateY(-1px);
+
+      .callout-icon {
+        background: #ea580c;
+        color: #ffffff;
+      }
+
+      .callout-arrow {
+        color: #ea580c;
+        transform: translateX(3px);
+      }
+    }
+
+    .callout-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: rgba(234, 88, 12, 0.15);
+      color: #fb923c;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    .callout-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      strong {
+        font-size: 0.825rem;
+        color: #f1f5f9;
+      }
+
+      span {
+        font-size: 0.75rem;
+        color: #94a3b8;
+      }
+    }
+
+    .callout-arrow {
+      color: #64748b;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      transition: all 0.2s ease;
+    }
+  }
+
+  // Botón para Volver desde modo registro
+  .switch-back-row {
+    margin-top: 4px;
+    display: flex;
+    justify-content: center;
+
+    .btn-switch-back {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 0.8rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
+
+      &:hover {
+        color: #f8fafc;
+        background: rgba(255, 255, 255, 0.05);
+      }
     }
   }
 }
@@ -280,8 +544,14 @@
   justify-content: center;
   gap: 12px;
   margin-top: 24px;
-  color: $text-light-muted;
+  color: #94a3b8;
   font-size: 0.875rem;
+
+  .btn-spinner {
+    circle {
+      stroke: #ea580c;
+    }
+  }
 }
 
 @keyframes fadeInUp {
@@ -294,4 +564,10 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
 }

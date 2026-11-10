@@ -5,6 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EstadoCaja, EstadoFactura, EstadoPedido, RolUsuario, TipoPedido } from '@prisma/client';
+import * as fs from 'fs';
+import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CambiarEstadoDomicilioDto,
@@ -12,12 +14,140 @@ import {
   UpdateDomicilioDto,
 } from './dto';
 
+export interface RepartidorOperativo {
+  id: string;
+  nombre: string;
+  telefono: string;
+  vehiculo?: string;
+  activo: boolean;
+}
+
 @Injectable()
 export class DomiciliosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   private recibiendoDomicilios: boolean = true;
   private motivoPausa?: string;
+
+  // Directorio en memoria y persistencia liviana para domiciliarios operativos
+  private readonly defaultRepartidores: RepartidorOperativo[] = [
+    {
+      id: 'rep-1',
+      nombre: 'Carlos Rodríguez',
+      telefono: '3145678901',
+      vehiculo: 'Moto Suzuki AX100 - Negra',
+      activo: true,
+    },
+    {
+      id: 'rep-2',
+      nombre: 'Andrés Mina',
+      telefono: '3119876543',
+      vehiculo: 'Moto Yamaha YBR - Azul',
+      activo: true,
+    },
+    {
+      id: 'rep-3',
+      nombre: 'Mauricio Muñoz',
+      telefono: '3204561234',
+      vehiculo: 'Bicicleta Eléctrica',
+      activo: true,
+    },
+  ];
+
+  private repartidoresMemoria: RepartidorOperativo[] | null = null;
+  private readonly repartidoresFilePath = path.join(__dirname, 'repartidores.json');
+
+  private async cargarRepartidores(): Promise<RepartidorOperativo[]> {
+    if (this.repartidoresMemoria) {
+      return this.repartidoresMemoria;
+    }
+    try {
+      if (fs.existsSync(this.repartidoresFilePath)) {
+        const data = fs.readFileSync(this.repartidoresFilePath, 'utf-8');
+        this.repartidoresMemoria = JSON.parse(data);
+        return this.repartidoresMemoria!;
+      }
+    } catch {
+      // Ignorar error de lectura de archivo y usar valores por defecto
+    }
+    this.repartidoresMemoria = [...this.defaultRepartidores];
+    return this.repartidoresMemoria;
+  }
+
+  private guardarRepartidoresEnArchivo() {
+    try {
+      if (this.repartidoresMemoria) {
+        fs.writeFileSync(this.repartidoresFilePath, JSON.stringify(this.repartidoresMemoria, null, 2), 'utf-8');
+      }
+    } catch {
+      // Continuar con memoria si el sistema de archivos tuviera restricciones
+    }
+  }
+
+  /**
+   * Consulta los domiciliarios registrados en el sistema operativo
+   * (Entidades operativas directas, sin ser roles ni usuarios de autenticación).
+   */
+  async obtenerRepartidores(): Promise<RepartidorOperativo[]> {
+    return this.cargarRepartidores();
+  }
+
+  /**
+   * Guarda o actualiza un domiciliario en el directorio operativo.
+   */
+  async guardarRepartidor(dto: { id?: string; nombre: string; telefono: string; vehiculo?: string; activo?: boolean }): Promise<RepartidorOperativo[]> {
+    const list = await this.cargarRepartidores();
+    const nombre = dto.nombre?.trim();
+    const telefono = dto.telefono?.trim();
+    if (!nombre || !telefono) {
+      throw new BadRequestException('El nombre y teléfono del domiciliario son obligatorios.');
+    }
+
+    if (dto.id) {
+      const idx = list.findIndex((r) => r.id === dto.id);
+      if (idx >= 0) {
+        list[idx] = {
+          ...list[idx],
+          nombre,
+          telefono,
+          vehiculo: dto.vehiculo?.trim() || list[idx].vehiculo,
+          activo: dto.activo ?? list[idx].activo,
+        };
+      } else {
+        list.push({
+          id: dto.id,
+          nombre,
+          telefono,
+          vehiculo: dto.vehiculo?.trim() || 'Moto / Vehículo propio',
+          activo: dto.activo ?? true,
+        });
+      }
+    } else {
+      const nuevoId = `rep-${Date.now()}`;
+      list.push({
+        id: nuevoId,
+        nombre,
+        telefono,
+        vehiculo: dto.vehiculo?.trim() || 'Moto / Vehículo propio',
+        activo: dto.activo ?? true,
+      });
+    }
+
+    this.repartidoresMemoria = list;
+    this.guardarRepartidoresEnArchivo();
+    return list;
+  }
+
+  /**
+   * Elimina un domiciliario del directorio operativo.
+   */
+  async eliminarRepartidor(id: string): Promise<RepartidorOperativo[]> {
+    let list = await this.cargarRepartidores();
+    list = list.filter((r) => r.id !== id);
+    this.repartidoresMemoria = list;
+    this.guardarRepartidoresEnArchivo();
+    return list;
+  }
 
   /**
    * Consulta el estado de servicio de domicilios y disponibilidad de atención.
@@ -102,7 +232,7 @@ export class DomiciliosService {
    * desglosa y congela precios unitarios históricos y asigna consecutivo diario.
    */
   async crear(createDto: CreateDomicilioDto, id_usuario: number) {
-    const { cliente: clienteDto, items, observacion, metodo_pago } = createDto;
+    const { cliente: clienteDto, items, observacion, metodo_pago, costo_envio, zona_entrega } = createDto;
 
     // 0. Validar disponibilidad del restaurante y recepción de domicilios
     const estadoServicio = await this.obtenerEstadoServicio();
@@ -199,16 +329,22 @@ export class DomiciliosService {
 
       const numero_pedido = (ultimoPedido?.numero_pedido ?? 0) + 1;
 
-      // 2.4 Crear pedido de tipo domicilio con marca [PENDIENTE] y forma de pago
+      // 2.4 Crear pedido de tipo domicilio con marca [PENDIENTE], forma de pago y costo de envío/zona
       const metodoLimpio = metodo_pago ? metodo_pago.trim() : 'Efectivo';
       const metodoNormalizado = metodoLimpio.toLowerCase().includes('transf')
         ? 'Transferencia'
         : metodoLimpio.toLowerCase().includes('tarj')
-        ? 'Tarjeta'
-        : 'Efectivo';
+          ? 'Tarjeta'
+          : 'Efectivo';
       const etiquetaPago = `[PAGO: ${metodoNormalizado}]`;
+
+      // Tarificación por zona de Popayán
+      const costoEnvioNum = costo_envio !== undefined ? Number(costo_envio) : undefined;
+      const etiquetaEnvio = costoEnvioNum !== undefined ? `[ENVIO: ${costoEnvioNum}]` : '';
+      const etiquetaZona = zona_entrega ? `[ZONA: ${zona_entrega.trim()}]` : '';
+
       const obsLimpia = observacion ? observacion.trim() : '';
-      let observacionConPendiente = ['[PENDIENTE]', etiquetaPago, obsLimpia]
+      let observacionConPendiente = ['[PENDIENTE]', etiquetaPago, etiquetaEnvio, etiquetaZona, obsLimpia]
         .filter(Boolean)
         .join(' ');
       if (observacionConPendiente.length > 255) {
@@ -362,8 +498,6 @@ export class DomiciliosService {
     return this.mapearEtapaOperativa(pedido);
   }
 
-
-
   /**
    * Modifica la etapa operativa de un domicilio (aceptar/enviar a cocina, despachar a reparto con repartidor, cerrar/entregar o cancelar).
    */
@@ -407,12 +541,20 @@ export class DomiciliosService {
       .replace(/\[EN REPARTO\]/gi, '')
       .replace(/\[REPARTIDOR:[^\]]+\]/gi, '')
       .replace(/\[PAGO:[^\]]+\]/gi, '')
+      .replace(/\[ENVIO:[^\]]+\]/gi, '')
+      .replace(/\[ZONA:[^\]]+\]/gi, '')
       .trim();
 
-    // Preservar la forma de pago original del cliente
+    // Preservar la forma de pago original del cliente y costo de envío / zona
     const rawObs = (pedido as any).observacion_raw || pedido.observacion || '';
     const matchPagoRaw = rawObs.match(/\[PAGO:\s*([^\]]+)\]/i);
     const tagPago = matchPagoRaw ? `[PAGO: ${matchPagoRaw[1].trim()}]` : '';
+
+    const matchEnvioRaw = rawObs.match(/\[ENVIO:\s*\$?(\d+)\]/i);
+    const tagEnvio = matchEnvioRaw ? `[ENVIO: ${matchEnvioRaw[1].trim()}]` : '';
+
+    const matchZonaRaw = rawObs.match(/\[ZONA:\s*([^\]]+)\]/i);
+    const tagZona = matchZonaRaw ? `[ZONA: ${matchZonaRaw[1].trim()}]` : '';
 
     const tags: string[] = [];
 
@@ -427,9 +569,9 @@ export class DomiciliosService {
       tags.push('[PENDIENTE]');
     }
 
-    if (tagPago) {
-      tags.push(tagPago);
-    }
+    if (tagPago) tags.push(tagPago);
+    if (tagEnvio) tags.push(tagEnvio);
+    if (tagZona) tags.push(tagZona);
 
     let observacionActualizada = [...tags, observacionLimpia].filter(Boolean).join(' ').trim();
 
@@ -494,12 +636,20 @@ export class DomiciliosService {
         .replace(/\[EN REPARTO\]/gi, '')
         .replace(/\[REPARTIDOR:[^\]]+\]/gi, '')
         .replace(/\[PAGO:[^\]]+\]/gi, '')
+        .replace(/\[ENVIO:[^\]]+\]/gi, '')
+        .replace(/\[ZONA:[^\]]+\]/gi, '')
         .trim();
       const rawObs = (pedido as any).observacion_raw || pedido.observacion || '';
       const matchPagoRaw = rawObs.match(/\[PAGO:\s*([^\]]+)\]/i);
       const tagPago = matchPagoRaw ? `[PAGO: ${matchPagoRaw[1].trim()}]` : '';
 
-      let observacionFinal = [notaCancelado, tagPago, observacionLimpia].filter(Boolean).join(' ').trim();
+      const matchEnvioRaw = rawObs.match(/\[ENVIO:\s*\$?(\d+)\]/i);
+      const tagEnvio = matchEnvioRaw ? `[ENVIO: ${matchEnvioRaw[1].trim()}]` : '';
+
+      const matchZonaRaw = rawObs.match(/\[ZONA:\s*([^\]]+)\]/i);
+      const tagZona = matchZonaRaw ? `[ZONA: ${matchZonaRaw[1].trim()}]` : '';
+
+      let observacionFinal = [notaCancelado, tagPago, tagEnvio, tagZona, observacionLimpia].filter(Boolean).join(' ').trim();
       if (observacionFinal.length > 255) {
         observacionFinal = observacionFinal.slice(0, 255);
       }
@@ -578,19 +728,36 @@ export class DomiciliosService {
       metodo_pago = 'Efectivo';
     }
 
+    // Costo de envío y zona de Popayán
+    let costo_envio = 0;
+    let zona_nombre: string | null = null;
+    if (pedido.observacion) {
+      const matchEnvio = pedido.observacion.match(/\[ENVIO:\s*\$?(\d+)\]/i);
+      if (matchEnvio) {
+        costo_envio = parseInt(matchEnvio[1], 10);
+      }
+      const matchZona = pedido.observacion.match(/\[ZONA:\s*([^\]]+)\]/i);
+      if (matchZona) {
+        zona_nombre = matchZona[1].trim();
+      }
+    }
+
     const observacionLimpia = (pedido.observacion || '')
       .replace(/\[PENDIENTE\]/gi, '')
       .replace(/\[EN REPARTO\]/gi, '')
       .replace(/\[REPARTIDOR:[^\]]*\]/gi, '')
       .replace(/\[PAGO:[^\]]*\]/gi, '')
+      .replace(/\[ENVIO:[^\]]*\]/gi, '')
+      .replace(/\[ZONA:[^\]]*\]/gi, '')
       .replace(/\[CANCELADO:[^\]]*\]/gi, '')
       .replace(/\[CANCELADO\]/gi, '')
       .trim();
 
-    const totalCalculado = (pedido.items || []).reduce(
+    const subtotalProductos = (pedido.items || []).reduce(
       (acc: number, it: any) => acc + it.cantidad * Number(it.precio_unitario),
       0,
     );
+    const totalCalculado = subtotalProductos + costo_envio;
 
     return {
       ...pedido,
@@ -605,6 +772,9 @@ export class DomiciliosService {
       etapaOperativa,
       repartidor,
       metodo_pago,
+      costo_envio,
+      zona_nombre,
+      subtotalProductos,
       totalCalculado,
     };
   }
@@ -669,19 +839,19 @@ export class DomiciliosService {
       const metodoFinal = dto.metodo_pago
         ? dto.metodo_pago.trim()
         : matchPago
-        ? matchPago[1].trim()
-        : 'Efectivo';
+          ? matchPago[1].trim()
+          : 'Efectivo';
       const tagPago = `[PAGO: ${metodoFinal}]`;
 
       const etiquetasOperativas =
-        rawObs.match(/\[(PENDIENTE|EN REPARTO|REPARTIDOR:[^\]]+|CANCELADO:[^\]]+|CANCELADO)\]/g) || [];
+        rawObs.match(/\[(PENDIENTE|EN REPARTO|REPARTIDOR:[^\]]+|ENVIO:[^\]]+|ZONA:[^\]]+|CANCELADO:[^\]]+|CANCELADO)\]/g) || [];
 
       const textoLimpio =
         dto.observacion !== undefined
           ? dto.observacion.trim()
           : rawObs
-              .replace(/\[(PENDIENTE|EN REPARTO|REPARTIDOR:[^\]]+|PAGO:[^\]]+|CANCELADO:[^\]]+|CANCELADO)\]/g, '')
-              .trim();
+            .replace(/\[(PENDIENTE|EN REPARTO|REPARTIDOR:[^\]]+|ENVIO:[^\]]+|ZONA:[^\]]+|PAGO:[^\]]+|CANCELADO:[^\]]+|CANCELADO)\]/g, '')
+            .trim();
 
       const obsActual = [...etiquetasOperativas, tagPago, textoLimpio].filter(Boolean).join(' ');
       data.observacion = obsActual.slice(0, 255);
@@ -720,4 +890,3 @@ export class DomiciliosService {
     });
   }
 }
-

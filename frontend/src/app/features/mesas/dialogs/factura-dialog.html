@@ -58,16 +58,25 @@
         <span>$ {{ subtotal() | number }}</span>
       </div>
 
-      <label class="propina-toggle">
-        <input
-          type="checkbox"
-          [checked]="tipoPropina() === 'diez'"
-          (change)="togglePropinaDiez($event)"
-        />
-        <span class="propina-texto">
-          Propina voluntaria (10%): <strong>$ {{ propinaDiez() | number }}</strong>
-        </span>
-      </label>
+      @if (esDomicilio() && costoEnvio() > 0) {
+        <div class="resumen-fila envio-fila">
+          <span>Servicio de Domicilio ({{ zonaNombre() || 'Zona de entrega' }})</span>
+          <span>$ {{ costoEnvio() | number }}</span>
+        </div>
+      }
+
+      @if (!esDomicilio()) {
+        <label class="propina-toggle">
+          <input
+            type="checkbox"
+            [checked]="tipoPropina() === 'diez'"
+            (change)="togglePropinaDiez($event)"
+          />
+          <span class="propina-texto">
+            Propina voluntaria (10%): <strong>$ {{ propinaDiez() | number }}</strong>
+          </span>
+        </label>
+      }
 
       <div class="resumen-fila total-fila">
         <span>TOTAL:</span>

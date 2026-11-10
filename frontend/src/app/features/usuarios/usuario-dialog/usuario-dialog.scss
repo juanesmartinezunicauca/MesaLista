@@ -101,39 +101,40 @@
 
 .email-identity-notice {
   display: flex;
-  align-items: flex-start;
   gap: 12px;
-  padding: 12px 16px;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  padding: 14px 16px;
+  background-color: rgba(37, 99, 235, 0.05);
+  border: 1px solid rgba(37, 99, 235, 0.2);
   border-radius: $radius-md;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 
   .notice-icon {
+    color: $brand-blue;
+    display: flex;
+    align-items: flex-start;
+    padding-top: 2px;
+
     mat-icon {
       font-size: 22px;
       width: 22px;
       height: 22px;
-      color: #2563eb;
-      flex-shrink: 0;
-      margin-top: 1px;
     }
   }
 
   .notice-body {
     .notice-title {
       display: block;
-      font-size: 0.825rem;
+      font-size: 0.875rem;
       font-weight: 700;
-      color: #1e40af;
-      margin-bottom: 2px;
+      color: $brand-blue;
+      margin-bottom: 4px;
     }
 
     .notice-desc {
       margin: 0;
-      font-size: 0.775rem;
-      line-height: 1.4;
-      color: #1d4ed8;
+      font-size: 0.8rem;
+      color: $text-secondary;
+      line-height: 1.45;
     }
   }
 }
@@ -141,43 +142,24 @@
 .form-content {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-
-.w-full {
-  width: 100%;
-  display: block;
-
-  mat-icon[matPrefix] {
-    margin-right: 10px;
-    color: #64748b;
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
-  }
+  gap: 18px;
 }
 
 .selected-role-trigger {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 600;
-  color: $text-primary;
-  vertical-align: middle;
 
   .trigger-role-icon {
-    font-size: 19px;
-    width: 19px;
-    height: 19px;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
     color: $brand-blue;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
   }
 
   .trigger-role-name {
-    line-height: 1;
-    font-size: 0.9rem;
+    font-weight: 600;
+    color: $text-primary;
   }
 }
 
@@ -185,88 +167,75 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 6px 0;
+  padding: 8px 0;
 
   .option-role-icon {
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
     color: $brand-blue;
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
     flex-shrink: 0;
   }
 
   .option-role-text {
     display: flex;
     flex-direction: column;
-  }
 
-  .role-name {
-    font-weight: 600;
-    color: $text-primary;
-    font-size: 0.875rem;
-  }
+    .role-name {
+      font-weight: 600;
+      color: $text-primary;
+      font-size: 0.9rem;
+    }
 
-  .role-desc {
-    font-size: 0.75rem;
-    color: $text-muted;
+    .role-desc {
+      font-size: 0.75rem;
+      color: $text-muted;
+      line-height: 1.25;
+      margin-top: 2px;
+    }
   }
 }
 
-.status-toggle-card {
+.toggle-container {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
+  padding: 12px 16px;
+  background-color: $bg-card-alt;
   border: 1px solid $border-color;
   border-radius: $radius-md;
-  background-color: $bg-card-alt;
 
   .toggle-info {
     display: flex;
     flex-direction: column;
     gap: 2px;
-  }
 
-  .toggle-title {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: $text-primary;
-  }
+    .toggle-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: $text-primary;
+    }
 
-  .toggle-desc {
-    font-size: 0.75rem;
-    color: $text-muted;
-  }
-
-  .status-pill {
-    font-size: 0.8rem;
-    font-weight: 600;
-    padding: 3px 10px;
-    border-radius: $radius-full;
-    background-color: #e5e7eb;
-    color: $text-secondary;
-    margin-right: 8px;
-
-    &.pill-active {
-      background-color: $color-success-bg;
-      color: $color-success;
+    .toggle-desc {
+      font-size: 0.75rem;
+      color: $text-muted;
     }
   }
 }
 
 .dialog-actions {
-  padding: 16px 24px;
-  border-top: 1px solid $border-color;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid $border-color;
   background-color: $bg-card-alt;
   border-radius: 0 0 $radius-lg $radius-lg;
+  margin: 0;
 
-  .btn-confirm {
-    background-color: $brand-blue !important;
-    color: #ffffff !important;
+  button {
+    height: 40px;
     border-radius: $radius-md;
     font-weight: 600;
     padding: 0 20px;
@@ -316,9 +285,9 @@
   .success-subtitle {
     font-size: 0.9rem;
     color: #475569;
-    max-width: 420px;
+    max-width: 440px;
     line-height: 1.5;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
   }
 
   .code-display-box {
@@ -327,14 +296,14 @@
     gap: 12px;
     background: #f8fafc;
     border: 2px dashed #94a3b8;
-    border-radius: 8px;
-    padding: 10px 20px;
+    border-radius: 10px;
+    padding: 12px 24px;
     margin-bottom: 8px;
 
     .invitation-code-text {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 1.6rem;
-      font-weight: 700;
+      font-size: 1.7rem;
+      font-weight: 800;
       color: #0f172a;
       letter-spacing: 0.08em;
     }
@@ -351,12 +320,150 @@
     margin-bottom: 16px;
   }
 
+  /* Alerta de Correo Despachado */
+  .email-dispatched-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #ecfdf5;
+    border: 1px solid #6ee7b7;
+    border-radius: 8px;
+    padding: 10px 16px;
+    margin: 12px 0;
+    text-align: left;
+    max-width: 440px;
+    width: 100%;
+    box-sizing: border-box;
+
+    .dispatched-icon {
+      color: #059669;
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .dispatched-content {
+      display: flex;
+      flex-direction: column;
+
+      .dispatched-title {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #065f46;
+      }
+
+      .dispatched-note {
+        font-size: 0.75rem;
+        color: #047857;
+        margin-top: 2px;
+      }
+    }
+  }
+
+  /* Sección interactiva para enviar/reenviar correo */
+  .email-send-section {
+    width: 100%;
+    max-width: 440px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 16px;
+    margin: 12px 0 16px;
+    text-align: left;
+    box-sizing: border-box;
+
+    .send-section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #1e293b;
+
+      .send-icon {
+        color: #2563eb;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+
+      .send-title {
+        font-size: 0.88rem;
+        font-weight: 700;
+      }
+    }
+
+    .send-desc {
+      font-size: 0.78rem;
+      color: #64748b;
+      margin: 4px 0 12px;
+      line-height: 1.4;
+    }
+
+    .send-input-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+
+      .flex-input {
+        flex: 1;
+      }
+
+      .btn-send-mail {
+        height: 44px;
+        border-radius: 8px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background-color: #2563eb;
+        color: #ffffff;
+        padding: 0 14px;
+        flex-shrink: 0;
+
+        &:disabled {
+          background-color: #94a3b8;
+          color: #f1f5f9;
+        }
+      }
+    }
+
+    .manual-feedback-alert {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      line-height: 1.35;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+      }
+
+      &.feedback-success {
+        background-color: #ecfdf5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+      }
+
+      &.feedback-error {
+        background-color: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+      }
+    }
+  }
+
   .privacy-note {
     font-size: 0.8rem;
     color: #64748b;
-    max-width: 420px;
+    max-width: 440px;
     line-height: 1.45;
-    margin: 12px 0 24px;
+    margin: 4px 0 20px;
     background: #f1f5f9;
     padding: 10px 14px;
     border-radius: 6px;

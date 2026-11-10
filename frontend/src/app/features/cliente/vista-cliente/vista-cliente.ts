@@ -18,7 +18,13 @@ import { CatalogoApiService } from '../../../core/services/api/catalogo-api.serv
 import { DomiciliosApiService } from '../../../core/services/api/domicilios-api.service';
 import { CarritoService } from '../../../core/services/carrito/carrito.service';
 import { Producto } from '../../../core/models/producto.model';
-import { CreateDomicilioPayload, Domicilio, EstadoServicioDomicilio } from '../../../core/models';
+import {
+  CreateDomicilioPayload,
+  Domicilio,
+  EstadoServicioDomicilio,
+  ZONAS_DOMICILIO_POPAYAN,
+  ZonaTarifaPopayan,
+} from '../../../core/models';
 
 export interface CartItem {
   producto: Producto;
@@ -163,6 +169,19 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
     const precio = this.productoSeleccionado()?.precio_venta || 0;
     return Number(precio) * this.cantidad();
   });
+
+  // Zonificación de Popayán para cálculo de tarifa de domicilio
+  readonly zonasPopayan = ZONAS_DOMICILIO_POPAYAN;
+  zonaSeleccionada = signal<ZonaTarifaPopayan>(this.zonasPopayan[0]);
+  costoEnvio = computed<number>(() => this.zonaSeleccionada().tarifa);
+  totalConEnvio = computed<number>(() => this.totalPedido() + this.costoEnvio());
+
+  cambiarZona(zonaId: string): void {
+    const found = this.zonasPopayan.find((z) => z.id === zonaId);
+    if (found) {
+      this.zonaSeleccionada.set(found);
+    }
+  }
 
   ngOnInit(): void {
     this.cargarCatalogo();
@@ -425,9 +444,9 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
 
   generarUrlWhatsApp(codigoPedido?: string): string {
     const nombre = this.nombreCliente().trim() || this.currentUser()?.nombre || 'Cliente';
-    const total = this.totalPedido();
+    const total = this.totalConEnvio();
     const codigo = codigoPedido || 'NUEVO';
-    const msg = `Hola Luigie's Restaurante! Acabo de hacer un pedido a domicilio ${codigo !== 'NUEVO' ? '#' + codigo : ''} por valor de $${total.toLocaleString('es-CO')} COP a nombre de ${nombre}. Adjunto mi comprobante de pago por transferencia para confirmarlo.`;
+    const msg = `Hola Luigie's Restaurante! Acabo de hacer un pedido a domicilio ${codigo !== 'NUEVO' ? '#' + codigo : ''} por valor de $${total.toLocaleString('es-CO')} COP a nombre de ${nombre} (incluye envío de $${this.costoEnvio().toLocaleString('es-CO')} COP para ${this.zonaSeleccionada().nombre}). Adjunto mi comprobante de pago por transferencia para confirmarlo.`;
     return `https://wa.me/${this.WHATSAPP_SOPORTE_NUMERO}?text=${encodeURIComponent(msg)}`;
   }
 
@@ -531,8 +550,9 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const zona = this.zonaSeleccionada();
     const clienteNombre = this.nombreCliente().trim();
-    const direccion = this.direccionEntrega().trim();
+    const direccion = `${this.direccionEntrega().trim()} [${zona.nombre.split(':')[0]}]`;
     const notasArray = [
       this.referenciaUbicacion().trim() ? `Ref: ${this.referenciaUbicacion().trim()}` : '',
       this.observaciones().trim() ? `Obs: ${this.observaciones().trim()}` : '',
@@ -548,6 +568,8 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
       items: itemsPayload,
       observacion: notasArray.length > 0 ? notasArray.join(' | ').slice(0, 255) : undefined,
       metodo_pago: this.metodoPago(),
+      costo_envio: this.costoEnvio(),
+      zona_entrega: zona.nombre,
     };
 
     this.enviandoPedido.set(true);
@@ -556,7 +578,7 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
       next: (domicilioCreado) => {
         this.enviandoPedido.set(false);
         const codigo = `DOM-${domicilioCreado.numero_pedido}`;
-        const total = Number(domicilioCreado.totalCalculado || this.totalPedido());
+        const total = Number(domicilioCreado.totalCalculado || this.totalConEnvio());
 
         this.pedidoConfirmado.set({
           codigo,

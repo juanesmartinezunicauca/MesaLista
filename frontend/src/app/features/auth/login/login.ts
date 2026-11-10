@@ -1,4 +1,4 @@
-import { Component, inject, signal, AfterViewInit, NgZone } from '@angular/core';
+import { Component, inject, signal, OnInit, AfterViewInit, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { environment } from '../../../../environments/environment';
@@ -26,7 +26,7 @@ import { AuthService } from '../../../core/services/auth/auth.service';
   templateUrl: './login.html',
   styleUrl: './login.scss',
 })
-export class LoginComponent implements AfterViewInit {
+export class LoginComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private authService = inject(AuthService);
@@ -35,12 +35,38 @@ export class LoginComponent implements AfterViewInit {
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
   googleInitialized = signal<boolean>(false);
-  mostrarCajaInvitacion = signal<boolean>(false);
+
+  // 'acceso' = ingreso habitual de personal y clientes
+  // 'registro' = activación de cuenta para nuevo colaborador
+  modo = signal<'acceso' | 'registro'>('acceso');
   codigoInvitacion = signal<string>('');
+
+  ngOnInit(): void {
+    // Si viene desde un enlace de invitación con ?codigo=INV-XXXXXX
+    this.route.queryParams.subscribe((params) => {
+      if (params['codigo']) {
+        const cod = String(params['codigo']).trim().toUpperCase();
+        this.codigoInvitacion.set(cod);
+        this.modo.set('registro');
+      } else if (params['tab'] === 'nuevo-empleado' || params['modo'] === 'registro') {
+        this.modo.set('registro');
+      }
+    });
+  }
+
+  setModo(modo: 'acceso' | 'registro'): void {
+    this.modo.set(modo);
+    this.errorMessage.set(null);
+  }
 
   onCodigoInvitacionInput(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.codigoInvitacion.set(input.value.toUpperCase());
+    let val = input.value.toUpperCase().replace(/\s+/g, '');
+    // Si el usuario escribe solo los dígitos (ej. 482910), formatear amigablemente como INV-482910
+    if (/^\d{4,6}$/.test(val)) {
+      val = `INV-${val}`;
+    }
+    this.codigoInvitacion.set(val);
   }
 
   ngAfterViewInit(): void {
@@ -99,6 +125,12 @@ export class LoginComponent implements AfterViewInit {
   }
 
   triggerGooglePrompt(): void {
+    // Si está en modo registro de colaborador y no ha escrito el código, advertirle antes de abrir Google
+    if (this.modo() === 'registro' && !this.codigoInvitacion().trim()) {
+      this.errorMessage.set('Por favor ingresa tu código de invitación (ej. INV-821943) para activar tu perfil de colaborador.');
+      return;
+    }
+
     const google = (window as any).google;
     if (google?.accounts?.id) {
       google.accounts.id.prompt((notification: any) => {
@@ -121,6 +153,12 @@ export class LoginComponent implements AfterViewInit {
       return;
     }
 
+    // Validación preventiva en modo registro
+    if (this.modo() === 'registro' && !this.codigoInvitacion().trim()) {
+      this.errorMessage.set('Por favor ingresa tu código de invitación (ej. INV-821943) antes de continuar con Google.');
+      return;
+    }
+
     this.errorMessage.set(null);
     this.isLoading.set(true);
 
@@ -134,7 +172,7 @@ export class LoginComponent implements AfterViewInit {
         this.isLoading.set(false);
         if (err.status === 401) {
           this.errorMessage.set(
-            err.error?.message || 'Acceso no autorizado con tu cuenta de Google.'
+            err.error?.message || 'Acceso no autorizado con tu cuenta de Google. Verifica tu código de invitación o correo.'
           );
         } else if (err.status === 0) {
           this.errorMessage.set(

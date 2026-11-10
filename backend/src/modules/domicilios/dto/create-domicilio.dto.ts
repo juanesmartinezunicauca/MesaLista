@@ -3,9 +3,11 @@ import {
   ArrayMinSize,
   IsArray,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   MaxLength,
+  Min,
   ValidateNested,
 } from 'class-validator';
 import { CreateClienteDomicilioDto } from './create-cliente-domicilio.dto';
@@ -32,4 +34,14 @@ export class CreateDomicilioDto {
   @IsString({ message: 'El método de pago debe ser una cadena de texto.' })
   @MaxLength(50, { message: 'El método de pago no puede superar los 50 caracteres.' })
   metodo_pago?: string;
+
+  @IsOptional()
+  @IsNumber({}, { message: 'El costo de envío debe ser un valor numérico.' })
+  @Min(0, { message: 'El costo de envío no puede ser negativo.' })
+  costo_envio?: number;
+
+  @IsOptional()
+  @IsString({ message: 'La zona de entrega debe ser un texto.' })
+  @MaxLength(100, { message: 'La zona de entrega no puede superar los 100 caracteres.' })
+  zona_entrega?: string;
 }

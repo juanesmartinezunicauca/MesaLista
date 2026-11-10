@@ -18,6 +18,7 @@ import { JwtAuthGuard, RolesGuard } from '../../common/guards';
 import {
   CambiarEstadoDto,
   CreateUsuarioDto,
+  EnviarCodigoDto,
   QueryUsuarioDto,
   UpdateUsuarioDto,
 } from './dto';
@@ -33,12 +34,27 @@ export class UsuariosController {
    * POST /api/v1/usuarios
    * Crea un nuevo colaborador en el sistema (gestión exclusiva de administración).
    * - Flujo Principal (Google SSO): Genera un código de invitación unívoco (INV-XXXXXX) para enrolamiento delegado sin contraseña.
+   * - Envío de Código: Si se proporciona correoEnvioCodigo o email de colaborador, se envía el código sin persistir el correo en BD.
    * - Flujo de Contingencia: Acepta opcionalmente contraseña hasheada en Argon2id para cuentas maestras o de respaldo local.
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
   crear(@Body() createUsuarioDto: CreateUsuarioDto) {
     return this.usuariosService.crear(createUsuarioDto);
+  }
+
+  /**
+   * POST /api/v1/usuarios/:id/enviar-codigo
+   * Despacha el código de invitación a un correo electrónico temporal solicitado.
+   * GARANTÍA DE PRIVACIDAD: Este correo no se almacena en la base de datos.
+   */
+  @Post(':id/enviar-codigo')
+  @HttpCode(HttpStatus.OK)
+  enviarCodigo(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: EnviarCodigoDto,
+  ) {
+    return this.usuariosService.enviarCodigoPorCorreo(id, dto.correoDestino);
   }
 
   /**

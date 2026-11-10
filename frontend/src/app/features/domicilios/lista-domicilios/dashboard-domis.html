@@ -14,6 +14,18 @@
         </div>
 
         <div class="header-actions">
+            <!-- Directorio de Domiciliarios Operativos -->
+            <button
+                type="button"
+                mat-stroked-button
+                class="btn-manage-domis"
+                (click)="abrirGestionRepartidores()"
+                matTooltip="Directorio de repartidores del restaurante (sin ser usuarios con login)"
+            >
+                <mat-icon>sports_motorsports</mat-icon>
+                <span>Domiciliarios</span>
+            </button>
+
             <!-- Botón de Control de Recepción de Domicilios -->
             <button
                 type="button"

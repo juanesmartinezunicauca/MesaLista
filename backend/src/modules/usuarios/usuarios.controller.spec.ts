@@ -12,6 +12,7 @@ describe('UsuariosController', () => {
     actualizar: jest.Mock;
     cambiarEstado: jest.Mock;
     eliminar: jest.Mock;
+    enviarCodigoPorCorreo: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -22,6 +23,7 @@ describe('UsuariosController', () => {
       actualizar: jest.fn(),
       cambiarEstado: jest.fn(),
       eliminar: jest.fn(),
+      enviarCodigoPorCorreo: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -54,6 +56,25 @@ describe('UsuariosController', () => {
 
     const res = await controller.crear(dto);
     expect(service.crear).toHaveBeenCalledWith(dto);
+    expect(res).toEqual(mockRes);
+  });
+
+  it('POST /usuarios/:id/enviar-codigo debe despachar el código efímero', async () => {
+    const mockRes = {
+      success: true,
+      mensaje: 'Código enviado.',
+      destinatario: 'empleado@correo.com',
+      guardadoEnBaseDeDatos: false,
+    };
+    service.enviarCodigoPorCorreo.mockResolvedValue(mockRes);
+
+    const res = await controller.enviarCodigo(10, {
+      correoDestino: 'empleado@correo.com',
+    });
+    expect(service.enviarCodigoPorCorreo).toHaveBeenCalledWith(
+      10,
+      'empleado@correo.com',
+    );
     expect(res).toEqual(mockRes);
   });
 

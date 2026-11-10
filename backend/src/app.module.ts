@@ -15,6 +15,7 @@ import { CajaModule } from './modules/caja/caja.module';
 import { GastosModule } from './modules/gastos/gastos.module';
 import { ReportesModule } from './modules/reportes/reportes.module';
 import { ImpresionModule } from './modules/impresion/impresion.module';
+import { MailModule } from './modules/mail/mail.module';
 
 @Module({
   imports: [
@@ -32,11 +33,16 @@ import { ImpresionModule } from './modules/impresion/impresion.module';
         PRINTER_INTERFACE: Joi.string().optional(),
         GOOGLE_CLIENT_ID: Joi.string().optional().allow(''),
         GOOGLE_CLOCK_SKEW_SECS: Joi.number().optional().default(300),
+        SMTP_HOST: Joi.string().optional().allow(''),
+        SMTP_PORT: Joi.number().optional(),
+        SMTP_USER: Joi.string().optional().allow(''),
+        SMTP_PASS: Joi.string().optional().allow(''),
+        SMTP_FROM: Joi.string().optional().allow(''),
+        RESEND_API_KEY: Joi.string().optional().allow(''),
       }),
     }),
 
     // M-02: ThrottlerModule — Rate limiting global (10 req / 60 seg por IP)
-    // El guard se aplicará por endpoint en AuthController cuando se implemente
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10 }]),
 
     PrismaModule,
@@ -51,6 +57,7 @@ import { ImpresionModule } from './modules/impresion/impresion.module';
     GastosModule,
     ReportesModule,
     ImpresionModule,
+    MailModule,
   ],
   controllers: [],
   providers: [],

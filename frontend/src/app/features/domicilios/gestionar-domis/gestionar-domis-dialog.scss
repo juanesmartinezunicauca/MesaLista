@@ -1,0 +1,294 @@
+.gestionar-domis-modal {
+  padding: 20px;
+  max-width: 620px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #ffffff;
+  border-radius: 12px;
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      .header-icon-box {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        background: #f0fdf4;
+        color: #16a34a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        mat-icon {
+          font-size: 26px;
+          width: 26px;
+          height: 26px;
+        }
+      }
+
+      h2 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #0f172a;
+      }
+
+      .subtitle {
+        margin: 2px 0 0;
+        font-size: 0.8rem;
+        color: #64748b;
+      }
+    }
+
+    .btn-close {
+      color: #94a3b8;
+    }
+  }
+
+  .add-driver-form {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    .form-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #1e293b;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: #3b82f6;
+      }
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+
+      .field-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+
+        label {
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: #475569;
+        }
+
+        .input-wrapper {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: #ffffff;
+          border: 1px solid #cbd5e1;
+          border-radius: 6px;
+          padding: 6px 10px;
+
+          mat-icon {
+            font-size: 16px;
+            width: 16px;
+            height: 16px;
+            color: #94a3b8;
+          }
+
+          input {
+            border: none;
+            outline: none;
+            width: 100%;
+            font-size: 0.85rem;
+            color: #0f172a;
+            background: transparent;
+
+            &::placeholder {
+              color: #94a3b8;
+            }
+          }
+        }
+      }
+
+      .form-actions {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 4px;
+
+        .btn-save-driver {
+          border-radius: 6px;
+          font-weight: 600;
+          font-size: 0.85rem;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+      }
+    }
+  }
+
+  .drivers-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    .list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+
+      .count-badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 700;
+        color: #0f172a;
+
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+          color: #16a34a;
+        }
+      }
+
+      .hint-text {
+        color: #94a3b8;
+        font-size: 0.75rem;
+      }
+    }
+
+    .loading-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 20px;
+      color: #64748b;
+      font-size: 0.85rem;
+    }
+
+    .drivers-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 260px;
+      overflow-y: auto;
+      padding-right: 4px;
+
+      .driver-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        transition: border-color 0.2s, box-shadow 0.2s;
+
+        &:hover {
+          border-color: #cbd5e1;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+        }
+
+        .driver-avatar {
+          width: 36px;
+          height: 36px;
+          border-radius: 8px;
+          background: #eff6ff;
+          color: #2563eb;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          mat-icon {
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+          }
+        }
+
+        .driver-details {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+
+          .driver-name {
+            font-size: 0.9rem;
+            color: #0f172a;
+          }
+
+          .detail-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.78rem;
+            color: #64748b;
+
+            mat-icon {
+              font-size: 14px;
+              width: 14px;
+              height: 14px;
+            }
+
+            &.phone {
+              color: #059669;
+              font-weight: 500;
+            }
+          }
+        }
+
+        .btn-delete {
+          color: #ef4444;
+
+          mat-icon {
+            font-size: 20px;
+          }
+        }
+      }
+
+      .empty-drivers {
+        text-align: center;
+        padding: 24px;
+        color: #94a3b8;
+
+        mat-icon {
+          font-size: 40px;
+          width: 40px;
+          height: 40px;
+          margin-bottom: 6px;
+        }
+
+        p {
+          margin: 0;
+          font-size: 0.85rem;
+        }
+      }
+    }
+  }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 8px;
+  }
+}
+
