@@ -145,13 +145,20 @@ export class UsuarioDialogComponent {
 
     this.enviandoCorreoManual.set(true);
     this.usuariosApi.enviarCodigoPorCorreo(usuario.id_usuario, destino).subscribe({
-      next: (res) => {
+      next: (res: any) => {
         this.enviandoCorreoManual.set(false);
-        this.correoEnviadoExitoso.set(destino);
-        this.mensajeEnvioManual.set({
-          tipo: 'exito',
-          texto: `¡Código despachado a ${destino}! (El correo no ha sido guardado en la base de datos).`,
-        });
+        if (res.success || res.transport === 'smtp' || res.transport === 'resend') {
+          this.correoEnviadoExitoso.set(destino);
+          this.mensajeEnvioManual.set({
+            tipo: 'exito',
+            texto: `¡Código despachado a ${destino}! Revisa la bandeja de entrada o la carpeta de Spam.`,
+          });
+        } else {
+          this.mensajeEnvioManual.set({
+            tipo: 'error',
+            texto: res.errorSmtp || res.mensaje || 'No se pudo despachar el correo vía SMTP.',
+          });
+        }
         this.correoReenvioControl.reset();
       },
       error: (err) => {
@@ -209,11 +216,7 @@ export class UsuarioDialogComponent {
       });
     } else {
       const correoEnvio = val.correoEnvioCodigo?.trim() ? val.correoEnvioCodigo.trim().toLowerCase() : undefined;
-      const baseUsuario =
-        val.usuario?.trim() ||
-        (correoEnvio
-          ? correoEnvio.split('@')[0].slice(0, 30)
-          : val.nombre.trim().toLowerCase().replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 30));
+      const baseUsuario = val.usuario?.trim() ? val.usuario.trim() : undefined;
 
       const payload: CreateUsuarioPayload = {
         nombre: val.nombre.trim(),
@@ -225,13 +228,18 @@ export class UsuarioDialogComponent {
       };
 
       this.usuariosApi.crear(payload).subscribe({
-        next: (nuevoUsuario) => {
+        next: (nuevoUsuario: any) => {
           this.guardando.set(false);
           if (nuevoUsuario.codigoInvitacion) {
             this.invitacionGenerada.set(nuevoUsuario.codigoInvitacion);
             this.usuarioRecienCreado.set(nuevoUsuario);
             if (nuevoUsuario.correoEnviado && nuevoUsuario.correoDestino) {
               this.correoEnviadoExitoso.set(nuevoUsuario.correoDestino);
+            } else if (nuevoUsuario.correoDestino && nuevoUsuario.errorSmtp) {
+              this.mensajeEnvioManual.set({
+                tipo: 'error',
+                texto: `Aviso del servidor de correo: ${nuevoUsuario.errorSmtp}. Puedes reintentar abajo.`,
+              });
             }
           } else {
             this.dialogRef.close({ accion: 'creado', usuario: nuevoUsuario });

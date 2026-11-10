@@ -33,6 +33,7 @@ import { MailModule } from './modules/mail/mail.module';
         PRINTER_INTERFACE: Joi.string().optional(),
         GOOGLE_CLIENT_ID: Joi.string().optional().allow(''),
         GOOGLE_CLOCK_SKEW_SECS: Joi.number().optional().default(300),
+        FRONTEND_URL: Joi.string().optional().allow(''),
         SMTP_HOST: Joi.string().optional().allow(''),
         SMTP_PORT: Joi.number().optional(),
         SMTP_USER: Joi.string().optional().allow(''),

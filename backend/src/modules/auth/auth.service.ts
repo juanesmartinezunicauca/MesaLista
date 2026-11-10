@@ -2,12 +2,11 @@ import {
   BadRequestException,
   Injectable,
   Logger,
-  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { EstadoUsuario, RolUsuario } from '@prisma/client';
+import { EstadoUsuario } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { OAuth2Client } from 'google-auth-library';
 import { UsuariosService } from '../usuarios/usuarios.service';

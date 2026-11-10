@@ -11,9 +11,11 @@ export interface EnviarCodigoOptions {
 
 export interface EnvioMailResultado {
   enviado: boolean;
-  transport: 'smtp' | 'resend' | 'simulado';
+  transport: 'smtp' | 'resend' | 'brevo' | 'simulado';
   destinatario: string;
   mensaje?: string;
+  errorSmtp?: string | null;
+  smtpConfigurado?: boolean;
 }
 
 @Injectable()
@@ -33,13 +35,80 @@ export class MailService {
   ): Promise<EnvioMailResultado> {
     const emailNormalizado = destinatario.trim().toLowerCase();
     const asunto = `🔐 Tu Código de Registro e Invitación - MesaLista POS (Restaurante Luigie's)`;
-    const contenidoHtml = this.generarPlantillaHtml(datos);
-    const contenidoTexto = this.generarTextoPlano(datos);
+    const enlaceActivacion = this.generarEnlaceActivacion(datos.codigo);
+    const contenidoHtml = this.generarPlantillaHtml(datos, enlaceActivacion);
+    const contenidoTexto = this.generarTextoPlano(datos, enlaceActivacion);
 
+    const brevoApiKey = (this.configService.get<string>('BREVO_API_KEY') || '').trim();
     const resendApiKey = this.configService.get<string>('RESEND_API_KEY');
-    const smtpHost = this.configService.get<string>('SMTP_HOST');
+    const rawUser = this.configService.get<string>('SMTP_USER');
+    const rawPass = this.configService.get<string>('SMTP_PASS');
+    const user = rawUser ? rawUser.replace(/["'\s]/g, '') : '';
+    const pass = rawPass ? rawPass.replace(/["'\s]/g, '') : '';
+    const smtpHost = (this.configService.get<string>('SMTP_HOST') || '').trim();
 
-    // 1. Intentar envío vía Resend HTTP API si la API Key está configurada
+    // 1. Intentar envío vía Brevo REST API (HTTPS puerto 443, compatible con Render Free y a cualquier destinatario)
+    if (brevoApiKey) {
+      try {
+        const rawFrom =
+          this.configService.get<string>('BREVO_SENDER_EMAIL') ||
+          this.configService.get<string>('SMTP_FROM') ||
+          'mesalistaapp.notificaciones@gmail.com';
+        
+        let fromEmail = rawFrom.trim();
+        let fromName = this.configService.get<string>('SMTP_FROM_NAME') || 'MesaLista POS';
+
+        const ltIndex = rawFrom.indexOf('<');
+        const gtIndex = rawFrom.indexOf('>', ltIndex);
+        if (ltIndex !== -1 && gtIndex > ltIndex) {
+          const possibleName = rawFrom.slice(0, ltIndex).trim().replace(/^["']|["']$/g, '');
+          if (possibleName) {
+            fromName = possibleName;
+          }
+          fromEmail = rawFrom.slice(ltIndex + 1, gtIndex).trim();
+        }
+
+        const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+          method: 'POST',
+          headers: {
+            'api-key': brevoApiKey,
+            accept: 'application/json',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            sender: { name: fromName, email: fromEmail },
+            to: [{ email: emailNormalizado, name: datos.nombre || 'Colaborador' }],
+            subject: asunto,
+            htmlContent: contenidoHtml,
+            textContent: contenidoTexto,
+          }),
+        });
+
+        if (response.ok) {
+          const resData: any = await response.json().catch(() => ({}));
+          this.logger.log(
+            `[MAIL_SERVICE] ✅ Código de registro enviado exitosamente a '${emailNormalizado}' vía Brevo API (messageId: ${resData?.messageId || 'OK'}). (Correo NO persistido en BD).`,
+          );
+          return {
+            enviado: true,
+            transport: 'brevo',
+            destinatario: emailNormalizado,
+            mensaje: 'Correo enviado exitosamente vía Brevo API.',
+          };
+        } else {
+          const errData = await response.text();
+          this.logger.warn(
+            `[MAIL_SERVICE] Falló envío vía Brevo (${response.status}): ${errData}. Intentando siguiente transport...`,
+          );
+        }
+      } catch (err: any) {
+        this.logger.warn(
+          `[MAIL_SERVICE] Error conectando con Brevo API: ${err?.message}. Intentando siguiente transport...`,
+        );
+      }
+    }
+
+    // 2. Intentar envío vía Resend HTTP API si la API Key está configurada
     if (resendApiKey) {
       try {
         const fromEmail =
@@ -84,7 +153,9 @@ export class MailService {
       }
     }
 
-    // 2. Intentar envío vía SMTP directo si las credenciales están configuradas
+    let smtpError: string | null = null;
+
+    // 2. Intentar envío vía SMTP directo si las credenciales o host están configurados
     if (smtpHost) {
       try {
         await this.enviarViaSmtpDirecto(emailNormalizado, asunto, contenidoHtml, contenidoTexto);
@@ -98,37 +169,60 @@ export class MailService {
           mensaje: `Correo enviado exitosamente vía SMTP (${smtpHost}).`,
         };
       } catch (err: any) {
+        smtpError = err?.message || String(err);
         this.logger.error(
-          `[MAIL_SERVICE] ❌ No se pudo enviar por SMTP (${smtpHost}) a '${emailNormalizado}': ${err?.message}`,
+          `[MAIL_SERVICE] ❌ No se pudo enviar por SMTP (${smtpHost}) a '${emailNormalizado}': ${smtpError}`,
         );
       }
     }
 
     // 3. Modo Simulado / Entorno de Desarrollo y Pruebas
-    // Registra en el log de auditoría el despacho completo garantizando que el flujo nunca se bloquee
+    // Registra en el log de auditoría el despacho enmascarando secretos
+    const codigoEnmascarado = datos.codigo ? `${datos.codigo.slice(0, 4)}****` : '****';
     this.logger.log(
       `------------------------------------------------------------------------\n` +
-      `[MAIL_SERVICE] ✉️ DESPACHO EFÍMERO DE CÓDIGO DE REGISTRO (SIN PERSISTENCIA EN BD)\n` +
-      `  • Destinatario: ${emailNormalizado}\n` +
-      `  • Colaborador:  ${datos.nombre} (Rol: ${datos.rol})\n` +
-      `  • Código:       ${datos.codigo}\n` +
-      `  • Estado:       Despachado exitosamente (Modo Simulado / Fallback Activo)\n` +
+      `[MAIL_SERVICE] ✉️ ESTADO DE DESPACHO DE CÓDIGO DE REGISTRO\n` +
+      `  • Destinatario:   ${emailNormalizado}\n` +
+      `  • Colaborador:    ${datos.nombre} (Rol: ${datos.rol})\n` +
+      `  • Código:         ${codigoEnmascarado}\n` +
+      `  • Estado:         ${smtpError ? 'Falló envío SMTP' : 'No enviado / Simulado (servidor SMTP no configurado)'}\n` +
+      `  • Host SMTP:      ${smtpHost || 'No configurado'}\n` +
+      `  • Error SMTP:     ${smtpError || (!smtpHost ? 'SMTP_HOST/USER no configurado en entorno' : 'Ninguno')}\n` +
       `------------------------------------------------------------------------`,
     );
 
     return {
-      enviado: true,
+      enviado: false,
       transport: 'simulado',
       destinatario: emailNormalizado,
-      mensaje: `Código despachado a ${emailNormalizado} (modo desarrollo/simulado). Recuerda que este correo no se guarda en el sistema.`,
+      errorSmtp: smtpError || (!smtpHost ? 'Credenciales SMTP (SMTP_USER/SMTP_HOST) no configuradas en servidor' : null),
+      smtpConfigurado: Boolean(smtpHost && user && pass),
+      mensaje: smtpError
+        ? `No se pudo enviar el correo real por SMTP: ${smtpError}.`
+        : !smtpHost
+          ? 'El servidor no tiene configuradas las credenciales SMTP en sus variables de entorno.'
+          : `Código generado para ${emailNormalizado} (modo simulación).`,
     };
+  }
+
+  /**
+   * Sanitiza caracteres especiales HTML para mitigar inyecciones XSS en clientes de correo
+   */
+  private escaparHtml(str: string): string {
+    return (str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   /**
    * Genera el HTML enriquecido del correo electrónico con el diseño visual de MesaLista
    */
-  private generarPlantillaHtml(datos: EnviarCodigoOptions): string {
-    const rolFormateado = datos.rol.toUpperCase();
+  private generarPlantillaHtml(datos: EnviarCodigoOptions, enlaceActivacion: string): string {
+    const nombreEscapado = this.escaparHtml(datos.nombre);
+    const rolFormateado = this.escaparHtml(datos.rol).toUpperCase();
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -262,11 +356,11 @@ export class MailService {
         <p>Restaurante Luigie's — Sistema de Gestión Gastronómica</p>
       </div>
       <div class="body">
-        <p class="greeting">¡Hola, ${datos.nombre}!</p>
+        <p class="greeting">¡Hola, ${nombreEscapado}!</p>
         <div class="badge">PERFIL ASIGNADO: ${rolFormateado}</div>
         
         <p style="color: #cbd5e1; font-size: 14px; line-height: 1.5;">
-          Has sido registrado como colaborador en <strong>MesaLista POS</strong>. Para acceder a la plataforma por primera vez, debes vincular tu cuenta de Google utilizando el siguiente código de registro único:
+          Has sido registrado como colaborador en <strong>MesaLista POS</strong>. Para acceder a la plataforma por primera vez, pulsa el botón a continuación para ingresar directamente con tu código precargado:
         </p>
 
         <div class="code-container">
@@ -274,13 +368,22 @@ export class MailService {
           <div class="code-value">${datos.codigo}</div>
         </div>
 
+        <!-- Botón de Activación Directa en 1 Clic -->
+        <div style="text-align: center; margin: 28px 0 24px;">
+          <a href="${enlaceActivacion}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #ff6b35; background-image: linear-gradient(135deg, #ff6b35 0%, #ea580c 100%); color: #ffffff !important; text-decoration: none; font-size: 16px; font-weight: 700; padding: 14px 28px; border-radius: 12px; box-shadow: 0 4px 14px rgba(255, 107, 53, 0.4); letter-spacing: 0.3px;">
+            🚀 Ir a MesaLista y Activar Mi Cuenta
+          </a>
+          <p style="margin: 10px 0 0; font-size: 12px; color: #94a3b8;">
+            (El enlace abrirá la aplicación web y completará tu código automáticamente)
+          </p>
+        </div>
+
         <div class="steps">
           <h3>📌 Instrucciones para ingresar:</h3>
           <ol>
-            <li>Ingresa a la aplicación web de <strong>MesaLista</strong>.</li>
-            <li>En la pantalla de inicio de sesión, pulsa la pestaña <strong>"Nuevo Empleado"</strong>.</li>
-            <li>Escribe tu código <strong>${datos.codigo}</strong> en el recuadro.</li>
-            <li>Presiona <strong>"Continuar con Google"</strong> e inicia sesión con tu cuenta personal o corporativa.</li>
+            <li>Haz clic en el botón superior <strong>"Ir a MesaLista y Activar Mi Cuenta"</strong>.</li>
+            <li>La pantalla se abrirá automáticamente en la pestaña <strong>"Nuevo Empleado"</strong> con tu código <strong>${datos.codigo}</strong> precargado.</li>
+            <li>Presiona <strong>"Continuar con Google"</strong> e inicia sesión con tu cuenta personal de Google.</li>
             <li>¡Listo! Tu cuenta quedará vinculada automáticamente a tu cargo y el código se consumirá.</li>
           </ol>
         </div>
@@ -300,32 +403,83 @@ export class MailService {
   }
 
   /**
+   * Sanitiza texto plano eliminando etiquetas HTML y delimitadores
+   */
+  private limpiarTextoPlano(str: string): string {
+    if (!str) return '';
+    let anterior = '';
+    let limpio = str;
+    while (limpio !== anterior) {
+      anterior = limpio;
+      limpio = limpio.replace(/<[^>]*>/g, '');
+    }
+    return limpio.replace(/[<>]/g, '');
+  }
+
+  /**
    * Genera la versión en texto plano para clientes de correo sin soporte HTML
    */
-  private generarTextoPlano(datos: EnviarCodigoOptions): string {
+  private generarTextoPlano(datos: EnviarCodigoOptions, enlaceActivacion: string): string {
+    const nombreLimpio = this.limpiarTextoPlano(datos.nombre);
+    const rolLimpio = this.limpiarTextoPlano(datos.rol).toUpperCase();
+
     return `
 ======================================================
 MesaLista POS — Restaurante Luigie's
 Tu Código de Registro e Invitación
 ======================================================
 
-Hola, ${datos.nombre}:
+Hola, ${nombreLimpio}:
 
-Has sido registrado como colaborador en MesaLista con el rol: ${datos.rol.toUpperCase()}.
+Has sido registrado como colaborador en MesaLista con el rol: ${rolLimpio}.
 
 TU CÓDIGO DE REGISTRO TEMPORAL:
 >>> ${datos.codigo} <<<
 
+ENLACE DE ACTIVACIÓN DIRECTA (CÓDIGO INCLUIDO):
+${enlaceActivacion}
+
 INSTRUCCIONES PARA INGRESAR:
-1. Ingresa a la aplicación web de MesaLista POS.
-2. En la pantalla de inicio de sesión, pulsa la pestaña "Nuevo Empleado".
-3. Escribe tu código: ${datos.codigo}
-4. Presiona "Continuar con Google" e inicia sesión con tu cuenta personal o corporativa.
-5. Tu cuenta quedará vinculada y el código se quemará de inmediato.
+1. Haz clic en el enlace de activación directa o ingresa a la aplicación web.
+2. Si usas el enlace, tu código ${datos.codigo} ya estará listo en pantalla.
+3. Presiona "Continuar con Google" e inicia sesión con tu cuenta personal o corporativa.
+4. Tu cuenta quedará vinculada y el código se quemará de inmediato.
 
 AVISO DE PRIVACIDAD:
 Este correo electrónico se utilizó únicamente para la entrega de este mensaje y NO se almacena en la base de datos del sistema.
 `;
+  }
+
+  /**
+   * Construye el enlace de activación directa con el código precargado
+   */
+  private generarEnlaceActivacion(codigo: string): string {
+    const customFrontend = this.configService.get<string>('FRONTEND_URL');
+    let baseUrl = 'https://mesa-lista-virid.vercel.app';
+
+    if (customFrontend && customFrontend.trim()) {
+      baseUrl = customFrontend.trim();
+    } else {
+      const corsOrigin = this.configService.get<string>('CORS_ORIGIN');
+      if (corsOrigin) {
+        const origins = corsOrigin.split(',').map((o) => o.trim());
+        const vercel = origins.find((o) => o.includes('vercel.app'));
+        if (vercel) {
+          baseUrl = vercel;
+        } else {
+          const remote = origins.find((o) => !o.includes('localhost') && !o.includes('127.0.0.1'));
+          if (remote) {
+            baseUrl = remote;
+          }
+        }
+      }
+    }
+
+    let cleanBase = baseUrl.trim();
+    while (cleanBase.endsWith('/')) {
+      cleanBase = cleanBase.slice(0, -1);
+    }
+    return `${cleanBase}/login?codigo=${encodeURIComponent(codigo)}`;
   }
 
   /**
@@ -337,14 +491,29 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
     html: string,
     texto: string,
   ): Promise<void> {
-    const host = this.configService.get<string>('SMTP_HOST')!;
-    const port = Number(this.configService.get<number>('SMTP_PORT') || 587);
-    const rawUser = this.configService.get<string>('SMTP_USER') || '';
-    const rawPass = this.configService.get<string>('SMTP_PASS') || '';
-    const user = rawUser.replace(/["'\s]/g, '');
-    const pass = rawPass.replace(/["'\s]/g, '');
+    const rawHost = this.configService.get<string>('SMTP_HOST');
+    const rawUser = this.configService.get<string>('SMTP_USER');
+    const rawPass = this.configService.get<string>('SMTP_PASS');
+    const user = rawUser ? rawUser.replace(/["'\s]/g, '') : '';
+    const pass = rawPass ? rawPass.replace(/["'\s]/g, '') : '';
+    const host = rawHost ? rawHost.trim() : '';
+
+    if (!host) {
+      throw new Error('Servidor SMTP (SMTP_HOST) no configurado en variables de entorno.');
+    }
+
+    const rawPort = this.configService.get<string | number>('SMTP_PORT');
+    const parsedPort = rawPort ? Number(rawPort) : 0;
+
+    // Respetar explícitamente SMTP_PORT: si se define 587, port = 587 (TLS: false)
+    // Si se define 465 o por defecto Gmail sin puerto, port = 465 (TLS: true)
+    const isGmailHost = host === 'smtp.gmail.com' || host.endsWith('.gmail.com');
+    const port = parsedPort > 0 ? parsedPort : (isGmailHost ? 465 : 587);
+    const useTls = port === 465;
+
     const from =
-      this.configService.get<string>('SMTP_FROM') || 'MesaLista POS <no-reply@mesalista.local>';
+      this.configService.get<string>('SMTP_FROM') ||
+      (user ? `MesaLista POS <${user}>` : 'MesaLista POS <no-reply@mesalista.local>');
 
     let senderEmail = from.trim();
     const ltIndex = from.indexOf('<');
@@ -354,7 +523,9 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
     }
 
     return new Promise<void>((resolve, reject) => {
-      const socket = (port === 465)
+      this.logger.log(`[SMTP_CONNECT] Conectando a ${host}:${port} (TLS: ${useTls})...`);
+
+      const socket = useTls
         ? tls.connect({ host, port, rejectUnauthorized: true })
         : net.createConnection({ host, port });
 
@@ -365,9 +536,10 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
         socket.write(cmd + '\r\n');
       };
 
-      socket.setTimeout(10000, () => {
+      // Timeout agresivo de 4.5 segundos para evitar que puertos bloqueados congelen peticiones
+      socket.setTimeout(4500, () => {
         socket.destroy();
-        reject(new Error('Tiempo de espera agotado al conectar con el servidor SMTP.'));
+        reject(new Error(`Tiempo de espera agotado (4.5s) al conectar con el servidor SMTP (${host}:${port}).`));
       });
 
       socket.on('error', (err) => {
@@ -400,7 +572,7 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
               step = 2;
               send(`AUTH LOGIN`);
             } else {
-              step = 4;
+              step = 5;
               send(`MAIL FROM:<${senderEmail}>`);
             }
           } else if (step === 2 && code === 334) {
@@ -421,7 +593,14 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
           } else if (step === 7 && code === 354) {
             step = 8;
             const boundary = `----=_Part_${Date.now()}`;
+            const messageId = `<${Date.now()}.${Math.random().toString(36).substring(2)}@${host || 'mesalista.local'}>`;
+            const dateHeader = new Date().toUTCString();
+            const safeText = texto.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
+            const safeHtml = html.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
+
             const message = [
+              `Date: ${dateHeader}`,
+              `Message-ID: ${messageId}`,
               `From: ${from}`,
               `To: ${destinatario}`,
               `Subject: =?UTF-8?B?${Buffer.from(asunto).toString('base64')}?=`,
@@ -432,13 +611,13 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
               `Content-Type: text/plain; charset=UTF-8`,
               `Content-Transfer-Encoding: 8bit`,
               ``,
-              texto,
+              safeText,
               ``,
               `--${boundary}`,
               `Content-Type: text/html; charset=UTF-8`,
               `Content-Transfer-Encoding: 8bit`,
               ``,
-              html,
+              safeHtml,
               ``,
               `--${boundary}--`,
               `.`,

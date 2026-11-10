@@ -12,9 +12,11 @@ describe('UsuariosService', () => {
   const prisma = {
     usuario: {
       findUnique: jest.fn(),
+      findFirst: jest.fn().mockResolvedValue(null),
       findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       delete: jest.fn(),
     },
   };
@@ -48,9 +50,11 @@ describe('UsuariosService', () => {
 
   beforeEach(() => {
     prisma.usuario.findUnique.mockReset();
+    prisma.usuario.findFirst.mockReset().mockResolvedValue(null);
     prisma.usuario.findMany.mockReset();
     prisma.usuario.create.mockReset();
     prisma.usuario.update.mockReset();
+    prisma.usuario.updateMany.mockReset().mockResolvedValue({ count: 1 });
     prisma.usuario.delete.mockReset();
     mockMailService.enviarCodigoInvitacion.mockReset();
 
@@ -160,7 +164,7 @@ describe('UsuariosService', () => {
         'mateo_personal@gmail.com',
         expect.objectContaining({
           nombre: 'Mateo Mesero',
-          codigo: expect.stringMatching(/^INV-\d{6}$/),
+          codigo: expect.stringMatching(/^INV-[A-Z0-9]{6,8}$/),
         }),
       );
 

@@ -64,7 +64,8 @@ model Usuario {
   email        String?       @unique @db.VarChar(100)
   googleId     String?       @unique @map("google_id") @db.VarChar(100)
   passwordHash     String?       @map("password_hash") @db.VarChar(255)
-  codigoInvitacion String?       @unique @map("codigo_invitacion") @db.VarChar(50)
+  codigoInvitacion       String?       @unique @map("codigo_invitacion") @db.VarChar(50)
+  codigoInvitacionExpira DateTime?     @map("codigo_invitacion_expira")
   rol              RolUsuario
   estado       EstadoUsuario @default(activo)
 

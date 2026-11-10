@@ -115,55 +115,6 @@
     animation: fadeInUp 0.4s ease-out;
   }
 
-  // Pestañas Segmentadas Superiores
-  .auth-mode-tabs {
-    display: flex;
-    background: rgba(30, 41, 59, 0.6);
-    padding: 4px;
-    border-radius: 12px;
-    border: 1px solid rgba(148, 163, 184, 0.15);
-    margin-bottom: 24px;
-
-    .tab-btn {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 10px 14px;
-      border: none;
-      background: transparent;
-      color: #94a3b8;
-      font-size: 0.85rem;
-      font-weight: 600;
-      border-radius: 9px;
-      cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-
-      mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-        transition: transform 0.2s ease;
-      }
-
-      &:hover:not(.active) {
-        color: #f1f5f9;
-        background: rgba(255, 255, 255, 0.04);
-      }
-
-      &.active {
-        background: #ffffff;
-        color: #0f172a;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-
-        mat-icon {
-          color: #ea580c;
-        }
-      }
-    }
-  }
-
   // Encabezado
   .form-header {
     margin-bottom: 24px;
@@ -429,77 +380,42 @@
     }
   }
 
-  // Callout para Nuevo Empleado (en modo acceso habitual)
-  .new-employee-callout {
-    margin-top: 4px;
+  // Enlace para Registrarse como Empleado (en modo acceso habitual)
+  .register-employee-action {
+    margin-top: 10px;
     display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 14px;
-    background: rgba(30, 41, 59, 0.5);
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.2s ease;
+    justify-content: center;
 
-    &:hover {
-      background: rgba(30, 41, 59, 0.85);
-      border-color: rgba(234, 88, 12, 0.5);
-      transform: translateY(-1px);
-
-      .callout-icon {
-        background: #ea580c;
-        color: #ffffff;
-      }
-
-      .callout-arrow {
-        color: #ea580c;
-        transform: translateX(3px);
-      }
-    }
-
-    .callout-icon {
-      width: 36px;
-      height: 36px;
+    .btn-register-employee {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 0.875rem;
+      cursor: pointer;
+      padding: 8px 14px;
       border-radius: 8px;
-      background: rgba(234, 88, 12, 0.15);
-      color: #fb923c;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
+      font-family: inherit;
       transition: all 0.2s ease;
-
-      mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-      }
-    }
-
-    .callout-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-
-      strong {
-        font-size: 0.825rem;
-        color: #f1f5f9;
-      }
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
 
       span {
-        font-size: 0.75rem;
-        color: #94a3b8;
+        color: #ff8c42;
+        font-weight: 700;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        transition: color 0.2s ease;
       }
-    }
 
-    .callout-arrow {
-      color: #64748b;
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-      transition: all 0.2s ease;
+      &:hover {
+        color: #f1f5f9;
+        background: rgba(255, 255, 255, 0.05);
+
+        span {
+          color: #ff6b35;
+        }
+      }
     }
   }
 
