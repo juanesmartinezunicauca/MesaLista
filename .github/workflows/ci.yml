@@ -36,7 +36,7 @@ jobs:
         run: npm run lint
 
       - name: Ejecutar Pruebas Automatizadas con Jest
-        run: npm test -- --passWithNoTests --maxWorkers=2
+        run: npm test -- --passWithNoTests --runInBand
 
       - name: Compilación del Backend (NestJS)
         run: npm run build

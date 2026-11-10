@@ -75,7 +75,7 @@ export class UsuariosService {
         : createUsuarioDto.nombre.trim().toLowerCase().replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 40) || 'colaborador';
       finalUsername = base;
       let counter = 1;
-      while (await this.prisma.usuario.findUnique({ where: { usuario: finalUsername } })) {
+      while (counter <= 20 && (await this.prisma.usuario.findUnique({ where: { usuario: finalUsername } }))) {
         finalUsername = `${base.slice(0, 35)}_${counter++}`;
       }
     } else {

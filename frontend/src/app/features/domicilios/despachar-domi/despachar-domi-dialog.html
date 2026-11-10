@@ -53,99 +53,79 @@
         <mat-icon>sports_motorsports</mat-icon>
         <span>Domiciliarios Registrados</span>
       </span>
-      <button
-        type="button"
-        mat-button
-        class="btn-manage-link"
-        (click)="abrirGestionRepartidores()"
-      >
+      <button type="button" mat-button class="btn-manage-link" (click)="abrirGestionRepartidores()">
         <mat-icon>settings</mat-icon>
         <span>Gestionar Directorio</span>
       </button>
     </div>
 
     @if (cargando()) {
-      <div class="loading-drivers">
-        <mat-spinner diameter="24"></mat-spinner>
-        <span>Cargando domiciliarios...</span>
-      </div>
+    <div class="loading-drivers">
+      <mat-spinner diameter="24"></mat-spinner>
+      <span>Cargando domiciliarios...</span>
+    </div>
     } @else {
-      <div class="drivers-picker-list">
-        @for (rep of repartidores(); track rep.id) {
-          <div
-            class="driver-option-card"
-            [class.selected]="modoSeleccion() === 'lista' && repartidorSeleccionadoId() === rep.id"
-            (click)="seleccionarRepartidor(rep.id)"
-          >
-            <div class="radio-indicator">
-              <span class="dot"></span>
-            </div>
-            <div class="driver-info">
-              <strong class="driver-name">{{ rep.nombre }}</strong>
-              <div class="driver-meta">
-                <span class="phone">
-                  <mat-icon>call</mat-icon>
-                  <span>{{ rep.telefono }}</span>
-                </span>
-                @if (rep.vehiculo) {
-                  <span class="vehicle">
-                    <mat-icon>two_wheeler</mat-icon>
-                    <span>{{ rep.vehiculo }}</span>
-                  </span>
-                }
-              </div>
-            </div>
-          </div>
-        }
-
-        <!-- Opción Manual -->
-        <div
-          class="driver-option-card manual-option"
-          [class.selected]="modoSeleccion() === 'manual'"
-          (click)="activarManual()"
-        >
-          <div class="radio-indicator">
-            <span class="dot"></span>
-          </div>
-          <div class="driver-info">
-            <strong class="driver-name">Otro Domiciliario (Ingreso Manual)</strong>
-            <span class="manual-sub">Ingresa un nombre y teléfono diferente para esta entrega</span>
+    <div class="drivers-picker-list">
+      @for (rep of repartidores(); track rep.id) {
+      <div class="driver-option-card"
+        [class.selected]="modoSeleccion() === 'lista' && repartidorSeleccionadoId() === rep.id"
+        (click)="seleccionarRepartidor(rep.id)">
+        <div class="radio-indicator">
+          <span class="dot"></span>
+        </div>
+        <div class="driver-info">
+          <strong class="driver-name">{{ rep.nombre }}</strong>
+          <div class="driver-meta">
+            <span class="phone">
+              <mat-icon>call</mat-icon>
+              <span>{{ rep.telefono }}</span>
+            </span>
+            @if (rep.vehiculo) {
+            <span class="vehicle">
+              <mat-icon>two_wheeler</mat-icon>
+              <span>{{ rep.vehiculo }}</span>
+            </span>
+            }
           </div>
         </div>
       </div>
-
-      <!-- Campos de texto si elige Manual -->
-      @if (modoSeleccion() === 'manual') {
-        <div class="manual-inputs-box">
-          <div class="field-item">
-            <label for="nombreRepartidorManual">Nombre del Domiciliario *</label>
-            <div class="input-wrapper">
-              <mat-icon>person</mat-icon>
-              <input
-                id="nombreRepartidorManual"
-                type="text"
-                placeholder="Ej. Juan Pérez"
-                [value]="nombreManual()"
-                (input)="nombreManual.set($any($event.target).value)"
-              />
-            </div>
-          </div>
-
-          <div class="field-item">
-            <label for="telefonoRepartidorManual">Teléfono de Contacto (Opcional)</label>
-            <div class="input-wrapper">
-              <mat-icon>call</mat-icon>
-              <input
-                id="telefonoRepartidorManual"
-                type="tel"
-                placeholder="Ej. 312 000 0000"
-                [value]="telefonoManual()"
-                (input)="telefonoManual.set($any($event.target).value)"
-              />
-            </div>
-          </div>
-        </div>
       }
+
+      <!-- Opción Manual -->
+      <div class="driver-option-card manual-option" [class.selected]="modoSeleccion() === 'manual'"
+        (click)="activarManual()">
+        <div class="radio-indicator">
+          <span class="dot"></span>
+        </div>
+        <div class="driver-info">
+          <strong class="driver-name">Otro Domiciliario (Ingreso Manual)</strong>
+          <span class="manual-sub">Ingresa un nombre y teléfono diferente para esta entrega</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Campos de texto si elige Manual -->
+    @if (modoSeleccion() === 'manual') {
+    <div class="manual-inputs-box">
+      <div class="field-item">
+        <label for="nombreRepartidorManual">Nombre del Domiciliario *</label>
+        <div class="input-wrapper">
+          <mat-icon>person</mat-icon>
+          <input id="nombreRepartidorManual" type="text" placeholder="Ej. Juan Pérez" [value]="nombreManual()"
+            (input)="nombreManual.set($any($event.target).value)" />
+        </div>
+      </div>
+
+      <div class="field-item">
+        <label for="telefonoRepartidorManual">Teléfono de Contacto (Opcional)</label>
+        <div class="input-wrapper">
+          <mat-icon>call</mat-icon>
+          <input id="telefonoRepartidorManual" type="tel" placeholder="Ej. 312 000 0000" [value]="telefonoManual()"
+            (input)="telefonoManual.set($any($event.target).value)" />
+        </div>
+      </div>
+    </div>
+    }
     }
   </div>
 
@@ -162,4 +142,3 @@
     </button>
   </div>
 </div>
-

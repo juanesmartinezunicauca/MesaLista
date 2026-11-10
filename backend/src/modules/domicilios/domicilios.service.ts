@@ -697,14 +697,17 @@ export class DomiciliosService {
     }
 
     let repartidor: { nombre: string; telefono: string } | null = null;
-    if (pedido.observacion) {
-      const match = pedido.observacion.match(/\[REPARTIDOR:\s*([^\]]+)\]/i);
-      if (match) {
-        const partes = match[1].split('|');
+    if (pedido.observacion?.includes('[REPARTIDOR:')) {
+      const start = pedido.observacion.indexOf('[REPARTIDOR:');
+      const end = pedido.observacion.indexOf(']', start);
+      if (end > start) {
+        const contenido = pedido.observacion.substring(start + 12, end).trim();
+        const partes = contenido.split('|');
         const nombre = partes[0]?.trim() || '';
         let telefono = '';
         if (partes[1]) {
-          telefono = partes[1].replace(/TEL:\s*/i, '').trim();
+          const telPart = partes[1].split(':');
+          telefono = telPart[1]?.trim() || partes[1].trim();
         }
         repartidor = { nombre, telefono };
       }
@@ -837,7 +840,7 @@ export class DomiciliosService {
 
     if (dto.observacion !== undefined || dto.metodo_pago !== undefined) {
       const rawObs = pedido.observacion || '';
-      const matchPago = rawObs.match(/\[PAGO:\s*([^\]]+)\]/i);
+      const matchPago = rawObs.match(/\[PAGO:([^\]]+)\]/i);
       const metodoFinal = dto.metodo_pago
         ? dto.metodo_pago.trim()
         : matchPago
@@ -846,13 +849,13 @@ export class DomiciliosService {
       const tagPago = `[PAGO: ${metodoFinal}]`;
 
       const etiquetasOperativas =
-        rawObs.match(/\[(PENDIENTE|EN REPARTO|REPARTIDOR:[^\]]+|ENVIO:[^\]]+|ZONA:[^\]]+|CANCELADO:[^\]]+|CANCELADO)\]/g) || [];
+        rawObs.match(/\[(PENDIENTE|EN REPARTO|REPARTIDOR:[^\]]+|ENVIO:[^\]]+|ZONA:[^\]]+|CANCELADO(?::[^\]]+)?)\]/g) || [];
 
       const textoLimpio =
         dto.observacion !== undefined
           ? dto.observacion.trim()
           : rawObs
-            .replace(/\[(PENDIENTE|EN REPARTO|REPARTIDOR:[^\]]+|ENVIO:[^\]]+|ZONA:[^\]]+|PAGO:[^\]]+|CANCELADO:[^\]]+|CANCELADO)\]/g, '')
+            .replace(/\[(PENDIENTE|EN REPARTO|REPARTIDOR:[^\]]+|ENVIO:[^\]]+|ZONA:[^\]]+|PAGO:[^\]]+|CANCELADO(?::[^\]]+)?)\]/g, '')
             .trim();
 
       const obsActual = [...etiquetasOperativas, tagPago, textoLimpio].filter(Boolean).join(' ');

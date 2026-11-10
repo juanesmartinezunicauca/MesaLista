@@ -344,8 +344,12 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
     const from =
       this.configService.get<string>('SMTP_FROM') || 'MesaLista POS <no-reply@mesalista.local>';
 
-    const matchFrom = from.match(/<([^>]+)>/);
-    const senderEmail = (matchFrom ? matchFrom[1] : from).trim();
+    let senderEmail = from.trim();
+    const ltIndex = from.indexOf('<');
+    const gtIndex = from.indexOf('>', ltIndex);
+    if (ltIndex !== -1 && gtIndex > ltIndex) {
+      senderEmail = from.substring(ltIndex + 1, gtIndex).trim();
+    }
 
     return new Promise<void>((resolve, reject) => {
       const socket = (port === 465)

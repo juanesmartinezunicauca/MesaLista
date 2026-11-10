@@ -169,8 +169,9 @@ export class ListaUsuariosComponent implements OnInit {
     if (!email || !email.trim()) return;
 
     const emailNorm = email.trim().toLowerCase();
-    const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!regexEmail.test(emailNorm)) {
+    const atIndex = emailNorm.indexOf('@');
+    const dotIndex = emailNorm.lastIndexOf('.');
+    if (atIndex <= 0 || dotIndex <= atIndex + 1 || dotIndex >= emailNorm.length - 1 || emailNorm.includes(' ')) {
       this.mostrarMensaje('El correo electrónico ingresado no tiene un formato válido.', true);
       return;
     }

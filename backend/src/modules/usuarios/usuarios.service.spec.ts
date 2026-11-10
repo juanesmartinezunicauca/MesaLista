@@ -8,39 +8,22 @@ import { UsuariosService } from './usuarios.service';
 
 describe('UsuariosService', () => {
   let service: UsuariosService;
-  let prisma: {
+  let module: TestingModule;
+  const prisma = {
     usuario: {
-      findUnique: jest.Mock;
-      findMany: jest.Mock;
-      create: jest.Mock;
-      update: jest.Mock;
-      delete: jest.Mock;
-    };
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
   };
-  let mockMailService: {
-    enviarCodigoInvitacion: jest.Mock;
+  const mockMailService = {
+    enviarCodigoInvitacion: jest.fn(),
   };
 
-  beforeEach(async () => {
-    prisma = {
-      usuario: {
-        findUnique: jest.fn(),
-        findMany: jest.fn(),
-        create: jest.fn(),
-        update: jest.fn(),
-        delete: jest.fn(),
-      },
-    };
-
-    mockMailService = {
-      enviarCodigoInvitacion: jest.fn().mockResolvedValue({
-        enviado: true,
-        transport: 'simulado',
-        destinatario: 'test@correo.com',
-      }),
-    };
-
-    const module: TestingModule = await Test.createTestingModule({
+  beforeAll(async () => {
+    module = await Test.createTestingModule({
       providers: [
         UsuariosService,
         {
@@ -55,6 +38,28 @@ describe('UsuariosService', () => {
     }).compile();
 
     service = module.get<UsuariosService>(UsuariosService);
+  });
+
+  afterAll(async () => {
+    if (module) {
+      await module.close();
+    }
+  });
+
+  beforeEach(() => {
+    prisma.usuario.findUnique.mockReset();
+    prisma.usuario.findMany.mockReset();
+    prisma.usuario.create.mockReset();
+    prisma.usuario.update.mockReset();
+    prisma.usuario.delete.mockReset();
+    mockMailService.enviarCodigoInvitacion.mockReset();
+
+    prisma.usuario.findUnique.mockResolvedValue(null);
+    mockMailService.enviarCodigoInvitacion.mockResolvedValue({
+      enviado: true,
+      transport: 'simulado',
+      destinatario: 'test@correo.com',
+    });
   });
 
   it('debe estar definido', () => {
@@ -84,7 +89,7 @@ describe('UsuariosService', () => {
       });
 
       expect(prisma.usuario.findUnique).toHaveBeenCalledWith({
-        where: { email: 'cmesero@unicauca.edu.co' },
+        where: { usuario: 'cmesero' },
       });
       expect(prisma.usuario.create).toHaveBeenCalled();
       const createArgs = prisma.usuario.create.mock.calls[0][0];
@@ -109,7 +114,7 @@ describe('UsuariosService', () => {
         id_usuario: 2,
         nombre: 'Ana Cajera',
         usuario: 'anacajera',
-        email: 'ana@unicauca.edu.co',
+        email: null,
         rol: RolUsuario.cajero,
         estado: EstadoUsuario.activo,
       };
@@ -124,7 +129,7 @@ describe('UsuariosService', () => {
 
       expect(prisma.usuario.create).toHaveBeenCalled();
       const createArgs = prisma.usuario.create.mock.calls[0][0];
-      expect(createArgs.data.email).toBe('ana@unicauca.edu.co');
+      expect(createArgs.data.email).toBeNull();
       expect(createArgs.data.passwordHash).toBeNull();
       expect(resultado).toMatchObject(mockCreado);
     });
@@ -166,7 +171,7 @@ describe('UsuariosService', () => {
       expect(resultado.correoEnviado).toBe(true);
     });
 
-    it('debe lanzar ConflictException si el correo electrónico ya existe', async () => {
+    it('debe lanzar ConflictException si el correo electrónico ya existe (cliente)', async () => {
       prisma.usuario.findUnique.mockResolvedValue({
         id_usuario: 2,
         email: 'yaexiste@unicauca.edu.co',
@@ -174,8 +179,23 @@ describe('UsuariosService', () => {
 
       await expect(
         service.crear({
-          nombre: 'Juan Admin',
+          nombre: 'Juan Cliente',
           email: 'yaexiste@unicauca.edu.co',
+          rol: RolUsuario.cliente,
+        }),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('debe lanzar ConflictException si el nombre de usuario ya existe', async () => {
+      prisma.usuario.findUnique.mockResolvedValue({
+        id_usuario: 2,
+        usuario: 'juanadmin',
+      });
+
+      await expect(
+        service.crear({
+          nombre: 'Juan Admin',
+          usuario: 'juanadmin',
           rol: RolUsuario.administrador,
         }),
       ).rejects.toThrow(ConflictException);
