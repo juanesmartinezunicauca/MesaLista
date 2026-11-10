@@ -135,6 +135,9 @@ export class UsuariosService {
       ...nuevoUsuario,
       correoEnviado: Boolean(despachoMail?.enviado),
       correoDestino: correoParaDespacho,
+      transport: despachoMail?.transport,
+      mensajeCorreo: despachoMail?.mensaje,
+      errorSmtp: despachoMail?.errorSmtp,
       guardadoEnBaseDeDatos: false, // Declaración explícita para auditoría
     };
   }
@@ -167,11 +170,13 @@ export class UsuariosService {
     });
 
     return {
-      success: true,
-      mensaje: `Código de registro ${usuario.codigoInvitacion} enviado a '${emailNorm}'.`,
+      success: Boolean(resultado.enviado),
+      mensaje: resultado.mensaje,
       destinatario: emailNorm,
       guardadoEnBaseDeDatos: false,
       transport: resultado.transport,
+      errorSmtp: (resultado as any).errorSmtp,
+      smtpConfigurado: (resultado as any).smtpConfigurado,
     };
   }
 

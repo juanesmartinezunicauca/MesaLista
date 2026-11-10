@@ -14,6 +14,8 @@ export interface EnvioMailResultado {
   transport: 'smtp' | 'resend' | 'simulado';
   destinatario: string;
   mensaje?: string;
+  errorSmtp?: string | null;
+  smtpConfigurado?: boolean;
 }
 
 @Injectable()
@@ -38,7 +40,11 @@ export class MailService {
     const contenidoTexto = this.generarTextoPlano(datos, enlaceActivacion);
 
     const resendApiKey = this.configService.get<string>('RESEND_API_KEY');
-    const smtpHost = this.configService.get<string>('SMTP_HOST');
+    const rawUser = this.configService.get<string>('SMTP_USER') || '';
+    const rawPass = this.configService.get<string>('SMTP_PASS') || '';
+    const user = rawUser.replace(/["'\s]/g, '');
+    const pass = rawPass.replace(/["'\s]/g, '');
+    const smtpHost = this.configService.get<string>('SMTP_HOST') || (user && pass ? 'smtp.gmail.com' : undefined);
 
     // 1. Intentar envío vía Resend HTTP API si la API Key está configurada
     if (resendApiKey) {
@@ -85,7 +91,9 @@ export class MailService {
       }
     }
 
-    // 2. Intentar envío vía SMTP directo si las credenciales están configuradas
+    let smtpError: string | null = null;
+
+    // 2. Intentar envío vía SMTP directo si las credenciales o host están configurados
     if (smtpHost) {
       try {
         await this.enviarViaSmtpDirecto(emailNormalizado, asunto, contenidoHtml, contenidoTexto);
@@ -99,8 +107,9 @@ export class MailService {
           mensaje: `Correo enviado exitosamente vía SMTP (${smtpHost}).`,
         };
       } catch (err: any) {
+        smtpError = err?.message || String(err);
         this.logger.error(
-          `[MAIL_SERVICE] ❌ No se pudo enviar por SMTP (${smtpHost}) a '${emailNormalizado}': ${err?.message}`,
+          `[MAIL_SERVICE] ❌ No se pudo enviar por SMTP (${smtpHost}) a '${emailNormalizado}': ${smtpError}`,
         );
       }
     }
@@ -110,18 +119,26 @@ export class MailService {
     this.logger.log(
       `------------------------------------------------------------------------\n` +
       `[MAIL_SERVICE] ✉️ DESPACHO EFÍMERO DE CÓDIGO DE REGISTRO (SIN PERSISTENCIA EN BD)\n` +
-      `  • Destinatario: ${emailNormalizado}\n` +
-      `  • Colaborador:  ${datos.nombre} (Rol: ${datos.rol})\n` +
-      `  • Código:       ${datos.codigo}\n` +
-      `  • Estado:       Despachado exitosamente (Modo Simulado / Fallback Activo)\n` +
+      `  • Destinatario:   ${emailNormalizado}\n` +
+      `  • Colaborador:    ${datos.nombre} (Rol: ${datos.rol})\n` +
+      `  • Código:         ${datos.codigo}\n` +
+      `  • Estado:         Despachado exitosamente (Modo Simulado / Fallback Activo)\n` +
+      `  • Host SMTP:      ${smtpHost || 'No configurado'}\n` +
+      `  • Error SMTP:     ${smtpError || (smtpHost ? 'Ninguno' : 'SMTP_HOST/USER no configurado en entorno')}\n` +
       `------------------------------------------------------------------------`,
     );
 
     return {
-      enviado: true,
+      enviado: false,
       transport: 'simulado',
       destinatario: emailNormalizado,
-      mensaje: `Código despachado a ${emailNormalizado} (modo desarrollo/simulado). Recuerda que este correo no se guarda en el sistema.`,
+      errorSmtp: smtpError || (!smtpHost ? 'Credenciales SMTP (SMTP_USER/SMTP_HOST) no configuradas en servidor' : null),
+      smtpConfigurado: Boolean(smtpHost),
+      mensaje: smtpError
+        ? `No se pudo enviar el correo real por SMTP: ${smtpError}.`
+        : !smtpHost
+          ? 'El servidor no tiene configuradas las credenciales SMTP en sus variables de entorno.'
+          : `Código despachado a ${emailNormalizado} (modo simulado). Recuerda que este correo no se guarda en el sistema.`,
     };
   }
 
@@ -378,14 +395,22 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
     html: string,
     texto: string,
   ): Promise<void> {
-    const host = this.configService.get<string>('SMTP_HOST')!;
-    const port = Number(this.configService.get<number>('SMTP_PORT') || 587);
+    const rawHost = this.configService.get<string>('SMTP_HOST');
     const rawUser = this.configService.get<string>('SMTP_USER') || '';
     const rawPass = this.configService.get<string>('SMTP_PASS') || '';
     const user = rawUser.replace(/["'\s]/g, '');
     const pass = rawPass.replace(/["'\s]/g, '');
+    const host = rawHost || (user ? 'smtp.gmail.com' : 'smtp.gmail.com');
+    const rawPort = this.configService.get<string | number>('SMTP_PORT');
+    const parsedPort = rawPort ? Number(rawPort) : 0;
+
+    // Si es Gmail o puerto 465, se utiliza TLS directo (puerto 465)
+    const useTls = parsedPort === 465 || host.includes('gmail.com') || parsedPort === 0;
+    const port = useTls ? 465 : parsedPort;
+
     const from =
-      this.configService.get<string>('SMTP_FROM') || 'MesaLista POS <no-reply@mesalista.local>';
+      this.configService.get<string>('SMTP_FROM') ||
+      (user ? `MesaLista POS <${user}>` : 'MesaLista POS <no-reply@mesalista.local>');
 
     let senderEmail = from.trim();
     const ltIndex = from.indexOf('<');
@@ -395,7 +420,9 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
     }
 
     return new Promise<void>((resolve, reject) => {
-      const socket = (port === 465)
+      this.logger.log(`[SMTP_CONNECT] Conectando a ${host}:${port} (TLS: ${useTls})...`);
+
+      const socket = useTls
         ? tls.connect({ host, port, rejectUnauthorized: true })
         : net.createConnection({ host, port });
 
@@ -406,9 +433,9 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
         socket.write(cmd + '\r\n');
       };
 
-      socket.setTimeout(10000, () => {
+      socket.setTimeout(15000, () => {
         socket.destroy();
-        reject(new Error('Tiempo de espera agotado al conectar con el servidor SMTP.'));
+        reject(new Error(`Tiempo de espera agotado (15s) al conectar con el servidor SMTP (${host}:${port}).`));
       });
 
       socket.on('error', (err) => {
