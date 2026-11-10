@@ -17,6 +17,7 @@ const config: Config = {
   transform: {
     '^.+\\.(t|j)s$': 'ts-jest',
   },
+  workerIdleMemoryLimit: '512MB',
   moduleNameMapper: pathsToModuleNameMapper(paths, { prefix: '<rootDir>/' }),
   collectCoverageFrom: [
     'src/**/*.(t|j)s',

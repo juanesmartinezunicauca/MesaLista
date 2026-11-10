@@ -153,6 +153,40 @@ export class ListaUsuariosComponent implements OnInit {
     });
   }
 
+  /**
+   * Envía el código de registro del usuario a un correo efímero (sin guardarlo en la base de datos).
+   */
+  enviarCodigoPorCorreo(usuario: Usuario): void {
+    if (!usuario.codigoInvitacion) {
+      this.mostrarMensaje('Este colaborador ya completó su vinculación o no cuenta con código pendiente.', true);
+      return;
+    }
+
+    const email = prompt(
+      `Ingresa el correo para enviar el código de registro (${usuario.codigoInvitacion}) a ${usuario.nombre}:\n\n* Por privacidad, este correo NO será guardado en el sistema.`
+    );
+
+    if (!email || !email.trim()) return;
+
+    const emailNorm = email.trim().toLowerCase();
+    const atIndex = emailNorm.indexOf('@');
+    const dotIndex = emailNorm.lastIndexOf('.');
+    if (atIndex <= 0 || dotIndex <= atIndex + 1 || dotIndex >= emailNorm.length - 1 || emailNorm.includes(' ')) {
+      this.mostrarMensaje('El correo electrónico ingresado no tiene un formato válido.', true);
+      return;
+    }
+
+    this.usuariosApi.enviarCodigoPorCorreo(usuario.id_usuario, emailNorm).subscribe({
+      next: () => {
+        this.mostrarMensaje(`¡Código ${usuario.codigoInvitacion} enviado a ${emailNorm}! (No guardado en BD).`);
+      },
+      error: (err) => {
+        const msg = err.error?.message || 'Error al despachar el código por correo.';
+        this.mostrarMensaje(msg, true);
+      },
+    });
+  }
+
   toggleEstado(usuario: Usuario): void {
     const nuevoEstado: EstadoUsuario = usuario.estado === 'activo' ? 'inactivo' : 'activo';
 

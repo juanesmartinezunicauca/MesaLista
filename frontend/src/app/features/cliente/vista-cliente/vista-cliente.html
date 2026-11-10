@@ -596,8 +596,9 @@
         <!-- Campos de Entrega del Restaurante -->
         <div class="form-fields-container">
           <div class="field-item">
-            <label class="field-label">Nombre Completo *</label>
+            <label class="field-label" for="clienteModalNombre">Nombre Completo *</label>
             <input
+              id="clienteModalNombre"
               type="text"
               class="field-input"
               placeholder="Ej. Juan Pérez"
@@ -607,8 +608,9 @@
           </div>
 
           <div class="field-item">
-            <label class="field-label">Teléfono o Celular de Contacto *</label>
+            <label class="field-label" for="clienteModalTel">Teléfono o Celular de Contacto *</label>
             <input
+              id="clienteModalTel"
               type="tel"
               class="field-input"
               placeholder="Ej. 310 123 4567 (para coordinar con el repartidor)"
@@ -618,8 +620,9 @@
           </div>
 
           <div class="field-item">
-            <label class="field-label">Dirección de Entrega *</label>
+            <label class="field-label" for="clienteModalDir">Dirección de Entrega *</label>
             <input
+              id="clienteModalDir"
               type="text"
               class="field-input"
               placeholder="Ej. Calle 15 # 8-42, Barrio Bolívar"
@@ -629,8 +632,26 @@
           </div>
 
           <div class="field-item">
-            <label class="field-label">Apartamento / Casa / Punto de Referencia</label>
+            <label class="field-label" for="zonaEntregaCliente">Zona de Entrega en Popayán *</label>
+            <select
+              id="zonaEntregaCliente"
+              class="field-input zone-select"
+              [value]="zonaSeleccionada().id"
+              (change)="cambiarZona($any($event.target).value)"
+            >
+              @for (z of zonasPopayan; track z.id) {
+                <option [value]="z.id">
+                  {{ z.nombre }} — ${{ z.tarifa | number:'1.0-0' }} COP
+                </option>
+              }
+            </select>
+            <small class="field-help">Cobertura: {{ zonaSeleccionada().descripcion }}</small>
+          </div>
+
+          <div class="field-item">
+            <label class="field-label" for="clienteModalRef">Apartamento / Casa / Punto de Referencia</label>
             <input
+              id="clienteModalRef"
               type="text"
               class="field-input"
               placeholder="Ej. Apto 302, timbre blanco, casa frente al parque"
@@ -640,8 +661,9 @@
           </div>
 
           <div class="field-item">
-            <label class="field-label">Indicaciones o Notas para la Cocina (Opcional)</label>
+            <label class="field-label" for="clienteModalNotas">Indicaciones o Notas para la Cocina (Opcional)</label>
             <input
+              id="clienteModalNotas"
               type="text"
               class="field-input"
               maxlength="255"
@@ -722,12 +744,12 @@
             <span>${{ totalPedido() | number:'1.0-0' }} COP</span>
           </div>
           <div class="bill-line">
-            <span>Costo de domicilio:</span>
-            <span class="free-badge">Envío Gratis</span>
+            <span>Costo de envío ({{ zonaSeleccionada().nombre.split(':')[0] }}):</span>
+            <span class="delivery-charge">+${{ costoEnvio() | number:'1.0-0' }} COP</span>
           </div>
           <div class="bill-line total-line">
             <span>Total a Pagar:</span>
-            <span class="total-price">${{ totalPedido() | number:'1.0-0' }} COP</span>
+            <span class="total-price">${{ totalConEnvio() | number:'1.0-0' }} COP</span>
           </div>
         </div>
 

@@ -46,8 +46,8 @@ export class FacturaDialogComponent {
       const raw = (
         p.metodo_pago ||
         p.factura?.pagos?.[0]?.medioPago?.nombre ||
-        p.observacion_raw?.match(/\[PAGO:\s*([^\]]+)\]/i)?.[1] ||
-        p.observacion?.match(/\[PAGO:\s*([^\]]+)\]/i)?.[1] ||
+        p.observacion_raw?.match(/\[PAGO:([^\]]+)\]/i)?.[1]?.trim() ||
+        p.observacion?.match(/\[PAGO:([^\]]+)\]/i)?.[1]?.trim() ||
         'efectivo'
       ).toLowerCase();
 
@@ -77,6 +77,26 @@ export class FacturaDialogComponent {
   tipoPropina = signal<'cero' | 'diez' | 'personalizada'>(this.data?.pedido ? 'cero' : 'diez');
   propinaPersonalizada = signal<number>(0);
   efectivoRecibido = signal<number>(0);
+
+  costoEnvio = computed<number>(() => {
+    if (!this.data?.pedido) return 0;
+    const p = this.data.pedido;
+    if (p.costo_envio !== undefined && p.costo_envio !== null) return Number(p.costo_envio);
+    const raw = p.observacion_raw || p.observacion || '';
+    const match = raw.match(/\[ENVIO:([^\]]+)\]/i);
+    if (!match) return 0;
+    const digitos = match[1].replace(/\D/g, '');
+    return digitos ? Number.parseInt(digitos, 10) : 0;
+  });
+
+  zonaNombre = computed<string>(() => {
+    if (!this.data?.pedido) return '';
+    const p = this.data.pedido;
+    if (p.zona_nombre) return p.zona_nombre;
+    const raw = p.observacion_raw || p.observacion || '';
+    const match = raw.match(/\[ZONA:([^\]]+)\]/i);
+    return match ? match[1].trim() : '';
+  });
 
   // Desglose para pagos mixtos
   montoEfectivo = signal<number>(0);
@@ -167,9 +187,15 @@ export class FacturaDialogComponent {
     return 0;
   });
 
-  propinaDiez = computed(() => Math.round(this.subtotal() * 0.1));
+  propinaDiez = computed(() => {
+    if (this.esDomicilio()) return 0;
+    return Math.round(this.subtotal() * 0.1);
+  });
 
   montoPropina = computed(() => {
+    if (this.esDomicilio()) {
+      return Number(this.data?.pedido?.factura?.propina || 0);
+    }
     switch (this.tipoPropina()) {
       case 'cero':
         return 0;
@@ -182,7 +208,7 @@ export class FacturaDialogComponent {
     }
   });
 
-  totalFinal = computed(() => this.subtotal() + this.montoPropina());
+  totalFinal = computed(() => this.subtotal() + this.costoEnvio() + this.montoPropina());
 
   // Cálculos para pago mixto
   totalAsignado = computed(() => {
@@ -264,6 +290,7 @@ export class FacturaDialogComponent {
   }
 
   togglePropinaDiez(event: Event): void {
+    if (this.esDomicilio()) return;
     const isChecked = (event.target as HTMLInputElement).checked;
     this.tipoPropina.set(isChecked ? 'diez' : 'cero');
   }

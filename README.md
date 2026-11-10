@@ -203,3 +203,20 @@ Tras ejecutar el seed (`npx prisma db seed`), puedes ingresar a la plataforma co
   npm test
   ```
 
+
+
+---
+
+## 📊 Calidad y Análisis Estático de Código (SonarQube)
+
+Para auditar métricas de mantenibilidad, deuda técnica, bugs, vulnerabilidades y cobertura de pruebas:
+
+1. **Iniciar servidor SonarQube local (Docker):**
+   ```cmd
+   .\iniciar_sonarqube.bat
+   ```
+2. **Ejecutar análisis automatizado:**
+   ```cmd
+   .\ejecutar_sonar_scan.bat
+   ```
+> Consulta la [Guía Completa de SonarQube](GUIA_SONARQUBE.md) para detalles sobre generación de tokens, interpretación de Quality Gates y configuración en GitHub Actions / SonarCloud.

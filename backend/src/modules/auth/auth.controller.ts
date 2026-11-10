@@ -18,20 +18,14 @@ import { GoogleLoginDto, LoginDto, UpdatePerfilDto } from './dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  /**
-   * POST /api/v1/auth/login
-   * Endpoint público con protección de rate limiting (M-02: ThrottlerGuard contra fuerza bruta).
-   */
-  @Post('login')
-  @HttpCode(HttpStatus.OK)
-  @UseGuards(ThrottlerGuard)
-  login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
-  }
+  // =========================================================================
+  // 1. FLUJO PRINCIPAL DE PRODUCCIÓN: AUTENTICACIÓN GOOGLE OAUTH 2.0 (SSO)
+  // =========================================================================
 
   /**
    * POST /api/v1/auth/google
-   * Autenticación federada mediante Google OAuth 2.0 (ID Token).
+   * Autenticación federada mediante Google OAuth 2.0 (ID Token criptográfico).
+   * Valida tokens de invitación (INV-XXXXXX) para enrolamiento privado de empleados.
    */
   @Post('google')
   @HttpCode(HttpStatus.OK)
@@ -39,6 +33,10 @@ export class AuthController {
   googleLogin(@Body() googleLoginDto: GoogleLoginDto) {
     return this.authService.loginConGoogle(googleLoginDto);
   }
+
+  // =========================================================================
+  // 2. GESTIÓN Y CONSULTA DE PERFIL DEL USUARIO EN SESIÓN
+  // =========================================================================
 
   /**
    * GET /api/v1/auth/perfil
@@ -52,7 +50,7 @@ export class AuthController {
 
   /**
    * PATCH /api/v1/auth/perfil
-   * Actualiza el perfil del usuario autenticado (nombre y/o contraseña).
+   * Actualiza el perfil del usuario autenticado (nombre y/o contraseña de contingencia).
    */
   @Patch('perfil')
   @UseGuards(JwtAuthGuard)
@@ -61,5 +59,22 @@ export class AuthController {
     @Body() updatePerfilDto: UpdatePerfilDto,
   ) {
     return this.authService.actualizarPerfil(idUsuario, updatePerfilDto);
+  }
+
+  // =========================================================================
+  // 3. FLUJO DE CONTINGENCIA LOCAL Y ALTA DISPONIBILIDAD (FALLBACK / DISASTER RECOVERY)
+  // Utilizado exclusivamente ante caídas de WAN/Internet o inicialización seed.
+  // =========================================================================
+
+  /**
+   * POST /api/v1/auth/login
+   * Endpoint de contingencia para acceso local con credenciales hasheadas en Argon2id.
+   * Protegido con ThrottlerGuard contra ataques de fuerza bruta (OWASP A04/A07).
+   */
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  login(@Body() loginDto: LoginDto) {
+    return this.authService.login(loginDto);
   }
 }

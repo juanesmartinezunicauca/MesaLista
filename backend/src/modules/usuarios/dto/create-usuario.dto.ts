@@ -3,7 +3,6 @@ import { EstadoUsuario, RolUsuario } from '@prisma/client';
 
 export { EstadoUsuario, RolUsuario };
 
-
 export class CreateUsuarioDto {
   @IsString({ message: 'El nombre debe ser una cadena de texto' })
   @IsNotEmpty({ message: 'El nombre es obligatorio' })
@@ -23,6 +22,16 @@ export class CreateUsuarioDto {
   @Length(5, 100, { message: 'El correo electrónico debe tener entre 5 y 100 caracteres' })
   email?: string;
 
+  /**
+   * Correo efímero de entrega del código de registro e invitación.
+   * IMPORTANTE: Este correo se utiliza EXCLUSIVAMENTE para enviar el código
+   * y NO se guarda en la base de datos para preservar la privacidad del usuario.
+   */
+  @IsOptional()
+  @IsEmail({}, { message: 'El correo de envío del código no tiene un formato válido' })
+  @Length(5, 100, { message: 'El correo de envío debe tener entre 5 y 100 caracteres' })
+  correoEnvioCodigo?: string;
+
   @IsOptional()
   @IsString({ message: 'La contraseña debe ser una cadena de texto' })
   @Length(8, 100, { message: 'La contraseña debe tener al menos 8 caracteres' })
@@ -36,7 +45,6 @@ export class CreateUsuarioDto {
   })
   @IsNotEmpty({ message: 'El rol es obligatorio' })
   rol!: RolUsuario;
-
 
   @IsOptional()
   @IsEnum(EstadoUsuario, {

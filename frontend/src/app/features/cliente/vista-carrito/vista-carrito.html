@@ -195,13 +195,13 @@
                 <span>${{ carritoService.totalPrecio() | number:'1.0-0' }} COP</span>
               </div>
               <div class="sum-row">
-                <span>Costo de envío a domicilio:</span>
-                <span class="free-shipping">Gratis</span>
+                <span>Costo de envío ({{ zonaSeleccionada().nombre.split(':')[0] }}):</span>
+                <span class="shipping-charge">+${{ costoEnvio() | number:'1.0-0' }} COP</span>
               </div>
               <mat-divider></mat-divider>
               <div class="sum-row total-highlight">
                 <span>Total a Pagar:</span>
-                <span class="total-number">${{ carritoService.totalPrecio() | number:'1.0-0' }} COP</span>
+                <span class="total-number">${{ totalConEnvio() | number:'1.0-0' }} COP</span>
               </div>
             </div>
           </div>
@@ -228,10 +228,11 @@
               }
 
               <div class="input-field-group">
-                <label>Nombre Completo *</label>
+                <label for="nombreClienteInput">Nombre Completo *</label>
                 <div class="field-with-icon">
                   <mat-icon>person</mat-icon>
                   <input
+                    id="nombreClienteInput"
                     type="text"
                     placeholder="Ej. Juan Gómez"
                     [value]="nombreCliente()"
@@ -241,10 +242,11 @@
               </div>
 
               <div class="input-field-group">
-                <label>Teléfono o Celular *</label>
+                <label for="telefonoContactoInput">Teléfono o Celular *</label>
                 <div class="field-with-icon">
                   <mat-icon>call</mat-icon>
                   <input
+                    id="telefonoContactoInput"
                     type="tel"
                     placeholder="Ej. 312 456 7890"
                     [value]="telefonoContacto()"
@@ -254,10 +256,11 @@
               </div>
 
               <div class="input-field-group">
-                <label>Dirección de Entrega *</label>
+                <label for="direccionEntregaInput">Dirección de Entrega *</label>
                 <div class="field-with-icon">
                   <mat-icon>home</mat-icon>
                   <input
+                    id="direccionEntregaInput"
                     type="text"
                     placeholder="Ej. Calle 15 # 8-42, Barrio Bolívar"
                     [value]="direccionEntrega()"
@@ -267,10 +270,34 @@
               </div>
 
               <div class="input-field-group">
-                <label>Apartamento / Casa / Punto de Referencia</label>
+                <label for="zonaEntregaSelect">Zona de Entrega en Popayán (Cálculo automático de tarifa) *</label>
+                <div class="field-with-icon select-wrapper">
+                  <mat-icon>near_me</mat-icon>
+                  <select
+                    id="zonaEntregaSelect"
+                    class="native-zone-select"
+                    [value]="zonaSeleccionada().id"
+                    (change)="cambiarZona($any($event.target).value)"
+                  >
+                    @for (z of zonasPopayan; track z.id) {
+                      <option [value]="z.id">
+                        {{ z.nombre }} — ${{ z.tarifa | number:'1.0-0' }} COP
+                      </option>
+                    }
+                  </select>
+                </div>
+                <span class="zone-desc-hint">
+                  <mat-icon>info</mat-icon>
+                  <span>Cobertura: {{ zonaSeleccionada().descripcion }}</span>
+                </span>
+              </div>
+
+              <div class="input-field-group">
+                <label for="referenciaUbicacionInput">Apartamento / Casa / Punto de Referencia</label>
                 <div class="field-with-icon">
                   <mat-icon>apartment</mat-icon>
                   <input
+                    id="referenciaUbicacionInput"
                     type="text"
                     placeholder="Ej. Apto 302, casa frente al parque"
                     [value]="referenciaUbicacion()"
@@ -280,10 +307,11 @@
               </div>
 
               <div class="input-field-group">
-                <label>Notas generales para el restaurante (Opcional)</label>
+                <label for="observacionesInput">Notas generales para el restaurante (Opcional)</label>
                 <div class="field-with-icon">
                   <mat-icon>edit_note</mat-icon>
                   <input
+                    id="observacionesInput"
                     type="text"
                     maxlength="255"
                     placeholder="Ej. Timbre dañado, llamar al llegar..."

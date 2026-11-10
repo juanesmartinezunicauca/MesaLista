@@ -29,6 +29,9 @@ export interface Domicilio {
   estado: EstadoPedido;
   etapaOperativa: EtapaOperativaDomicilio;
   totalCalculado: number;
+  costo_envio?: number;
+  zona_nombre?: string;
+  subtotalProductos?: number;
   fecha_hora: string | Date;
   observacion?: string | null;
   cliente: Cliente;
@@ -61,6 +64,8 @@ export interface CreateDomicilioPayload {
   }[];
   observacion?: string;
   metodo_pago?: string;
+  costo_envio?: number;
+  zona_entrega?: string;
 }
 
 export interface EstadoServicioDomicilio {
@@ -70,3 +75,44 @@ export interface EstadoServicioDomicilio {
   motivo?: string;
 }
 
+export interface Domiciliario {
+  id: string;
+  nombre: string;
+  telefono: string;
+  vehiculo?: string;
+  activo?: boolean;
+}
+
+export interface ZonaTarifaPopayan {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  tarifa: number;
+}
+
+export const ZONAS_DOMICILIO_POPAYAN: ZonaTarifaPopayan[] = [
+  {
+    id: 'zona-comuna-1',
+    nombre: 'Zona 1: Comuna 1 y Cercanías',
+    descripcion: 'Catay, Campanario, Ciudad Jardín, Campamento, La Floresta',
+    tarifa: 3000,
+  },
+  {
+    id: 'zona-centro-aledanas',
+    nombre: 'Zona 2: Aledañas a Comuna 1 y Centro',
+    descripcion: 'Los Hoyos, Yambitará, Pomona, Centro Histórico, Caldas, Modelo',
+    tarifa: 4000,
+  },
+  {
+    id: 'zona-sur',
+    nombre: 'Zona 3: Sur de Popayán',
+    descripcion: 'Lomas de Granada, Chirimía, Alfonso López, Los Sauces, Variante Sur, Mi Bohío',
+    tarifa: 6000,
+  },
+  {
+    id: 'zona-norte',
+    nombre: 'Zona 4: Zona Norte',
+    descripcion: 'La Paz, Bello Horizonte, Entre Pinos, Morinda, Pisojé, Variante Norte',
+    tarifa: 7000,
+  },
+];

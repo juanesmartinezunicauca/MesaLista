@@ -2,25 +2,22 @@ import {
   BadRequestException,
   Injectable,
   Logger,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { EstadoUsuario } from '@prisma/client';
+import { EstadoUsuario, RolUsuario } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { OAuth2Client } from 'google-auth-library';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import { GoogleLoginDto, LoginDto, UpdatePerfilDto } from './dto';
-import {
-  AuthResponse,
-  AuthUserResponse,
-  JwtPayload,
-} from './interfaces';
+import { AuthResponse, AuthUserResponse, JwtPayload } from './interfaces';
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger('SecurityAudit');
-  private googleClient: OAuth2Client;
+  private readonly googleClient: OAuth2Client;
 
   constructor(
     private readonly usuariosService: UsuariosService,
@@ -58,85 +55,15 @@ export class AuthService {
       .filter((id) => id.length > 0 && !id.includes('TU_GOOGLE_CLIENT_ID'));
   }
 
-  /**
-   * Valida credenciales contra la base de datos verificando el hash Argon2id (OWASP).
-   * Arroja UnauthorizedException si las credenciales no coinciden o el usuario está inactivo.
-   */
-  async validarUsuario(
-    username: string,
-    passwordPlano: string,
-  ): Promise<AuthUserResponse> {
-    const usuario =
-      await this.usuariosService.obtenerPorUsernameParaAuth(username);
-
-    if (!usuario) {
-      this.logger.warn(`[SECURITY_AUDIT] Intento fallido de autenticación: usuario '${username}' no encontrado.`);
-      throw new UnauthorizedException('Credenciales inválidas.');
-    }
-
-    if (usuario.estado !== EstadoUsuario.activo) {
-      this.logger.warn(`[SECURITY_AUDIT] Intento de acceso denegado: cuenta inactiva '${username}'.`);
-      throw new UnauthorizedException(
-        'El usuario se encuentra inactivo en el sistema. Contacte a la administración.',
-      );
-    }
-
-    if (!usuario.passwordHash) {
-      this.logger.warn(`[SECURITY_AUDIT] Intento de inicio por contraseña en cuenta Google: '${username}'.`);
-      throw new UnauthorizedException(
-        'Esta cuenta está vinculada con Google OAuth 2.0. Por favor inicia sesión usando el botón de Google.',
-      );
-    }
-
-    const esPasswordValido = await argon2.verify(
-      usuario.passwordHash,
-      passwordPlano,
-    );
-
-    if (!esPasswordValido) {
-      this.logger.warn(`[SECURITY_AUDIT] Intento fallido de autenticación: contraseña errónea para '${username}'.`);
-      throw new UnauthorizedException('Credenciales inválidas.');
-    }
-
-    return {
-      id_usuario: usuario.id_usuario,
-      nombre: usuario.nombre,
-      usuario: usuario.usuario,
-      email: usuario.email,
-      rol: usuario.rol,
-      estado: usuario.estado,
-    };
-  }
-
-  /**
-   * Autentica al usuario y emite un token JWT con tiempo de expiración configurable.
-   */
-  async login(loginDto: LoginDto): Promise<AuthResponse> {
-    const usuario = await this.validarUsuario(
-      loginDto.usuario,
-      loginDto.password,
-    );
-
-    this.logger.log(`[SECURITY_AUDIT] Inicio de sesión exitoso: '${usuario.usuario}' (Rol: ${usuario.rol}, ID: ${usuario.id_usuario})`);
-
-    const payload: JwtPayload = {
-      sub: usuario.id_usuario,
-      usuario: usuario.usuario,
-      rol: usuario.rol,
-      nombre: usuario.nombre,
-    };
-
-    const accessToken = this.jwtService.sign(payload);
-
-    return {
-      accessToken,
-      usuario,
-    };
-  }
+  // =========================================================================
+  // 1. FLUJO PRINCIPAL DE PRODUCCIÓN: AUTENTICACIÓN GOOGLE OAUTH 2.0 (SSO)
+  // Autenticación delegada federada, enrolamiento por invitación e inmutabilidad
+  // =========================================================================
 
   /**
    * Autentica o registra un usuario mediante Google OAuth 2.0.
-   * Valida criptográficamente el ID Token con los servidores de Google.
+   * Valida criptográficamente el ID Token (JWT) con los certificados de Google.
+   * Si se provee código de invitación, enrola al nuevo empleado; si ya existe, asocia su rol.
    */
   async loginConGoogle(googleDto: GoogleLoginDto): Promise<AuthResponse> {
     const rawToken =
@@ -248,12 +175,16 @@ export class AuthService {
         id_usuario: usuario.id_usuario,
         nombre: usuario.nombre,
         usuario: usuario.usuario,
-        email: usuario.email,
+        email: usuario.email ?? undefined,
         rol: usuario.rol,
         estado: usuario.estado,
       },
     };
   }
+
+  // =========================================================================
+  // 2. GESTIÓN Y CONSULTA DE PERFIL PROPIO
+  // =========================================================================
 
   /**
    * Retorna los datos actualizados del perfil de usuario autenticado.
@@ -263,7 +194,7 @@ export class AuthService {
   }
 
   /**
-   * Actualiza los datos del perfil del usuario autenticado (nombre y/o contraseña).
+   * Actualiza los datos del perfil del usuario autenticado (nombre y/o contraseña de contingencia).
    */
   async actualizarPerfil(id_usuario: number, dto: UpdatePerfilDto) {
     return this.usuariosService.actualizar(id_usuario, {
@@ -271,5 +202,85 @@ export class AuthService {
       password: dto.password,
     });
   }
-}
 
+  // =========================================================================
+  // 3. MECANISMO DE CONTINGENCIA LOCAL Y ALTA DISPONIBILIDAD (DISASTER RECOVERY)
+  // Utilizado como respaldo ante corte de WAN/Internet o para inicialización seed.
+  // =========================================================================
+
+  /**
+   * Valida credenciales locales contra la base de datos verificando el hash Argon2id (OWASP).
+   * Arroja UnauthorizedException si las credenciales no coinciden o el usuario está inactivo.
+   */
+  async validarUsuario(
+    username: string,
+    passwordPlano: string,
+  ): Promise<AuthUserResponse> {
+    const usuario =
+      await this.usuariosService.obtenerPorUsernameParaAuth(username);
+
+    if (!usuario) {
+      this.logger.warn(`[SECURITY_AUDIT] Intento fallido de autenticación: usuario '${username}' no encontrado.`);
+      throw new UnauthorizedException('Credenciales inválidas.');
+    }
+
+    if (usuario.estado !== EstadoUsuario.activo) {
+      this.logger.warn(`[SECURITY_AUDIT] Intento de acceso denegado: cuenta inactiva '${username}'.`);
+      throw new UnauthorizedException(
+        'El usuario se encuentra inactivo en el sistema. Contacte a la administración.',
+      );
+    }
+
+    if (!usuario.passwordHash) {
+      this.logger.warn(`[SECURITY_AUDIT] Intento de inicio por contraseña en cuenta vinculada exclusivamente a Google: '${username}'.`);
+      throw new UnauthorizedException(
+        'Esta cuenta está vinculada exclusivamente con Google OAuth 2.0. Por favor inicia sesión usando el botón de Google.',
+      );
+    }
+
+    const esPasswordValido = await argon2.verify(
+      usuario.passwordHash,
+      passwordPlano,
+    );
+
+    if (!esPasswordValido) {
+      this.logger.warn(`[SECURITY_AUDIT] Intento fallido de autenticación: contraseña errónea para '${username}'.`);
+      throw new UnauthorizedException('Credenciales inválidas.');
+    }
+
+    return {
+      id_usuario: usuario.id_usuario,
+      nombre: usuario.nombre,
+      usuario: usuario.usuario,
+      email: usuario.email ?? undefined,
+      rol: usuario.rol,
+      estado: usuario.estado,
+    };
+  }
+
+  /**
+   * Autentica al usuario mediante credenciales locales de contingencia y emite un token JWT.
+   */
+  async login(loginDto: LoginDto): Promise<AuthResponse> {
+    const usuario = await this.validarUsuario(
+      loginDto.usuario,
+      loginDto.password,
+    );
+
+    this.logger.log(`[SECURITY_AUDIT] Inicio de sesión exitoso por contingencia local: '${usuario.usuario}' (Rol: ${usuario.rol}, ID: ${usuario.id_usuario})`);
+
+    const payload: JwtPayload = {
+      sub: usuario.id_usuario,
+      usuario: usuario.usuario,
+      rol: usuario.rol,
+      nombre: usuario.nombre,
+    };
+
+    const accessToken = this.jwtService.sign(payload);
+
+    return {
+      accessToken,
+      usuario,
+    };
+  }
+}

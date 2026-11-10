@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { CreateDomicilioPayload, Domicilio, EstadoServicioDomicilio } from '../../models';
+import { CreateDomicilioPayload, Domicilio, Domiciliario, EstadoServicioDomicilio } from '../../models';
 
 @Injectable({
   providedIn: 'root',
@@ -49,8 +49,6 @@ export class DomiciliosApiService {
   obtenerMisPedidos(): Observable<Domicilio[]> {
     return this.http.get<Domicilio[]>(`${this.apiUrl}/mis-pedidos`);
   }
-
-
 
   /**
    * Cambia la etapa operativa de un domicilio ('Aceptar', 'En Preparación', 'En Reparto', 'Entregado', 'Cancelado').
@@ -125,5 +123,25 @@ export class DomiciliosApiService {
   ): Observable<Domicilio> {
     return this.http.patch<Domicilio>(`${this.apiUrl}/${id}`, payload);
   }
-}
 
+  /**
+   * Obtiene la lista de domiciliarios registrados operativamente en el sistema.
+   */
+  obtenerRepartidores(): Observable<Domiciliario[]> {
+    return this.http.get<Domiciliario[]>(`${this.apiUrl}/repartidores`);
+  }
+
+  /**
+   * Guarda o actualiza un domiciliario en el sistema.
+   */
+  guardarRepartidor(repartidor: Partial<Domiciliario>): Observable<Domiciliario[]> {
+    return this.http.post<Domiciliario[]>(`${this.apiUrl}/repartidores`, repartidor);
+  }
+
+  /**
+   * Elimina un domiciliario del sistema operativo.
+   */
+  eliminarRepartidor(id: string): Observable<Domiciliario[]> {
+    return this.http.delete<Domiciliario[]>(`${this.apiUrl}/repartidores/${id}`);
+  }
+}

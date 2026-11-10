@@ -3,7 +3,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { EstadoCaja, EstadoFactura, EstadoMesa, EstadoPedido, Prisma } from '@prisma/client';
-import { PrismaService } from '../src/prisma/prisma.service';
+import { PrismaService } from '../src/modules/prisma/prisma.service';
 import { FacturacionService } from '../src/modules/facturacion/facturacion.service';
 import { CajaService } from '../src/modules/caja/caja.service';
 
@@ -63,7 +63,7 @@ describe('🗄️ BATERÍA DE PRUEBAS DE INTEGRIDAD DE BASE DE DATOS Y BLINDAJE 
         id_mesa: 5,
         numero: 10,
         capacidad: 4,
-        estado: EstadoMesa.disponible,
+        estado: EstadoMesa.libre,
       });
 
       const mesaExistente = await mockPrisma.mesa.findUnique({ where: { numero: 10 } });
@@ -321,8 +321,8 @@ describe('🗄️ BATERÍA DE PRUEBAS DE INTEGRIDAD DE BASE DE DATOS Y BLINDAJE 
       });
 
       const cierre = await cajaService.cerrarCaja({
-        monto_cierre_real: 330000, // 100.000 base + 250.000 ventas - 20.000 gastos = 330.000 esperado
-        observaciones: 'Arqueo exacto sin descuadre',
+        valor_final_fisico: 330000, // 100.000 base + 250.000 ventas - 20.000 gastos = 330.000 esperado
+        observacion: 'Arqueo exacto sin descuadre',
       }, 1);
 
       expect(cierre).toBeDefined();

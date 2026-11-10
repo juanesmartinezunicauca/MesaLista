@@ -6,6 +6,7 @@ $brand-text: #1E293B;
 $brand-subtext: #64748B;
 $brand-border: #E2E8F0;
 $brand-success: #10B981;
+$brand-blue: #2563EB;
 $brand-bg: #F8FAFC;
 
 .cart-view-container {
@@ -550,6 +551,14 @@ $brand-bg: #F8FAFC;
           border-radius: 6px;
         }
 
+        .shipping-charge {
+          color: $brand-blue;
+          font-weight: 700;
+          background: #EFF6FF;
+          padding: 2px 8px;
+          border-radius: 6px;
+        }
+
         &.total-highlight {
           font-size: 1.05rem;
           font-weight: 800;
@@ -666,7 +675,8 @@ $brand-bg: #F8FAFC;
             color: #94A3B8;
           }
 
-          input {
+          input,
+          .native-zone-select {
             border: none;
             background: transparent;
             outline: none;
@@ -679,6 +689,17 @@ $brand-bg: #F8FAFC;
             }
           }
 
+          .native-zone-select {
+            cursor: pointer;
+            font-weight: 600;
+
+            option {
+              background: #ffffff;
+              color: #0f172a;
+              padding: 6px;
+            }
+          }
+
           &:focus-within {
             border-color: $brand-orange;
             background: #FFFFFF;
@@ -687,6 +708,22 @@ $brand-bg: #F8FAFC;
             mat-icon {
               color: $brand-orange;
             }
+          }
+        }
+
+        .zone-desc-hint {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 0.72rem;
+          color: #64748b;
+          margin-top: 2px;
+
+          mat-icon {
+            font-size: 14px;
+            width: 14px;
+            height: 14px;
+            color: #3b82f6;
           }
         }
       }

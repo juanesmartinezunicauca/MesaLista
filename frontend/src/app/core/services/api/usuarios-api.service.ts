@@ -14,6 +14,7 @@ export interface CreateUsuarioPayload {
   nombre: string;
   usuario?: string;
   email?: string;
+  correoEnvioCodigo?: string;
   password?: string;
   rol: RolUsuario;
   estado?: EstadoUsuario;
@@ -33,6 +34,14 @@ export interface RespuestaEliminarUsuario {
   tipo: 'soft-delete' | 'hard-delete';
   id_usuario: number;
   estado?: EstadoUsuario;
+}
+
+export interface RespuestaEnviarCodigo {
+  success: boolean;
+  mensaje: string;
+  destinatario: string;
+  guardadoEnBaseDeDatos: boolean;
+  transport?: string;
 }
 
 @Injectable({
@@ -61,10 +70,19 @@ export class UsuariosApiService {
   }
 
   /**
-   * Registra un nuevo empleado / usuario en el sistema
+   * Registra un nuevo empleado / colaborador en el sistema.
+   * Si se envía correoEnvioCodigo, el código será despachado por correo sin almacenarlo en BD.
    */
-  crear(payload: CreateUsuarioPayload): Observable<Usuario> {
-    return this.http.post<Usuario>(this.apiUrl, payload);
+  crear(payload: CreateUsuarioPayload): Observable<Usuario & { correoEnviado?: boolean; correoDestino?: string }> {
+    return this.http.post<Usuario & { correoEnviado?: boolean; correoDestino?: string }>(this.apiUrl, payload);
+  }
+
+  /**
+   * Despacha el código de registro a un correo electrónico temporal.
+   * IMPORTANTE: Este correo NO se persiste en la base de datos.
+   */
+  enviarCodigoPorCorreo(id: number, correoDestino: string): Observable<RespuestaEnviarCodigo> {
+    return this.http.post<RespuestaEnviarCodigo>(`${this.apiUrl}/${id}/enviar-codigo`, { correoDestino });
   }
 
   /**

@@ -8,9 +8,10 @@
       <h2>¡Colaborador Registrado!</h2>
       <p class="success-subtitle">
         Se ha creado la ficha de <strong>{{ usuarioRecienCreado()?.nombre }}</strong> (@{{ usuarioRecienCreado()?.usuario }}).
-        Entrega este código de vinculación único para su primer inicio de sesión con Google:
+        Entrega este código de vinculación para su primer inicio de sesión con Google:
       </p>
 
+      <!-- Caja destacada del código -->
       <div class="code-display-box">
         <span class="invitation-code-text">{{ invitacionGenerada() }}</span>
         <button type="button" mat-icon-button (click)="copiarCodigo()" class="btn-copy-code" aria-label="Copiar código">
@@ -21,8 +22,63 @@
         <span class="copy-success-hint">¡Código copiado al portapapeles!</span>
       }
 
+      <!-- Alerta si ya se despachó el correo automáticamente -->
+      @if (correoEnviadoExitoso()) {
+        <div class="email-dispatched-banner">
+          <mat-icon class="dispatched-icon">mark_email_read</mat-icon>
+          <div class="dispatched-content">
+            <span class="dispatched-title">Código enviado a: <strong>{{ correoEnviadoExitoso() }}</strong></span>
+            <span class="dispatched-note">🛡️ Garantía de privacidad: Este correo NO fue almacenado en la base de datos.</span>
+          </div>
+        </div>
+      }
+
+      <!-- Formulario interactivo para enviar o reenviar el código a un correo sin guardarlo -->
+      <div class="email-send-section">
+        <div class="send-section-header">
+          <mat-icon class="send-icon">forward_to_inbox</mat-icon>
+          <span class="send-title">{{ correoEnviadoExitoso() ? 'Reenviar código a otro correo' : 'Enviar código por correo electrónico' }}</span>
+        </div>
+        <p class="send-desc">
+          Ingresa el correo al que deseas hacer llegar este código. Por privacidad, este correo <strong>no se guardará</strong> en el sistema.
+        </p>
+
+        <div class="send-input-row">
+          <mat-form-field appearance="outline" class="flex-input" subscriptSizing="dynamic">
+            <mat-label>Correo de entrega (no se guarda)</mat-label>
+            <input
+              matInput
+              type="email"
+              [formControl]="correoReenvioControl"
+              placeholder="colaborador@correo.com"
+              (keydown.enter)="$event.preventDefault(); enviarCodigoPorCorreo()"
+            >
+            <mat-icon matPrefix>mail_outline</mat-icon>
+          </mat-form-field>
+
+          <button
+            type="button"
+            mat-flat-button
+            color="primary"
+            class="btn-send-mail"
+            (click)="enviarCodigoPorCorreo()"
+            [disabled]="enviandoCorreoManual() || correoReenvioControl.invalid"
+          >
+            <mat-icon>{{ enviandoCorreoManual() ? 'sync' : 'send' }}</mat-icon>
+            <span>{{ enviandoCorreoManual() ? 'Enviando...' : 'Enviar' }}</span>
+          </button>
+        </div>
+
+        @if (mensajeEnvioManual(); as msg) {
+          <div class="manual-feedback-alert" [class.feedback-success]="msg.tipo === 'exito'" [class.feedback-error]="msg.tipo === 'error'">
+            <mat-icon>{{ msg.tipo === 'exito' ? 'check_circle' : 'error_outline' }}</mat-icon>
+            <span>{{ msg.texto }}</span>
+          </div>
+        }
+      </div>
+
       <p class="privacy-note">
-        El colaborador ingresará este código en la pantalla de inicio de sesión y vinculará su cuenta de Google. Su correo personal permanecerá completamente privado y nunca será visible en comandas ni facturas.
+        El colaborador ingresará este código en la pantalla de inicio de sesión de MesaLista y vinculará su cuenta personal de Google.
       </p>
 
       <div class="success-dialog-actions">
@@ -68,7 +124,7 @@
           <div class="notice-body">
             <span class="notice-title">Enrolamiento Seguro por Código de Invitación</span>
             <p class="notice-desc">
-              Al guardar, el sistema generará un código único para que el colaborador vincule su cuenta de Google de forma privada, sin exponer su correo personal.
+              El colaborador vinculará su Google personal de forma privada. Si solicitas el envío del código por correo, <strong>dicho correo no se almacenará en la base de datos</strong>.
             </p>
           </div>
         </div>
@@ -136,56 +192,61 @@
             </mat-select>
           </mat-form-field>
 
-          <!-- 4. Correo Electrónico (Opcional) -->
-          <mat-form-field appearance="outline" class="w-full" subscriptSizing="dynamic">
-            <mat-label>Correo Electrónico (Opcional - Notificaciones)</mat-label>
-            <input
-              matInput
-              type="email"
-              formControlName="email"
-              placeholder="Opcional: colaborador@correo.com"
-              autocomplete="email"
-            >
-            <mat-icon matPrefix>mail</mat-icon>
-            @if (tieneError('email', 'email')) {
-              <mat-error>Ingresa un formato de correo válido.</mat-error>
-            }
-          </mat-form-field>
+          <!-- 4. Correo de Entrega del Código (Creación) O Correo Electrónico (Edición) -->
+          @if (!esEdicion()) {
+            <mat-form-field appearance="outline" class="w-full" subscriptSizing="dynamic">
+              <mat-label>Correo para Enviar Código de Registro (Opcional)</mat-label>
+              <input
+                matInput
+                type="email"
+                formControlName="correoEnvioCodigo"
+                placeholder="colaborador@correo.com"
+                autocomplete="email"
+              >
+              <mat-icon matPrefix>forward_to_inbox</mat-icon>
+              <mat-hint>🛡️ Se usa únicamente para despachar el código. NO se guarda en la base de datos.</mat-hint>
+              @if (tieneError('correoEnvioCodigo', 'email')) {
+                <mat-error>El correo electrónico no es válido.</mat-error>
+              }
+            </mat-form-field>
+          } @else {
+            <mat-form-field appearance="outline" class="w-full" subscriptSizing="dynamic">
+              <mat-label>Correo Electrónico (Cuentas Registradas)</mat-label>
+              <input
+                matInput
+                type="email"
+                formControlName="email"
+                placeholder="colaborador@correo.com"
+                autocomplete="email"
+              >
+              <mat-icon matPrefix>mail</mat-icon>
+              @if (tieneError('email', 'email')) {
+                <mat-error>El correo electrónico no es válido.</mat-error>
+              }
+            </mat-form-field>
+          }
 
           <!-- 5. Estado Activo / Inactivo -->
-          <div class="status-toggle-card">
+          <div class="toggle-container">
             <div class="toggle-info">
-              <span class="toggle-title">Estado de la cuenta</span>
+              <span class="toggle-title">Estado de la Cuenta</span>
               <span class="toggle-desc">
-                {{ usuarioForm.get('estado')?.value ? 'El colaborador puede operar en el sistema POS' : 'Acceso deshabilitado temporalmente' }}
+                {{ usuarioForm.get('estado')?.value ? 'Permite el acceso y autenticación al sistema' : 'Bloquea temporalmente el acceso del colaborador' }}
               </span>
             </div>
-            <mat-slide-toggle formControlName="estado" color="primary">
-              <span class="status-pill" [class.pill-active]="usuarioForm.get('estado')?.value">
-                {{ usuarioForm.get('estado')?.value ? 'Activo' : 'Inactivo' }}
-              </span>
-            </mat-slide-toggle>
+            <mat-slide-toggle formControlName="estado" color="primary"></mat-slide-toggle>
           </div>
         </div>
       </mat-dialog-content>
 
       <!-- Acciones del Modal -->
-      <mat-dialog-actions align="end" class="dialog-actions">
-        <button type="button" mat-button (click)="cerrar()" [disabled]="guardando()">
+      <mat-dialog-actions class="dialog-actions">
+        <button type="button" mat-stroked-button (click)="cerrar()" [disabled]="guardando()">
           Cancelar
         </button>
-        <button
-          type="submit"
-          mat-flat-button
-          color="primary"
-          class="btn-confirm"
-          [disabled]="guardando() || usuarioForm.invalid"
-        >
-          @if (guardando()) {
-            <span>Guardando...</span>
-          } @else {
-            <span>{{ esEdicion() ? 'Guardar Cambios' : 'Registrar Colaborador' }}</span>
-          }
+        <button type="submit" mat-flat-button color="primary" [disabled]="guardando() || usuarioForm.invalid">
+          <mat-icon>{{ guardando() ? 'sync' : (esEdicion() ? 'save' : 'vpn_key') }}</mat-icon>
+          <span>{{ guardando() ? 'Guardando...' : (esEdicion() ? 'Actualizar' : 'Registrar y Generar Código') }}</span>
         </button>
       </mat-dialog-actions>
     </form>

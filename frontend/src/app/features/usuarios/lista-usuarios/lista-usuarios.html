@@ -165,6 +165,14 @@
             }
           </div>
           <span class="user-username">&#64;{{ usuario.usuario }}</span>
+
+          @if (usuario.codigoInvitacion) {
+          <div class="pending-code-badge" matTooltip="Código generado. Haz clic para enviar a un correo efímero" (click)="enviarCodigoPorCorreo(usuario)">
+            <mat-icon class="badge-key-icon">vpn_key</mat-icon>
+            <span class="badge-code-text">{{ usuario.codigoInvitacion }}</span>
+            <mat-icon class="badge-send-icon">forward_to_inbox</mat-icon>
+          </div>
+          }
         </div>
 
         <button type="button" mat-icon-button [matMenuTriggerFor]="cardMenu" class="btn-card-menu"
@@ -173,6 +181,13 @@
         </button>
 
         <mat-menu #cardMenu="matMenu">
+          @if (usuario.codigoInvitacion) {
+          <button type="button" mat-menu-item (click)="enviarCodigoPorCorreo(usuario)">
+            <mat-icon>forward_to_inbox</mat-icon>
+            <span>Enviar código por correo</span>
+          </button>
+          <mat-divider></mat-divider>
+          }
           <button type="button" mat-menu-item (click)="abrirDialogoEditar(usuario)">
             <mat-icon>edit</mat-icon>
             <span>Editar datos</span>

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -15,7 +15,11 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { CarritoService, CartItem } from '../../../core/services/carrito/carrito.service';
 import { DomiciliosApiService } from '../../../core/services/api/domicilios-api.service';
 import { AuthService } from '../../../core/services/auth/auth.service';
-import { CreateDomicilioPayload } from '../../../core/models/domicilio.model';
+import {
+  CreateDomicilioPayload,
+  ZONAS_DOMICILIO_POPAYAN,
+  ZonaTarifaPopayan,
+} from '../../../core/models/domicilio.model';
 
 @Component({
   selector: 'app-vista-carrito',
@@ -56,6 +60,19 @@ export class VistaCarritoComponent implements OnInit {
   referenciaUbicacion = signal<string>('');
   observaciones = signal<string>('');
   metodoPago = signal<'Efectivo' | 'Transferencia'>('Efectivo');
+
+  // Zonificación de Popayán para tarifas de domicilio
+  readonly zonasPopayan = ZONAS_DOMICILIO_POPAYAN;
+  zonaSeleccionada = signal<ZonaTarifaPopayan>(this.zonasPopayan[0]);
+  costoEnvio = computed<number>(() => this.zonaSeleccionada().tarifa);
+  totalConEnvio = computed<number>(() => this.carritoService.totalPrecio() + this.costoEnvio());
+
+  cambiarZona(zonaId: string): void {
+    const found = this.zonasPopayan.find((z) => z.id === zonaId);
+    if (found) {
+      this.zonaSeleccionada.set(found);
+    }
+  }
 
   // Estado del envío
   enviandoPedido = signal<boolean>(false);
@@ -210,8 +227,10 @@ export class VistaCarritoComponent implements OnInit {
       observacion: it.observacion,
     }));
 
-    // Combinar dirección y referencia
-    let direccionCompleta = dir;
+    const zona = this.zonaSeleccionada();
+
+    // Combinar dirección, zona y referencia
+    let direccionCompleta = `${dir} [${zona.nombre.split(':')[0]}]`;
     if (this.referenciaUbicacion().trim()) {
       direccionCompleta += ` (${this.referenciaUbicacion().trim()})`;
     }
@@ -226,6 +245,8 @@ export class VistaCarritoComponent implements OnInit {
       items: itemsPayload,
       observacion: this.observaciones().trim() || undefined,
       metodo_pago: this.metodoPago(),
+      costo_envio: this.costoEnvio(),
+      zona_entrega: zona.nombre,
     };
 
     this.enviandoPedido.set(true);
@@ -237,7 +258,7 @@ export class VistaCarritoComponent implements OnInit {
           ? `DOM-${domicilioCreado.numero_pedido}`
           : 'CONFIRMADO';
 
-        const totalCalculado = this.carritoService.totalPrecio();
+        const totalCalculado = Number(domicilioCreado?.totalCalculado || this.totalConEnvio());
 
         // Guardar para seguimiento en tiempo real
         try {
@@ -282,8 +303,8 @@ export class VistaCarritoComponent implements OnInit {
 
   generarUrlWhatsApp(codigo?: string): string {
     const cod = codigo || 'PEDIDO';
-    const total = this.carritoService.totalPrecio();
-    const texto = `Hola Luigie's Restaurante, adjunto mi comprobante de transferencia para el pedido #${cod} por valor de $${total.toLocaleString('es-CO')} COP.`;
+    const total = this.totalConEnvio();
+    const texto = `Hola Luigie's Restaurante, adjunto mi comprobante de transferencia para el pedido #${cod} por valor de $${total.toLocaleString('es-CO')} COP (incluye envío de $${this.costoEnvio().toLocaleString('es-CO')} COP para ${this.zonaSeleccionada().nombre}).`;
     return `https://wa.me/${this.WHATSAPP_NUMERO_CLEAN}?text=${encodeURIComponent(texto)}`;
   }
 }

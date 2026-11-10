@@ -150,6 +150,14 @@
     align-items: center;
     font-size: 0.875rem;
     color: $text-secondary;
+
+    &.envio-fila {
+      color: $brand-blue;
+      font-weight: 600;
+      background: #eff6ff;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
   }
 
   .propina-toggle {

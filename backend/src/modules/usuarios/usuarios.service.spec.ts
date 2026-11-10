@@ -1,44 +1,65 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as argon2 from 'argon2';
+import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EstadoUsuario, RolUsuario } from './dto';
 import { UsuariosService } from './usuarios.service';
 
 describe('UsuariosService', () => {
   let service: UsuariosService;
-  let prisma: {
+  let module: TestingModule;
+  const prisma = {
     usuario: {
-      findUnique: jest.Mock;
-      findMany: jest.Mock;
-      create: jest.Mock;
-      update: jest.Mock;
-      delete: jest.Mock;
-    };
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+  };
+  const mockMailService = {
+    enviarCodigoInvitacion: jest.fn(),
   };
 
-  beforeEach(async () => {
-    prisma = {
-      usuario: {
-        findUnique: jest.fn(),
-        findMany: jest.fn(),
-        create: jest.fn(),
-        update: jest.fn(),
-        delete: jest.fn(),
-      },
-    };
-
-    const module: TestingModule = await Test.createTestingModule({
+  beforeAll(async () => {
+    module = await Test.createTestingModule({
       providers: [
         UsuariosService,
         {
           provide: PrismaService,
           useValue: prisma,
         },
+        {
+          provide: MailService,
+          useValue: mockMailService,
+        },
       ],
     }).compile();
 
     service = module.get<UsuariosService>(UsuariosService);
+  });
+
+  afterAll(async () => {
+    if (module) {
+      await module.close();
+    }
+  });
+
+  beforeEach(() => {
+    prisma.usuario.findUnique.mockReset();
+    prisma.usuario.findMany.mockReset();
+    prisma.usuario.create.mockReset();
+    prisma.usuario.update.mockReset();
+    prisma.usuario.delete.mockReset();
+    mockMailService.enviarCodigoInvitacion.mockReset();
+
+    prisma.usuario.findUnique.mockResolvedValue(null);
+    mockMailService.enviarCodigoInvitacion.mockResolvedValue({
+      enviado: true,
+      transport: 'simulado',
+      destinatario: 'test@correo.com',
+    });
   });
 
   it('debe estar definido', () => {
@@ -68,7 +89,7 @@ describe('UsuariosService', () => {
       });
 
       expect(prisma.usuario.findUnique).toHaveBeenCalledWith({
-        where: { email: 'cmesero@unicauca.edu.co' },
+        where: { usuario: 'cmesero' },
       });
       expect(prisma.usuario.create).toHaveBeenCalled();
       const createArgs = prisma.usuario.create.mock.calls[0][0];
@@ -83,7 +104,7 @@ describe('UsuariosService', () => {
       );
       expect(esValido).toBe(true);
 
-      expect(resultado).toEqual(mockCreado);
+      expect(resultado).toMatchObject(mockCreado);
     });
 
     it('debe crear un empleado pre-autorizado para Google OAuth sin contraseña (passwordHash en null)', async () => {
@@ -93,7 +114,7 @@ describe('UsuariosService', () => {
         id_usuario: 2,
         nombre: 'Ana Cajera',
         usuario: 'anacajera',
-        email: 'ana@unicauca.edu.co',
+        email: null,
         rol: RolUsuario.cajero,
         estado: EstadoUsuario.activo,
       };
@@ -108,12 +129,49 @@ describe('UsuariosService', () => {
 
       expect(prisma.usuario.create).toHaveBeenCalled();
       const createArgs = prisma.usuario.create.mock.calls[0][0];
-      expect(createArgs.data.email).toBe('ana@unicauca.edu.co');
+      expect(createArgs.data.email).toBeNull();
       expect(createArgs.data.passwordHash).toBeNull();
-      expect(resultado).toEqual(mockCreado);
+      expect(resultado).toMatchObject(mockCreado);
     });
 
-    it('debe lanzar ConflictException si el correo electrónico ya existe', async () => {
+    it('debe enviar el código de registro al correo efímero sin guardarlo en la base de datos (email en null)', async () => {
+      prisma.usuario.findUnique.mockResolvedValue(null);
+
+      const mockCreado = {
+        id_usuario: 3,
+        nombre: 'Mateo Mesero',
+        usuario: 'mateomesero',
+        email: null,
+        codigoInvitacion: 'INV-789123',
+        rol: RolUsuario.mesero,
+        estado: EstadoUsuario.activo,
+      };
+
+      prisma.usuario.create.mockResolvedValue(mockCreado);
+
+      const resultado = await service.crear({
+        nombre: 'Mateo Mesero',
+        correoEnvioCodigo: 'mateo_personal@gmail.com',
+        rol: RolUsuario.mesero,
+      });
+
+      // El correo para despacho se envía vía MailService
+      expect(mockMailService.enviarCodigoInvitacion).toHaveBeenCalledWith(
+        'mateo_personal@gmail.com',
+        expect.objectContaining({
+          nombre: 'Mateo Mesero',
+          codigo: expect.stringMatching(/^INV-\d{6}$/),
+        }),
+      );
+
+      // Verificación estricta: ¡El correo de envío NO se guarda en la base de datos!
+      const createArgs = prisma.usuario.create.mock.calls[0][0];
+      expect(createArgs.data.email).toBeNull();
+      expect(resultado.guardadoEnBaseDeDatos).toBe(false);
+      expect(resultado.correoEnviado).toBe(true);
+    });
+
+    it('debe lanzar ConflictException si el correo electrónico ya existe (cliente)', async () => {
       prisma.usuario.findUnique.mockResolvedValue({
         id_usuario: 2,
         email: 'yaexiste@unicauca.edu.co',
@@ -121,11 +179,53 @@ describe('UsuariosService', () => {
 
       await expect(
         service.crear({
-          nombre: 'Juan Admin',
+          nombre: 'Juan Cliente',
           email: 'yaexiste@unicauca.edu.co',
+          rol: RolUsuario.cliente,
+        }),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('debe lanzar ConflictException si el nombre de usuario ya existe', async () => {
+      prisma.usuario.findUnique.mockResolvedValue({
+        id_usuario: 2,
+        usuario: 'juanadmin',
+      });
+
+      await expect(
+        service.crear({
+          nombre: 'Juan Admin',
+          usuario: 'juanadmin',
           rol: RolUsuario.administrador,
         }),
       ).rejects.toThrow(ConflictException);
+    });
+  });
+
+  describe('enviarCodigoPorCorreo', () => {
+    it('debe despachar el código por correo sin almacenar el destinatario en BD', async () => {
+      prisma.usuario.findUnique.mockResolvedValue({
+        id_usuario: 10,
+        nombre: 'Lucía Cocina',
+        rol: RolUsuario.cocina,
+        codigoInvitacion: 'INV-445566',
+      });
+
+      const res = await service.enviarCodigoPorCorreo(10, 'lucia_destino@yahoo.com');
+
+      expect(mockMailService.enviarCodigoInvitacion).toHaveBeenCalledWith(
+        'lucia_destino@yahoo.com',
+        {
+          nombre: 'Lucía Cocina',
+          rol: RolUsuario.cocina,
+          codigo: 'INV-445566',
+        },
+      );
+      expect(res.success).toBe(true);
+      expect(res.guardadoEnBaseDeDatos).toBe(false);
+      expect(res.destinatario).toBe('lucia_destino@yahoo.com');
+      // No debe llamar a update en usuario para guardar el correo
+      expect(prisma.usuario.update).not.toHaveBeenCalled();
     });
   });
 
@@ -153,10 +253,9 @@ describe('UsuariosService', () => {
 
   describe('actualizar', () => {
     it('debe lanzar ConflictException si el nuevo usuario ya pertenece a otro id', async () => {
-      // Existente actual
       prisma.usuario.findUnique
-        .mockResolvedValueOnce({ id_usuario: 1, usuario: 'actual' }) // en obtenerPorId
-        .mockResolvedValueOnce({ id_usuario: 2, usuario: 'en_uso' }); // en colision check
+        .mockResolvedValueOnce({ id_usuario: 1, usuario: 'actual' })
+        .mockResolvedValueOnce({ id_usuario: 2, usuario: 'en_uso' });
 
       await expect(
         service.actualizar(1, { usuario: 'en_uso' }),
@@ -195,7 +294,7 @@ describe('UsuariosService', () => {
   describe('eliminar', () => {
     it('debe realizar borrado lógico (inactivo) si tiene historial operativo', async () => {
       prisma.usuario.findUnique
-        .mockResolvedValueOnce({ id_usuario: 1, usuario: 'carlos' }) // obtenerPorId
+        .mockResolvedValueOnce({ id_usuario: 1, usuario: 'carlos' })
         .mockResolvedValueOnce({
           id_usuario: 1,
           _count: {
@@ -206,7 +305,7 @@ describe('UsuariosService', () => {
             gastos: 0,
             ajustesInventario: 0,
           },
-        }); // findUnique include _count
+        });
 
       prisma.usuario.update.mockResolvedValue({
         id_usuario: 1,

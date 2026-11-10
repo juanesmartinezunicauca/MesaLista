@@ -27,7 +27,7 @@ import { DomiciliosService } from './domicilios.service';
 @Controller('domicilios')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class DomiciliosController {
-  constructor(private readonly domiciliosService: DomiciliosService) {}
+  constructor(private readonly domiciliosService: DomiciliosService) { }
 
   /**
    * GET /api/v1/domicilios/estado-servicio
@@ -50,6 +50,38 @@ export class DomiciliosController {
   }
 
   /**
+   * GET /api/v1/domicilios/repartidores
+   * Lista los repartidores operativos registrados en el sistema (sin credenciales ni login).
+   */
+  @Get('repartidores')
+  @Roles(RolUsuario.administrador, RolUsuario.cajero, RolUsuario.mesero)
+  obtenerRepartidores() {
+    return this.domiciliosService.obtenerRepartidores();
+  }
+
+  /**
+   * POST /api/v1/domicilios/repartidores
+   * Guarda o actualiza un repartidor en el directorio operativo.
+   */
+  @Post('repartidores')
+  @Roles(RolUsuario.administrador, RolUsuario.cajero)
+  guardarRepartidor(
+    @Body() body: { id?: string; nombre: string; telefono: string; vehiculo?: string; activo?: boolean },
+  ) {
+    return this.domiciliosService.guardarRepartidor(body);
+  }
+
+  /**
+   * DELETE /api/v1/domicilios/repartidores/:id
+   * Elimina un repartidor del directorio operativo.
+   */
+  @Delete('repartidores/:id')
+  @Roles(RolUsuario.administrador, RolUsuario.cajero)
+  eliminarRepartidor(@Param('id') id: string) {
+    return this.domiciliosService.eliminarRepartidor(id);
+  }
+
+  /**
    * POST /api/v1/domicilios
    * Registra un nuevo pedido a domicilio con cliente, productos y congelamiento de precios.
    */
@@ -67,7 +99,6 @@ export class DomiciliosController {
   ) {
     return this.domiciliosService.crear(createDto, id_usuario);
   }
-
 
   /**
    * GET /api/v1/domicilios
