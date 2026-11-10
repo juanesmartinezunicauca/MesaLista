@@ -596,8 +596,9 @@
         <!-- Campos de Entrega del Restaurante -->
         <div class="form-fields-container">
           <div class="field-item">
-            <label class="field-label">Nombre Completo *</label>
+            <label class="field-label" for="clienteModalNombre">Nombre Completo *</label>
             <input
+              id="clienteModalNombre"
               type="text"
               class="field-input"
               placeholder="Ej. Juan Pérez"
@@ -607,8 +608,9 @@
           </div>
 
           <div class="field-item">
-            <label class="field-label">Teléfono o Celular de Contacto *</label>
+            <label class="field-label" for="clienteModalTel">Teléfono o Celular de Contacto *</label>
             <input
+              id="clienteModalTel"
               type="tel"
               class="field-input"
               placeholder="Ej. 310 123 4567 (para coordinar con el repartidor)"
@@ -618,8 +620,9 @@
           </div>
 
           <div class="field-item">
-            <label class="field-label">Dirección de Entrega *</label>
+            <label class="field-label" for="clienteModalDir">Dirección de Entrega *</label>
             <input
+              id="clienteModalDir"
               type="text"
               class="field-input"
               placeholder="Ej. Calle 15 # 8-42, Barrio Bolívar"
@@ -629,8 +632,9 @@
           </div>
 
           <div class="field-item">
-            <label class="field-label">Zona de Entrega en Popayán *</label>
+            <label class="field-label" for="zonaEntregaCliente">Zona de Entrega en Popayán *</label>
             <select
+              id="zonaEntregaCliente"
               class="field-input zone-select"
               [value]="zonaSeleccionada().id"
               (change)="cambiarZona($any($event.target).value)"
@@ -645,8 +649,9 @@
           </div>
 
           <div class="field-item">
-            <label class="field-label">Apartamento / Casa / Punto de Referencia</label>
+            <label class="field-label" for="clienteModalRef">Apartamento / Casa / Punto de Referencia</label>
             <input
+              id="clienteModalRef"
               type="text"
               class="field-input"
               placeholder="Ej. Apto 302, timbre blanco, casa frente al parque"
@@ -656,8 +661,9 @@
           </div>
 
           <div class="field-item">
-            <label class="field-label">Indicaciones o Notas para la Cocina (Opcional)</label>
+            <label class="field-label" for="clienteModalNotas">Indicaciones o Notas para la Cocina (Opcional)</label>
             <input
+              id="clienteModalNotas"
               type="text"
               class="field-input"
               maxlength="255"

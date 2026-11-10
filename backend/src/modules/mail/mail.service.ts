@@ -344,9 +344,12 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
     const from =
       this.configService.get<string>('SMTP_FROM') || 'MesaLista POS <no-reply@mesalista.local>';
 
+    const matchFrom = from.match(/<([^>]+)>/);
+    const senderEmail = (matchFrom ? matchFrom[1] : from).trim();
+
     return new Promise<void>((resolve, reject) => {
       const socket = (port === 465)
-        ? tls.connect({ host, port, rejectUnauthorized: false })
+        ? tls.connect({ host, port, rejectUnauthorized: true })
         : net.createConnection({ host, port });
 
       let buffer = '';
@@ -371,8 +374,8 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
         buffer = lines.pop() || '';
 
         for (const line of lines) {
-          const code = parseInt(line.substring(0, 3), 10);
-          if (isNaN(code)) continue;
+          const code = Number.parseInt(line.substring(0, 3), 10);
+          if (Number.isNaN(code)) continue;
 
           if (step === 0 && (code === 220)) {
             step = 1;
@@ -383,7 +386,7 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
               send(`AUTH LOGIN`);
             } else {
               step = 4;
-              send(`MAIL FROM:<${from.replace(/.*<([^>]+)>.*/, '$1')}>`);
+              send(`MAIL FROM:<${senderEmail}>`);
             }
           } else if (step === 2 && (code === 334)) {
             step = 3;
@@ -393,7 +396,7 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
             send(Buffer.from(pass!).toString('base64'));
           } else if (step === 4 && (code === 235 || code === 250)) {
             step = 5;
-            send(`MAIL FROM:<${from.replace(/.*<([^>]+)>.*/, '$1')}>`);
+            send(`MAIL FROM:<${senderEmail}>`);
           } else if (step === 5 && code === 250) {
             step = 6;
             send(`RCPT TO:<${destinatario}>`);

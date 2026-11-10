@@ -118,10 +118,11 @@
       @if (modoSeleccion() === 'manual') {
         <div class="manual-inputs-box">
           <div class="field-item">
-            <label>Nombre del Domiciliario *</label>
+            <label for="nombreRepartidorManual">Nombre del Domiciliario *</label>
             <div class="input-wrapper">
               <mat-icon>person</mat-icon>
               <input
+                id="nombreRepartidorManual"
                 type="text"
                 placeholder="Ej. Juan Pérez"
                 [value]="nombreManual()"
@@ -131,10 +132,11 @@
           </div>
 
           <div class="field-item">
-            <label>Teléfono de Contacto (Opcional)</label>
+            <label for="telefonoRepartidorManual">Teléfono de Contacto (Opcional)</label>
             <div class="input-wrapper">
               <mat-icon>call</mat-icon>
               <input
+                id="telefonoRepartidorManual"
                 type="tel"
                 placeholder="Ej. 312 000 0000"
                 [value]="telefonoManual()"

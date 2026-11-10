@@ -547,13 +547,13 @@ export class DomiciliosService {
 
     // Preservar la forma de pago original del cliente y costo de envío / zona
     const rawObs = (pedido as any).observacion_raw || pedido.observacion || '';
-    const matchPagoRaw = rawObs.match(/\[PAGO:\s*([^\]]+)\]/i);
+    const matchPagoRaw = rawObs.match(/\[PAGO:([^\]]+)\]/i);
     const tagPago = matchPagoRaw ? `[PAGO: ${matchPagoRaw[1].trim()}]` : '';
 
-    const matchEnvioRaw = rawObs.match(/\[ENVIO:\s*\$?(\d+)\]/i);
-    const tagEnvio = matchEnvioRaw ? `[ENVIO: ${matchEnvioRaw[1].trim()}]` : '';
+    const matchEnvioRaw = rawObs.match(/\[ENVIO:([^\]]+)\]/i);
+    const tagEnvio = matchEnvioRaw ? `[ENVIO: ${matchEnvioRaw[1].trim().replace(/^\$/, '')}]` : '';
 
-    const matchZonaRaw = rawObs.match(/\[ZONA:\s*([^\]]+)\]/i);
+    const matchZonaRaw = rawObs.match(/\[ZONA:([^\]]+)\]/i);
     const tagZona = matchZonaRaw ? `[ZONA: ${matchZonaRaw[1].trim()}]` : '';
 
     const tags: string[] = [];
@@ -640,13 +640,13 @@ export class DomiciliosService {
         .replace(/\[ZONA:[^\]]+\]/gi, '')
         .trim();
       const rawObs = (pedido as any).observacion_raw || pedido.observacion || '';
-      const matchPagoRaw = rawObs.match(/\[PAGO:\s*([^\]]+)\]/i);
+      const matchPagoRaw = rawObs.match(/\[PAGO:([^\]]+)\]/i);
       const tagPago = matchPagoRaw ? `[PAGO: ${matchPagoRaw[1].trim()}]` : '';
 
-      const matchEnvioRaw = rawObs.match(/\[ENVIO:\s*\$?(\d+)\]/i);
-      const tagEnvio = matchEnvioRaw ? `[ENVIO: ${matchEnvioRaw[1].trim()}]` : '';
+      const matchEnvioRaw = rawObs.match(/\[ENVIO:([^\]]+)\]/i);
+      const tagEnvio = matchEnvioRaw ? `[ENVIO: ${matchEnvioRaw[1].trim().replace(/^\$/, '')}]` : '';
 
-      const matchZonaRaw = rawObs.match(/\[ZONA:\s*([^\]]+)\]/i);
+      const matchZonaRaw = rawObs.match(/\[ZONA:([^\]]+)\]/i);
       const tagZona = matchZonaRaw ? `[ZONA: ${matchZonaRaw[1].trim()}]` : '';
 
       let observacionFinal = [notaCancelado, tagPago, tagEnvio, tagZona, observacionLimpia].filter(Boolean).join(' ').trim();
@@ -698,14 +698,15 @@ export class DomiciliosService {
 
     let repartidor: { nombre: string; telefono: string } | null = null;
     if (pedido.observacion) {
-      const match = pedido.observacion.match(
-        /\[REPARTIDOR:\s*([^|\]]+?)(?:\s*\|\s*TEL:\s*([^\]]+))?\]/i,
-      );
+      const match = pedido.observacion.match(/\[REPARTIDOR:\s*([^\]]+)\]/i);
       if (match) {
-        repartidor = {
-          nombre: match[1]?.trim() || '',
-          telefono: match[2]?.trim() || '',
-        };
+        const partes = match[1].split('|');
+        const nombre = partes[0]?.trim() || '';
+        let telefono = '';
+        if (partes[1]) {
+          telefono = partes[1].replace(/TEL:\s*/i, '').trim();
+        }
+        repartidor = { nombre, telefono };
       }
     }
 
@@ -713,7 +714,7 @@ export class DomiciliosService {
     if (pedido.factura?.pagos && pedido.factura.pagos.length > 0) {
       metodo_pago = pedido.factura.pagos[0].medioPago?.nombre || 'Efectivo';
     } else if (pedido.observacion) {
-      const matchPago = pedido.observacion.match(/\[PAGO:\s*([^\]]+)\]/i);
+      const matchPago = pedido.observacion.match(/\[PAGO:([^\]]+)\]/i);
       if (matchPago) {
         metodo_pago = matchPago[1].trim();
       }
@@ -732,11 +733,12 @@ export class DomiciliosService {
     let costo_envio = 0;
     let zona_nombre: string | null = null;
     if (pedido.observacion) {
-      const matchEnvio = pedido.observacion.match(/\[ENVIO:\s*\$?(\d+)\]/i);
+      const matchEnvio = pedido.observacion.match(/\[ENVIO:([^\]]+)\]/i);
       if (matchEnvio) {
-        costo_envio = parseInt(matchEnvio[1], 10);
+        const digitos = matchEnvio[1].replace(/\D/g, '');
+        costo_envio = digitos ? Number.parseInt(digitos, 10) : 0;
       }
-      const matchZona = pedido.observacion.match(/\[ZONA:\s*([^\]]+)\]/i);
+      const matchZona = pedido.observacion.match(/\[ZONA:([^\]]+)\]/i);
       if (matchZona) {
         zona_nombre = matchZona[1].trim();
       }

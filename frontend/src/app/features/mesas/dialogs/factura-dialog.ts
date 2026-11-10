@@ -46,8 +46,8 @@ export class FacturaDialogComponent {
       const raw = (
         p.metodo_pago ||
         p.factura?.pagos?.[0]?.medioPago?.nombre ||
-        p.observacion_raw?.match(/\[PAGO:\s*([^\]]+)\]/i)?.[1] ||
-        p.observacion?.match(/\[PAGO:\s*([^\]]+)\]/i)?.[1] ||
+        p.observacion_raw?.match(/\[PAGO:([^\]]+)\]/i)?.[1]?.trim() ||
+        p.observacion?.match(/\[PAGO:([^\]]+)\]/i)?.[1]?.trim() ||
         'efectivo'
       ).toLowerCase();
 
@@ -83,8 +83,10 @@ export class FacturaDialogComponent {
     const p = this.data.pedido;
     if (p.costo_envio !== undefined && p.costo_envio !== null) return Number(p.costo_envio);
     const raw = p.observacion_raw || p.observacion || '';
-    const match = raw.match(/\[ENVIO:\s*\$?(\d+)\]/i);
-    return match ? parseInt(match[1], 10) : 0;
+    const match = raw.match(/\[ENVIO:([^\]]+)\]/i);
+    if (!match) return 0;
+    const digitos = match[1].replace(/\D/g, '');
+    return digitos ? Number.parseInt(digitos, 10) : 0;
   });
 
   zonaNombre = computed<string>(() => {
@@ -92,7 +94,7 @@ export class FacturaDialogComponent {
     const p = this.data.pedido;
     if (p.zona_nombre) return p.zona_nombre;
     const raw = p.observacion_raw || p.observacion || '';
-    const match = raw.match(/\[ZONA:\s*([^\]]+)\]/i);
+    const match = raw.match(/\[ZONA:([^\]]+)\]/i);
     return match ? match[1].trim() : '';
   });
 

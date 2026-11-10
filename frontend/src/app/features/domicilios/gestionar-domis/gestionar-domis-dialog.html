@@ -25,10 +25,11 @@
 
     <div class="form-grid">
       <div class="field-item">
-        <label>Nombre Completo *</label>
+        <label for="nombreDomiInput">Nombre Completo *</label>
         <div class="input-wrapper">
           <mat-icon>person</mat-icon>
           <input
+            id="nombreDomiInput"
             type="text"
             placeholder="Ej. Carlos Rodríguez"
             [value]="nombre()"
@@ -39,10 +40,11 @@
       </div>
 
       <div class="field-item">
-        <label>Teléfono / Celular *</label>
+        <label for="telefonoDomiInput">Teléfono / Celular *</label>
         <div class="input-wrapper">
           <mat-icon>phone</mat-icon>
           <input
+            id="telefonoDomiInput"
             type="tel"
             placeholder="Ej. 314 567 8901"
             [value]="telefono()"
@@ -53,10 +55,11 @@
       </div>
 
       <div class="field-item">
-        <label>Vehículo / Placa (Opcional)</label>
+        <label for="vehiculoDomiInput">Vehículo / Placa (Opcional)</label>
         <div class="input-wrapper">
           <mat-icon>two_wheeler</mat-icon>
           <input
+            id="vehiculoDomiInput"
             type="text"
             placeholder="Ej. Moto Suzuki AX - ABC-12D"
             [value]="vehiculo()"

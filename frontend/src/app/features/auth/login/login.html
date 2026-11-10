@@ -82,7 +82,7 @@
         @if (modo() === 'registro') {
           <div class="code-activation-card">
             <div class="code-card-header">
-              <label class="code-label">CÓDIGO DE INVITACIÓN</label>
+              <label class="code-label" for="codigoInvitacionInput">CÓDIGO DE INVITACIÓN</label>
               @if (codigoInvitacion()) {
                 <span class="badge-code-ready">
                   <mat-icon>check_circle</mat-icon>
@@ -96,6 +96,7 @@
                 <mat-icon>vpn_key</mat-icon>
               </div>
               <input
+                id="codigoInvitacionInput"
                 type="text"
                 class="code-input"
                 [value]="codigoInvitacion()"
