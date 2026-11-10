@@ -403,17 +403,23 @@ export class MailService {
   }
 
   /**
-   * Sanitiza texto plano eliminando etiquetas HTML y delimitadores
+   * Sanitiza texto plano eliminando etiquetas HTML y delimitadores sin usar regex (cero backtracking)
    */
   private limpiarTextoPlano(str: string): string {
     if (!str) return '';
-    let anterior = '';
-    let limpio = str;
-    while (limpio !== anterior) {
-      anterior = limpio;
-      limpio = limpio.replace(/<[^>]*>/g, '');
+    let resultado = '';
+    let dentroDeEtiqueta = false;
+    for (let i = 0; i < str.length; i++) {
+      const char = str[i];
+      if (char === '<') {
+        dentroDeEtiqueta = true;
+      } else if (char === '>') {
+        dentroDeEtiqueta = false;
+      } else if (!dentroDeEtiqueta) {
+        resultado += char;
+      }
     }
-    return limpio.replace(/[<>]/g, '');
+    return resultado.trim();
   }
 
   /**
