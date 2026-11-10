@@ -121,3 +121,4 @@ Time:        5.985 s
 > [!TIP]
 > **Conclusión Operativa:**  
 > La inquietud del usuario era completamente acertada: las pruebas puramente mockeadas ocultan los límites del hardware y del motor SQL. Con la identificación de `P2020`, `P2000` y las condiciones de carrera de inventario, el sistema dio el salto de un testing "idealista" a un **blindaje defensivo real contra desbordamientos y concurrencia**.
+

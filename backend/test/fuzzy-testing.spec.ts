@@ -303,7 +303,7 @@ describe('🔬 BATERÍA DE PRUEBAS FUZZY Y RESILIENCIA DE SISTEMA (FUZZ TESTING 
         usuario: {
           findFirst: jest.fn(),
           findUnique: jest.fn(),
-          updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
           update: jest.fn(),
         },
       };
@@ -354,7 +354,9 @@ describe('🔬 BATERÍA DE PRUEBAS FUZZY Y RESILIENCIA DE SISTEMA (FUZZ TESTING 
         email: null,
       };
 
-      mockPrisma.usuario.findFirst.mockResolvedValue(usuarioInvitadoMock);
+      mockPrisma.usuario.findFirst
+        .mockResolvedValueOnce(usuarioInvitadoMock)
+        .mockResolvedValueOnce(null);
       mockPrisma.usuario.update.mockResolvedValue({
         ...usuarioInvitadoMock,
         googleId: 'google-uid-777',

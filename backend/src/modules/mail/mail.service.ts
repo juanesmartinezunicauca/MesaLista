@@ -11,7 +11,7 @@ export interface EnviarCodigoOptions {
 
 export interface EnvioMailResultado {
   enviado: boolean;
-  transport: 'smtp' | 'resend' | 'simulado';
+  transport: 'smtp' | 'resend' | 'brevo' | 'simulado';
   destinatario: string;
   mensaje?: string;
   errorSmtp?: string | null;
@@ -39,14 +39,74 @@ export class MailService {
     const contenidoHtml = this.generarPlantillaHtml(datos, enlaceActivacion);
     const contenidoTexto = this.generarTextoPlano(datos, enlaceActivacion);
 
+    const brevoApiKey = (this.configService.get<string>('BREVO_API_KEY') || '').trim();
     const resendApiKey = this.configService.get<string>('RESEND_API_KEY');
-    const rawUser = this.configService.get<string>('SMTP_USER') || 'juaness1702@gmail.com';
-    const rawPass = this.configService.get<string>('SMTP_PASS') || 'lzwmmcdhwivcurph';
-    const user = rawUser.replace(/["'\s]/g, '');
-    const pass = rawPass.replace(/["'\s]/g, '');
-    const smtpHost = this.configService.get<string>('SMTP_HOST') || 'smtp.gmail.com';
+    const rawUser = this.configService.get<string>('SMTP_USER');
+    const rawPass = this.configService.get<string>('SMTP_PASS');
+    const user = rawUser ? rawUser.replace(/["'\s]/g, '') : '';
+    const pass = rawPass ? rawPass.replace(/["'\s]/g, '') : '';
+    const smtpHost = (this.configService.get<string>('SMTP_HOST') || '').trim();
 
-    // 1. Intentar envío vía Resend HTTP API si la API Key está configurada
+    // 1. Intentar envío vía Brevo REST API (HTTPS puerto 443, compatible con Render Free y a cualquier destinatario)
+    if (brevoApiKey) {
+      try {
+        const rawFrom =
+          this.configService.get<string>('BREVO_SENDER_EMAIL') ||
+          this.configService.get<string>('SMTP_FROM') ||
+          'mesalistaapp.notificaciones@gmail.com';
+        
+        let fromEmail = rawFrom.trim();
+        let fromName = this.configService.get<string>('SMTP_FROM_NAME') || 'MesaLista POS';
+        
+        const match = rawFrom.match(/^(.*?)\s*<([^>]+)>$/);
+        if (match) {
+          if (match[1]?.trim()) {
+            fromName = match[1].trim().replace(/^["']|["']$/g, '');
+          }
+          fromEmail = match[2]?.trim() || fromEmail;
+        }
+
+        const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+          method: 'POST',
+          headers: {
+            'api-key': brevoApiKey,
+            accept: 'application/json',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            sender: { name: fromName, email: fromEmail },
+            to: [{ email: emailNormalizado, name: datos.nombre || 'Colaborador' }],
+            subject: asunto,
+            htmlContent: contenidoHtml,
+            textContent: contenidoTexto,
+          }),
+        });
+
+        if (response.ok) {
+          const resData: any = await response.json().catch(() => ({}));
+          this.logger.log(
+            `[MAIL_SERVICE] ✅ Código de registro enviado exitosamente a '${emailNormalizado}' vía Brevo API (messageId: ${resData?.messageId || 'OK'}). (Correo NO persistido en BD).`,
+          );
+          return {
+            enviado: true,
+            transport: 'brevo',
+            destinatario: emailNormalizado,
+            mensaje: 'Correo enviado exitosamente vía Brevo API.',
+          };
+        } else {
+          const errData = await response.text();
+          this.logger.warn(
+            `[MAIL_SERVICE] Falló envío vía Brevo (${response.status}): ${errData}. Intentando siguiente transport...`,
+          );
+        }
+      } catch (err: any) {
+        this.logger.warn(
+          `[MAIL_SERVICE] Error conectando con Brevo API: ${err?.message}. Intentando siguiente transport...`,
+        );
+      }
+    }
+
+    // 2. Intentar envío vía Resend HTTP API si la API Key está configurada
     if (resendApiKey) {
       try {
         const fromEmail =
@@ -115,16 +175,17 @@ export class MailService {
     }
 
     // 3. Modo Simulado / Entorno de Desarrollo y Pruebas
-    // Registra en el log de auditoría el despacho completo garantizando que el flujo nunca se bloquee
+    // Registra en el log de auditoría el despacho enmascarando secretos
+    const codigoEnmascarado = datos.codigo ? `${datos.codigo.slice(0, 4)}****` : '****';
     this.logger.log(
       `------------------------------------------------------------------------\n` +
-      `[MAIL_SERVICE] ✉️ DESPACHO EFÍMERO DE CÓDIGO DE REGISTRO (SIN PERSISTENCIA EN BD)\n` +
+      `[MAIL_SERVICE] ✉️ ESTADO DE DESPACHO DE CÓDIGO DE REGISTRO\n` +
       `  • Destinatario:   ${emailNormalizado}\n` +
       `  • Colaborador:    ${datos.nombre} (Rol: ${datos.rol})\n` +
-      `  • Código:         ${datos.codigo}\n` +
-      `  • Estado:         Despachado exitosamente (Modo Simulado / Fallback Activo)\n` +
+      `  • Código:         ${codigoEnmascarado}\n` +
+      `  • Estado:         ${smtpError ? 'Falló envío SMTP' : 'No enviado / Simulado (servidor SMTP no configurado)'}\n` +
       `  • Host SMTP:      ${smtpHost || 'No configurado'}\n` +
-      `  • Error SMTP:     ${smtpError || (smtpHost ? 'Ninguno' : 'SMTP_HOST/USER no configurado en entorno')}\n` +
+      `  • Error SMTP:     ${smtpError || (!smtpHost ? 'SMTP_HOST/USER no configurado en entorno' : 'Ninguno')}\n` +
       `------------------------------------------------------------------------`,
     );
 
@@ -133,20 +194,33 @@ export class MailService {
       transport: 'simulado',
       destinatario: emailNormalizado,
       errorSmtp: smtpError || (!smtpHost ? 'Credenciales SMTP (SMTP_USER/SMTP_HOST) no configuradas en servidor' : null),
-      smtpConfigurado: Boolean(smtpHost),
+      smtpConfigurado: Boolean(smtpHost && user && pass),
       mensaje: smtpError
         ? `No se pudo enviar el correo real por SMTP: ${smtpError}.`
         : !smtpHost
           ? 'El servidor no tiene configuradas las credenciales SMTP en sus variables de entorno.'
-          : `Código despachado a ${emailNormalizado} (modo simulado). Recuerda que este correo no se guarda en el sistema.`,
+          : `Código generado para ${emailNormalizado} (modo simulación).`,
     };
+  }
+
+  /**
+   * Sanitiza caracteres especiales HTML para mitigar inyecciones XSS en clientes de correo
+   */
+  private escaparHtml(str: string): string {
+    return (str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   /**
    * Genera el HTML enriquecido del correo electrónico con el diseño visual de MesaLista
    */
   private generarPlantillaHtml(datos: EnviarCodigoOptions, enlaceActivacion: string): string {
-    const rolFormateado = datos.rol.toUpperCase();
+    const nombreEscapado = this.escaparHtml(datos.nombre);
+    const rolFormateado = this.escaparHtml(datos.rol).toUpperCase();
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -280,7 +354,7 @@ export class MailService {
         <p>Restaurante Luigie's — Sistema de Gestión Gastronómica</p>
       </div>
       <div class="body">
-        <p class="greeting">¡Hola, ${datos.nombre}!</p>
+        <p class="greeting">¡Hola, ${nombreEscapado}!</p>
         <div class="badge">PERFIL ASIGNADO: ${rolFormateado}</div>
         
         <p style="color: #cbd5e1; font-size: 14px; line-height: 1.5;">
@@ -327,18 +401,28 @@ export class MailService {
   }
 
   /**
+   * Sanitiza texto plano eliminando etiquetas HTML
+   */
+  private limpiarTextoPlano(str: string): string {
+    return (str || '').replace(/<[^>]*>?/gm, '');
+  }
+
+  /**
    * Genera la versión en texto plano para clientes de correo sin soporte HTML
    */
   private generarTextoPlano(datos: EnviarCodigoOptions, enlaceActivacion: string): string {
+    const nombreLimpio = this.limpiarTextoPlano(datos.nombre);
+    const rolLimpio = this.limpiarTextoPlano(datos.rol).toUpperCase();
+
     return `
 ======================================================
 MesaLista POS — Restaurante Luigie's
 Tu Código de Registro e Invitación
 ======================================================
 
-Hola, ${datos.nombre}:
+Hola, ${nombreLimpio}:
 
-Has sido registrado como colaborador en MesaLista con el rol: ${datos.rol.toUpperCase()}.
+Has sido registrado como colaborador en MesaLista con el rol: ${rolLimpio}.
 
 TU CÓDIGO DE REGISTRO TEMPORAL:
 >>> ${datos.codigo} <<<
@@ -396,17 +480,23 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
     texto: string,
   ): Promise<void> {
     const rawHost = this.configService.get<string>('SMTP_HOST');
-    const rawUser = this.configService.get<string>('SMTP_USER') || 'juaness1702@gmail.com';
-    const rawPass = this.configService.get<string>('SMTP_PASS') || 'lzwmmcdhwivcurph';
-    const user = rawUser.replace(/["'\s]/g, '');
-    const pass = rawPass.replace(/["'\s]/g, '');
-    const host = rawHost || 'smtp.gmail.com';
+    const rawUser = this.configService.get<string>('SMTP_USER');
+    const rawPass = this.configService.get<string>('SMTP_PASS');
+    const user = rawUser ? rawUser.replace(/["'\s]/g, '') : '';
+    const pass = rawPass ? rawPass.replace(/["'\s]/g, '') : '';
+    const host = rawHost ? rawHost.trim() : '';
+
+    if (!host) {
+      throw new Error('Servidor SMTP (SMTP_HOST) no configurado en variables de entorno.');
+    }
+
     const rawPort = this.configService.get<string | number>('SMTP_PORT');
     const parsedPort = rawPort ? Number(rawPort) : 0;
 
-    // Si es Gmail o puerto 465, se utiliza TLS directo (puerto 465)
-    const useTls = parsedPort === 465 || host.includes('gmail.com') || parsedPort === 0;
-    const port = useTls ? 465 : parsedPort;
+    // Respetar explícitamente SMTP_PORT: si se define 587, port = 587 (TLS: false)
+    // Si se define 465 o por defecto Gmail sin puerto, port = 465 (TLS: true)
+    const port = parsedPort > 0 ? parsedPort : (host.includes('gmail.com') ? 465 : 587);
+    const useTls = port === 465;
 
     const from =
       this.configService.get<string>('SMTP_FROM') ||
@@ -433,9 +523,10 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
         socket.write(cmd + '\r\n');
       };
 
-      socket.setTimeout(15000, () => {
+      // Timeout agresivo de 4.5 segundos para evitar que puertos bloqueados congelen peticiones
+      socket.setTimeout(4500, () => {
         socket.destroy();
-        reject(new Error(`Tiempo de espera agotado (15s) al conectar con el servidor SMTP (${host}:${port}).`));
+        reject(new Error(`Tiempo de espera agotado (4.5s) al conectar con el servidor SMTP (${host}:${port}).`));
       });
 
       socket.on('error', (err) => {
@@ -468,7 +559,7 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
               step = 2;
               send(`AUTH LOGIN`);
             } else {
-              step = 4;
+              step = 5;
               send(`MAIL FROM:<${senderEmail}>`);
             }
           } else if (step === 2 && code === 334) {
@@ -489,7 +580,14 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
           } else if (step === 7 && code === 354) {
             step = 8;
             const boundary = `----=_Part_${Date.now()}`;
+            const messageId = `<${Date.now()}.${Math.random().toString(36).substring(2)}@${host || 'mesalista.local'}>`;
+            const dateHeader = new Date().toUTCString();
+            const safeText = texto.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
+            const safeHtml = html.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
+
             const message = [
+              `Date: ${dateHeader}`,
+              `Message-ID: ${messageId}`,
               `From: ${from}`,
               `To: ${destinatario}`,
               `Subject: =?UTF-8?B?${Buffer.from(asunto).toString('base64')}?=`,
@@ -500,13 +598,13 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
               `Content-Type: text/plain; charset=UTF-8`,
               `Content-Transfer-Encoding: 8bit`,
               ``,
-              texto,
+              safeText,
               ``,
               `--${boundary}`,
               `Content-Type: text/html; charset=UTF-8`,
               `Content-Transfer-Encoding: 8bit`,
               ``,
-              html,
+              safeHtml,
               ``,
               `--${boundary}--`,
               `.`,
