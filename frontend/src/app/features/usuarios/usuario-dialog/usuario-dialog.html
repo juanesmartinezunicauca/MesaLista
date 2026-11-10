@@ -262,12 +262,12 @@
         </div>
       </mat-dialog-content>
 
-      <!-- Acciones del Modal -->
+      <!-- Acciones del Modal Siempre Visibles y Ancladas -->
       <mat-dialog-actions class="dialog-actions">
-        <button type="button" mat-stroked-button (click)="cerrar()" [disabled]="guardando()">
+        <button type="button" mat-stroked-button class="btn-cancel" (click)="cerrar()" [disabled]="guardando()">
           Cancelar
         </button>
-        <button type="submit" mat-flat-button color="primary" [disabled]="guardando() || usuarioForm.invalid">
+        <button type="submit" mat-flat-button class="btn-submit" [disabled]="guardando() || usuarioForm.invalid">
           <mat-icon>{{ guardando() ? 'sync' : (esEdicion() ? 'save' : 'vpn_key') }}</mat-icon>
           <span>{{ guardando() ? 'Guardando...' : (esEdicion() ? 'Actualizar' : 'Registrar y Generar Código') }}</span>
         </button>
