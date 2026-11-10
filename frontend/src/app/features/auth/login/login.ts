@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { environment } from '../../../../environments/environment';
 
+import { FormsModule } from '@angular/forms';
+
 // Angular Material Modules
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -17,6 +19,7 @@ import { AuthService } from '../../../core/services/auth/auth.service';
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
@@ -36,10 +39,13 @@ export class LoginComponent implements OnInit, AfterViewInit {
   errorMessage = signal<string | null>(null);
   googleInitialized = signal<boolean>(false);
 
-  // 'acceso' = ingreso habitual de personal y clientes
+  // 'acceso' = ingreso con Google
   // 'registro' = activación de cuenta para nuevo colaborador
-  modo = signal<'acceso' | 'registro'>('acceso');
+  // 'credenciales' = acceso administrativo con usuario y contraseña
+  modo = signal<'acceso' | 'registro' | 'credenciales'>('acceso');
   codigoInvitacion = signal<string>('');
+  usuario = signal<string>('');
+  password = signal<string>('');
 
   ngOnInit(): void {
     // Si viene desde un enlace de invitación con ?codigo=INV-XXXXXX
@@ -54,9 +60,45 @@ export class LoginComponent implements OnInit, AfterViewInit {
     });
   }
 
-  setModo(modo: 'acceso' | 'registro'): void {
+  setModo(modo: 'acceso' | 'registro' | 'credenciales'): void {
     this.modo.set(modo);
     this.errorMessage.set(null);
+  }
+
+  loginCredentials(): void {
+    if (!this.usuario().trim() || !this.password().trim()) {
+      this.errorMessage.set('Por favor ingresa tu usuario y contraseña.');
+      return;
+    }
+
+    this.errorMessage.set(null);
+    this.isLoading.set(true);
+
+    this.authService.login({
+      usuario: this.usuario().trim(),
+      password: this.password().trim(),
+    }).subscribe({
+      next: () => {
+        this.isLoading.set(false);
+        this.redirigirSegunRol();
+      },
+      error: (err) => {
+        this.isLoading.set(false);
+        if (err.status === 401) {
+          this.errorMessage.set(
+            err.error?.message || 'Usuario o contraseña incorrectos.'
+          );
+        } else if (err.status === 0) {
+          this.errorMessage.set(
+            'No fue posible conectar con el servidor backend. Verifica tu conexión.'
+          );
+        } else {
+          this.errorMessage.set(
+            err.error?.message || 'Error al autenticar. Intenta nuevamente.'
+          );
+        }
+      },
+    });
   }
 
   onCodigoInvitacionInput(event: Event): void {

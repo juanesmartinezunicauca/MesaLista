@@ -22,7 +22,8 @@
     "test:e2e": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config ./test/jest-e2e.json",
     "test:owasp": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config ./test/jest-owasp.json",
     "test:fuzz": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config ./test/jest-fuzz.json",
-    "db:reset-operacional": "node prisma/reset-operational-data.js"
+    "db:reset-operacional": "node prisma/reset-operational-data.js",
+    "db:purge-and-setup": "node prisma/purge-and-setup-superadmin.js"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

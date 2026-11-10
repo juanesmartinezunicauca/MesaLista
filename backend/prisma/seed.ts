@@ -22,14 +22,26 @@ async function main() {
 
     await prisma.usuario.create({
       data: {
-        nombre: 'Administrador del Sistema',
+        nombre: 'Juan Esteban Martinez',
         usuario: 'admin',
+        email: 'jesmartinez@unicauca.edu.co',
         passwordHash,
         rol: RolUsuario.administrador,
         estado: EstadoUsuario.activo,
       },
     });
-    console.log('Usuario administrador creado: admin / admin123');
+    console.log('Usuario administrador creado: admin / jesmartinez@unicauca.edu.co');
+  } else {
+    await prisma.usuario.update({
+      where: { usuario: 'admin' },
+      data: {
+        nombre: 'Juan Esteban Martinez',
+        email: 'jesmartinez@unicauca.edu.co',
+        rol: RolUsuario.administrador,
+        estado: EstadoUsuario.activo,
+      },
+    });
+    console.log('Usuario administrador sincronizado: admin / jesmartinez@unicauca.edu.co');
   }
 
   // 2. Crear mesas iniciales si no existen
