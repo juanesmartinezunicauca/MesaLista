@@ -98,8 +98,8 @@ export class MailService {
           mensaje: `Correo enviado exitosamente vía SMTP (${smtpHost}).`,
         };
       } catch (err: any) {
-        this.logger.warn(
-          `[MAIL_SERVICE] No se pudo enviar por SMTP (${smtpHost}): ${err?.message}. Pasando a simulación...`,
+        this.logger.error(
+          `[MAIL_SERVICE] ❌ No se pudo enviar por SMTP (${smtpHost}) a '${emailNormalizado}': ${err?.message}`,
         );
       }
     }
@@ -339,8 +339,10 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
   ): Promise<void> {
     const host = this.configService.get<string>('SMTP_HOST')!;
     const port = Number(this.configService.get<number>('SMTP_PORT') || 587);
-    const user = this.configService.get<string>('SMTP_USER');
-    const pass = this.configService.get<string>('SMTP_PASS');
+    const rawUser = this.configService.get<string>('SMTP_USER') || '';
+    const rawPass = this.configService.get<string>('SMTP_PASS') || '';
+    const user = rawUser.replace(/["'\s]/g, '');
+    const pass = rawPass.replace(/["'\s]/g, '');
     const from =
       this.configService.get<string>('SMTP_FROM') || 'MesaLista POS <no-reply@mesalista.local>';
 

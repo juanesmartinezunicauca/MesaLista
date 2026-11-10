@@ -3,19 +3,28 @@
 .usuario-dialog-container {
   padding: 0;
   width: 100%;
-  max-height: 88vh;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   font-family: $font-family-base;
   box-sizing: border-box;
+
+  form {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: 90vh;
+    overflow: hidden;
+  }
 }
 
 .dialog-header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: 16px 24px;
   border-bottom: 1px solid $border-color;
   background-color: $bg-card-alt;
   border-radius: $radius-lg $radius-lg 0 0;
@@ -76,9 +85,28 @@
 }
 
 .dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto !important;
+  overflow-x: hidden;
   padding: 20px 24px !important;
-  max-height: 72vh;
-  overflow-y: auto;
+  margin: 0 !important;
+
+  /* Deslizador vertical elegante */
+  &::-webkit-scrollbar {
+    width: 7px;
+  }
+  &::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+    &:hover {
+      background: #94a3b8;
+    }
+  }
 }
 
 .feedback-banner {
@@ -228,27 +256,59 @@
 }
 
 .dialog-actions {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
-  padding: 16px 24px;
+  padding: 14px 24px;
   border-top: 1px solid $border-color;
-  background-color: $bg-card-alt;
+  background-color: #ffffff;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+  margin: 0 !important;
+  min-height: 64px;
   border-radius: 0 0 $radius-lg $radius-lg;
-  margin: 0;
+  z-index: 10;
 
-  button {
-    height: 40px;
+  .btn-cancel {
+    height: 42px;
     border-radius: $radius-md;
     font-weight: 600;
-    padding: 0 20px;
-    box-shadow: $shadow-blue;
+    padding: 0 18px;
+    color: $text-secondary;
+    border: 1px solid $border-color;
+    background: transparent;
     transition: all 0.2s ease;
 
     &:hover:not(:disabled) {
-      background-color: $brand-blue-dark !important;
+      background-color: #f1f5f9;
+      color: $text-primary;
+    }
+  }
+
+  .btn-submit {
+    height: 42px;
+    border-radius: $radius-md;
+    font-weight: 700;
+    padding: 0 22px;
+    background: $brand-blue;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+
+    &:hover:not(:disabled) {
+      background-color: $brand-blue-dark;
       transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+    }
+
+    &:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      box-shadow: none;
     }
   }
 }
