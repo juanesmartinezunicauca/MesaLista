@@ -381,10 +381,19 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
           const code = Number.parseInt(line.substring(0, 3), 10);
           if (Number.isNaN(code)) continue;
 
-          if (step === 0 && (code === 220)) {
+          // En SMTP (RFC 5321), las respuestas multilínea tienen '-' en posición 3 (ej. 250-); la final tiene ' '
+          const esLineaFinal = line.length === 3 || line.charAt(3) === ' ';
+
+          if (code >= 400) {
+            socket.destroy();
+            reject(new Error(`Respuesta SMTP rechazada (${code}): ${line}`));
+            return;
+          }
+
+          if (step === 0 && code === 220) {
             step = 1;
             send(`EHLO localhost`);
-          } else if (step === 1 && (code === 250)) {
+          } else if (step === 1 && code === 250 && esLineaFinal) {
             if (user && pass) {
               step = 2;
               send(`AUTH LOGIN`);
@@ -392,19 +401,19 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
               step = 4;
               send(`MAIL FROM:<${senderEmail}>`);
             }
-          } else if (step === 2 && (code === 334)) {
+          } else if (step === 2 && code === 334) {
             step = 3;
             send(Buffer.from(user!).toString('base64'));
-          } else if (step === 3 && (code === 334)) {
+          } else if (step === 3 && code === 334) {
             step = 4;
             send(Buffer.from(pass!).toString('base64'));
           } else if (step === 4 && (code === 235 || code === 250)) {
             step = 5;
             send(`MAIL FROM:<${senderEmail}>`);
-          } else if (step === 5 && code === 250) {
+          } else if (step === 5 && code === 250 && esLineaFinal) {
             step = 6;
             send(`RCPT TO:<${destinatario}>`);
-          } else if (step === 6 && code === 250) {
+          } else if (step === 6 && code === 250 && esLineaFinal) {
             step = 7;
             send(`DATA`);
           } else if (step === 7 && code === 354) {
@@ -433,7 +442,7 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
               `.`,
             ].join('\r\n');
             send(message);
-          } else if (step === 8 && code === 250) {
+          } else if (step === 8 && code === 250 && esLineaFinal) {
             step = 9;
             send(`QUIT`);
             socket.end();
