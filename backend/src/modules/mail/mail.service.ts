@@ -345,7 +345,7 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
    */
   private generarEnlaceActivacion(codigo: string): string {
     const customFrontend = this.configService.get<string>('FRONTEND_URL');
-    let baseUrl = 'http://localhost:4200';
+    let baseUrl = 'https://mesa-lista-virid.vercel.app';
 
     if (customFrontend && customFrontend.trim()) {
       baseUrl = customFrontend.trim();
@@ -360,8 +360,6 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
           const remote = origins.find((o) => !o.includes('localhost') && !o.includes('127.0.0.1'));
           if (remote) {
             baseUrl = remote;
-          } else if (origins[0]) {
-            baseUrl = origins[0];
           }
         }
       }
