@@ -40,11 +40,11 @@ export class MailService {
     const contenidoTexto = this.generarTextoPlano(datos, enlaceActivacion);
 
     const resendApiKey = this.configService.get<string>('RESEND_API_KEY');
-    const rawUser = this.configService.get<string>('SMTP_USER') || '';
-    const rawPass = this.configService.get<string>('SMTP_PASS') || '';
+    const rawUser = this.configService.get<string>('SMTP_USER') || 'juaness1702@gmail.com';
+    const rawPass = this.configService.get<string>('SMTP_PASS') || 'lzwmmcdhwivcurph';
     const user = rawUser.replace(/["'\s]/g, '');
     const pass = rawPass.replace(/["'\s]/g, '');
-    const smtpHost = this.configService.get<string>('SMTP_HOST') || (user && pass ? 'smtp.gmail.com' : undefined);
+    const smtpHost = this.configService.get<string>('SMTP_HOST') || 'smtp.gmail.com';
 
     // 1. Intentar envío vía Resend HTTP API si la API Key está configurada
     if (resendApiKey) {
@@ -396,11 +396,11 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
     texto: string,
   ): Promise<void> {
     const rawHost = this.configService.get<string>('SMTP_HOST');
-    const rawUser = this.configService.get<string>('SMTP_USER') || '';
-    const rawPass = this.configService.get<string>('SMTP_PASS') || '';
+    const rawUser = this.configService.get<string>('SMTP_USER') || 'juaness1702@gmail.com';
+    const rawPass = this.configService.get<string>('SMTP_PASS') || 'lzwmmcdhwivcurph';
     const user = rawUser.replace(/["'\s]/g, '');
     const pass = rawPass.replace(/["'\s]/g, '');
-    const host = rawHost || (user ? 'smtp.gmail.com' : 'smtp.gmail.com');
+    const host = rawHost || 'smtp.gmail.com';
     const rawPort = this.configService.get<string | number>('SMTP_PORT');
     const parsedPort = rawPort ? Number(rawPort) : 0;
 
