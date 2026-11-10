@@ -1,0 +1,22 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": "..",
+  "testEnvironment": "node",
+  "testRegex": "test/fuzzy-testing\\.spec\\.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "reporters": [
+    "default",
+    [
+      "jest-html-reporters",
+      {
+        "publicPath": "./reports/fuzzy-testing",
+        "filename": "reporte-pruebas-fuzzy.html",
+        "pageTitle": "MesaLista - Evidencia y Reporte de Pruebas Fuzzy (Fuzz Testing)",
+        "expand": true,
+        "openReport": false
+      }
+    ]
+  ]
+}

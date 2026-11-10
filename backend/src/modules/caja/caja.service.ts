@@ -65,6 +65,10 @@ export class CajaService {
    * Regla de negocio: Solo puede haber 1 caja abierta a la vez.
    */
   async abrirCaja(dto: AbrirCajaDto, id_usuario: number) {
+    if (dto.valor_inicial < 0) {
+      throw new BadRequestException('El valor base inicial no puede ser negativo.');
+    }
+
     await this.asegurarCatalogosBase();
 
     const cajaAbierta = await this.prisma.caja.findFirst({
@@ -313,6 +317,10 @@ export class CajaService {
    * Realiza el arqueo y cierre del turno de caja comparando teórico vs físico.
    */
   async cerrarCaja(dto: CerrarCajaDto, id_usuario: number) {
+    if (dto.valor_final_fisico < 0) {
+      throw new BadRequestException('El valor físico final no puede ser negativo.');
+    }
+
     const estadoActual = await this.obtenerEstadoActual();
 
     if (!estadoActual.abierta || !estadoActual.caja || !estadoActual.resumen) {
