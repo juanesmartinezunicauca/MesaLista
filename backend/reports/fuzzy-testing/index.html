@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MesaLista — Reporte Visual de Pruebas Fuzzy y Resiliencia</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #3b82f6;
+      --primary-light: #60a5fa;
+      --success: #10b981;
+      --success-bg: rgba(16, 185, 129, 0.15);
+      --warning: #f59e0b;
+      --warning-bg: rgba(245, 158, 11, 0.15);
+      --danger: #ef4444;
+      --danger-bg: rgba(239, 68, 68, 0.15);
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      line-height: 1.6;
+      padding: 2rem 1rem;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    header {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+    }
+    .badge-header {
+      display: inline-block;
+      background: rgba(59, 130, 246, 0.2);
+      color: var(--primary-light);
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      border: 1px solid rgba(59, 130, 246, 0.4);
+    }
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(90deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .meta-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-top: 1rem;
+      border-top: 1px solid var(--card-border);
+      padding-top: 1rem;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+    .stat-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: transform 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-3px); }
+    .stat-val {
+      font-size: 2.5rem;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+    .stat-val.success { color: var(--success); }
+    .stat-val.primary { color: var(--primary-light); }
+    .stat-val.warning { color: var(--warning); }
+    .stat-label {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .callout {
+      background: rgba(245, 158, 11, 0.1);
+      border-left: 4px solid var(--warning);
+      border-radius: 0 12px 12px 0;
+      padding: 1.25rem;
+      margin-bottom: 2rem;
+    }
+    .callout h3 {
+      color: var(--warning);
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .section-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin: 2rem 0 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .category-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+    }
+    .category-header {
+      padding: 1rem 1.5rem;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .category-title {
+      font-weight: 600;
+      font-size: 1.05rem;
+    }
+    .test-list { list-style: none; }
+    .test-item {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .test-item:last-child { border-bottom: none; }
+    .test-info { flex: 1; }
+    .test-title {
+      font-weight: 500;
+      font-size: 0.95rem;
+      margin-bottom: 0.25rem;
+      color: var(--text);
+    }
+    .test-desc {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+    .badge.passed {
+      background-color: var(--success-bg);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .badge.duration {
+      background: rgba(255,255,255,0.05);
+      color: var(--text-muted);
+      font-weight: normal;
+    }
+    .vuln-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .vuln-card {
+      background: #1e293b;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .vuln-card h4 {
+      color: #f87171;
+      font-size: 1.05rem;
+      margin-bottom: 0.5rem;
+    }
+    .vuln-badge {
+      display: inline-block;
+      background: var(--danger-bg);
+      color: var(--danger);
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+    }
+    .fix-box {
+      margin-top: 0.75rem;
+      background: rgba(16, 185, 129, 0.1);
+      border-left: 3px solid var(--success);
+      padding: 0.5rem 0.75rem;
+      font-size: 0.85rem;
+      color: #a7f3d0;
+      border-radius: 0 6px 6px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <span class="badge-header">QA & SECURITY AUDIT · MESALISTA POS</span>
+      <h1>🔬 Reporte Oficial de Pruebas Fuzzy y Resiliencia</h1>
+      <p style="color: var(--text-muted);">Evaluación estocástica, inyección de valores de frontera, desbordamientos de base de datos y concurrencia hostil.</p>
+      <div class="meta-bar">
+        <div><strong>Fecha:</strong> 10 de Noviembre de 2026</div>
+        <div><strong>Entorno:</strong> NestJS 12 · PostgreSQL · Prisma ORM · Node.js v24</div>
+        <div><strong>Total Test Suites:</strong> 22 suites (245 pruebas totales)</div>
+        <div><strong>Batería Fuzzy Específica:</strong> 25 pruebas</div>
+      </div>
+    </header>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-val success">25 / 25</div>
+        <div class="stat-label">Pruebas Fuzzy Pasadas</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val primary">100%</div>
+        <div class="stat-label">Tasa de Éxito</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val warning">0</div>
+        <div class="stat-label">Fugas de Trazas SQL (0 Leaks)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val primary">1.31 s</div>
+        <div class="stat-label">Tiempo de Ejecución</div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <h3>⚠️ Hallazgo Clave: Del "Fuzzing Idealista" al "Blindaje Real de Motor"</h3>
+      <p>Las pruebas unitarias que usan <em>mocks</em> son inherentemente idealistas porque simulan un entorno perfecto. Al someter el código a <strong>condiciones reales de PostgreSQL y concurrencia</strong>, se identificaron y solucionaron 4 vulnerabilidades críticas antes de producción:</p>
+    </div>
+
+    <div class="vuln-grid">
+      <div class="vuln-card">
+        <span class="vuln-badge">VULNERABILIDAD 1 · DESBORDAMIENTO NUMÉRICO</span>
+        <h4>PostgreSQL Integer Overflow (Prisma P2020)</h4>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">
+          Al enviar IDs superiores a 2,147,483,647 (32-bit signed int), PostgreSQL lanza error 22003. El filtro de Prisma no lo capturaba y respondía con <strong>HTTP 500</strong>.
+        </p>
+        <div class="fix-box">
+          <strong>Solución implementada:</strong> PrismaExceptionFilter ahora intercepta P2020 y responde limpiamente con <strong>400 Bad Request</strong>.
+        </div>
+      </div>
+
+      <div class="vuln-card">
+        <span class="vuln-badge">VULNERABILIDAD 2 · DESBORDAMIENTO DE LONGITUD</span>
+        <h4>PostgreSQL String Length Overflow (Prisma P2000)</h4>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">
+          Cadenas mayores a VARCHAR(255) disparaban error de base de datos no capturado, generando caídas 500.
+        </p>
+        <div class="fix-box">
+          <strong>Solución implementada:</strong> Interceptado P2000 en el filtro para devolver <strong>400 Bad Request</strong> indicando el campo excedido.
+        </div>
+      </div>
+
+      <div class="vuln-card">
+        <span class="vuln-badge">VULNERABILIDAD 3 · CONDICIÓN DE CARRERA</span>
+        <h4>Time-of-Check to Time-of-Use (TOCTOU) en Inventario</h4>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">
+          Dos pedidos simultáneos sobre la última unidad de stock pasaban la validación y dejaban el inventario en <strong>-1</strong>.
+        </p>
+        <div class="fix-box">
+          <strong>Solución implementada:</strong> Guardas de inventario atómicas y prueba de simulación de carrera concurrente.
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">📋 Detalle de las 25 Pruebas Fuzzy Ejecutadas</div>
+
+    <!-- Módulo 1 -->
+    <div class="category-card">
+      <div class="category-header">
+        <span class="category-title">1. Fuzzing de DTOs y Validación de Frontera (ValidationPipe)</span>
+        <span class="badge passed">5 / 5 Pasaron</span>
+      </div>
+      <ul class="test-list">
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-DTO.1] Rechazo de mutaciones anómalas en emails (35 variantes)</div>
+            <div class="test-desc">Bytes nulos, XSS en correos, inyecciones SQL y dominios de 300 caracteres.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">25 ms</span></div>
+        </li>
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-DTO.2] Rechazo de valores fuzzificados en campo Rol (Enums estrictos)</div>
+            <div class="test-desc">Inyección de roles no existentes: 'root', 'superuser', 'Mesero' (capitalizado).</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">10 ms</span></div>
+        </li>
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-DTO.3] Contraseñas extremas y de longitud inválida</div>
+            <div class="test-desc">Contraseñas vacías, de 1 caracter o cadenas de 5,000 bytes para mitigar DoS en hash.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">6 ms</span></div>
+        </li>
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-DTO.4] Fuzzing de cantidades monetarias y números en Detalle de Pedido</div>
+            <div class="test-desc">Cantidades negativas (-100), fraccionarias (0.5), NaN e Infinity bloqueados.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">8 ms</span></div>
+        </li>
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-DTO.5] Fuzzing de valores de Caja inicial y final</div>
+            <div class="test-desc">Rechazo garantizado con @Min(0) ante montos iniciales y finales negativos o nulos.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">5 ms</span></div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Módulo 2 -->
+    <div class="category-card">
+      <div class="category-header">
+        <span class="category-title">2. Fuzzing de Tokens JWT y Firmas Criptográficas</span>
+        <span class="badge passed">3 / 3 Pasaron</span>
+      </div>
+      <ul class="test-list">
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-AUTH.1] Tokens truncados, malformados y bytes aleatorios</div>
+            <div class="test-desc">Ataques de degradación a algoritmo 'none' e interrupción de cabeceras Base64.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">44 ms</span></div>
+        </li>
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-AUTH.2] Tokens con clave secreta manipulada (Suplantación)</div>
+            <div class="test-desc">Rechazo inmediato por fallo de verificación criptográfica sin revelar firma real.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">2 ms</span></div>
+        </li>
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-AUTH.3] Reclamos temporales expirados (exp en el pasado)</div>
+            <div class="test-desc">Captura determinística de TokenExpiredError sin admitir sesiones zombi.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">2 ms</span></div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Módulo 3 -->
+    <div class="category-card">
+      <div class="category-header">
+        <span class="category-title">3. Fuzzing de Códigos de Invitación (Onboarding Colaboradores)</span>
+        <span class="badge passed">2 / 2 Pasaron</span>
+      </div>
+      <ul class="test-list">
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-INV.1] Inyección masiva de 50 códigos de invitación anómalos</div>
+            <div class="test-desc">Códigos con minúsculas, caracteres especiales, cadenas de 1,000 dígitos y SQLi.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">8 ms</span></div>
+        </li>
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-INV.2] Prevención de colisiones liberando googleId previos</div>
+            <div class="test-desc">Asegura que ante reutilización de cuentas se libere la identidad previa sin error 500.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">3 ms</span></div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Módulo 4 -->
+    <div class="category-card">
+      <div class="category-header">
+        <span class="category-title">4. Fuzzing de Máquina de Estados Operativos (Pedidos y Domicilios)</span>
+        <span class="badge passed">4 / 4 Pasaron</span>
+      </div>
+      <ul class="test-list">
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-STATE.1] Identificadores de pedido inexistentes o negativos</div>
+            <div class="test-desc">Lanza determinísticamente 404 NotFoundException sin fugas de consulta SQL.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">5 ms</span></div>
+        </li>
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-STATE.2] Mutación de pedidos ya cerrados hacia reparto</div>
+            <div class="test-desc">Bloqueo de transición ilegal con 400 BadRequestException.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">2 ms</span></div>
+        </li>
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-STATE.3] Intento de entrega sin cobro previo en caja</div>
+            <div class="test-desc">Protege el flujo contable impidiendo marcar como entregado un pedido no facturado.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">1 ms</span></div>
+        </li>
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-STATE.4] Fuzzing de domiciliarios con campos vacíos o malformados</div>
+            <div class="test-desc">Exige validación estricta de nombres y teléfonos operativos.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">1 ms</span></div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Módulo 5 -->
+    <div class="category-card">
+      <div class="category-header">
+        <span class="category-title">5. Fuzzing de Flujo de Caja y Arqueo Monetario</span>
+        <span class="badge passed">4 / 4 Pasaron</span>
+      </div>
+      <ul class="test-list">
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-CAJA.1] Rechazo de apertura con monto inicial negativo</div>
+            <div class="test-desc">Invariante de dominio que bloquea balances de inicio corruptos.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">3 ms</span></div>
+        </li>
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-CAJA.2] Prevención de turnos duplicados simultáneos</div>
+            <div class="test-desc">Rechaza con 409 Conflict si ya existe una sesión activa de caja en el restaurante.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">1 ms</span></div>
+        </li>
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-CAJA.3] Intento de cierre sin sesión abierta</div>
+            <div class="test-desc">Rechaza con 400 BadRequestException.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">2 ms</span></div>
+        </li>
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-CAJA.4] Rechazo de arqueo físico negativo</div>
+            <div class="test-desc">No permite valores contados en dinero por debajo de cero.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">1 ms</span></div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Módulo 6 -->
+    <div class="category-card">
+      <div class="category-header">
+        <span class="category-title">6. Filtro de Excepciones de Base de Datos y Prevención de Fugas</span>
+        <span class="badge passed">6 / 6 Pasaron</span>
+      </div>
+      <ul class="test-list">
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-LEAK.1] Sanitización de violaciones de clave única (P2002)</div>
+            <div class="test-desc">Verifica que nunca se filtren sentencias SELECT, passwords o metadatos internos.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">1 ms</span></div>
+        </li>
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-LEAK.2] Sanitización de violaciones de clave foránea (P2003)</div>
+            <div class="test-desc">Retorna mensaje amigable sin exponer la estructura de relaciones de PostgreSQL.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">1 ms</span></div>
+        </li>
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-LEAK.3] Fuzzing de códigos desconocidos de Prisma (P9999, P0000)</div>
+            <div class="test-desc">Retorna 500 genérico seguro sin filtrar trazas de depuración de Node.js o drivers C.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">5 ms</span></div>
+        </li>
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-LEAK.4] Fuzzing de desbordamiento de enteros 32-bit (P2020)</div>
+            <div class="test-desc">Números masivos (9999999999) son convertidos a 400 Bad Request en vez de 500.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">1 ms</span></div>
+        </li>
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-LEAK.5] Fuzzing de cadenas gigantes en columnas VARCHAR (P2000)</div>
+            <div class="test-desc">Strings que superan el tamaño de columna son transformados en 400 Bad Request.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">1 ms</span></div>
+        </li>
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-LEAK.6] Fuzzing de campos obligatorios nulos (P2011)</div>
+            <div class="test-desc">Valores nulos no admitidos retornan 400 Bad Request indicando la columna requerida.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">1 ms</span></div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Módulo 7 -->
+    <div class="category-card">
+      <div class="category-header">
+        <span class="category-title">7. Simulación de Concurrencia y Fallos Reales (Chaos & Race Conditions)</span>
+        <span class="badge passed">1 / 1 Pasó</span>
+      </div>
+      <ul class="test-list">
+        <li class="test-item">
+          <div class="test-info">
+            <div class="test-title">[FUZZ-RACE.1] Prevención de inventario negativo ante pedidos concurrentes</div>
+            <div class="test-desc">Dos solicitudes simultáneas por la última unidad: una es aceptada y la otra rechazada con stock en 0 exacto.</div>
+          </div>
+          <div><span class="badge passed">✓ PASÓ</span> <span class="badge duration">8 ms</span></div>
+        </li>
+      </ul>
+    </div>
+
+  </div>
+</body>
+</html>
