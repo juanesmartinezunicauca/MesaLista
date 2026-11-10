@@ -124,7 +124,8 @@ export class ListaUsuariosComponent implements OnInit {
     const ref = this.dialog.open(UsuarioDialogComponent, {
       width: '540px',
       maxWidth: '95vw',
-      disableClose: true,
+      maxHeight: '92vh',
+      disableClose: false,
     });
 
     ref.afterClosed().subscribe((res) => {

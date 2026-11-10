@@ -1,89 +1,112 @@
 <div class="usuario-dialog-container">
   @if (invitacionGenerada()) {
-    <!-- Pantalla de Éxito: Código de Invitación Generado -->
+    <!-- Pantalla de Éxito: Código de Invitación Generado con Deslizador y Botón Superior Visible -->
     <div class="invitation-success-card">
-      <div class="success-icon-badge">
-        <mat-icon>vpn_key</mat-icon>
-      </div>
-      <h2>¡Colaborador Registrado!</h2>
-      <p class="success-subtitle">
-        Se ha creado la ficha de <strong>{{ usuarioRecienCreado()?.nombre }}</strong> (@{{ usuarioRecienCreado()?.usuario }}).
-        Entrega este código de vinculación para su primer inicio de sesión con Google:
-      </p>
-
-      <!-- Caja destacada del código -->
-      <div class="code-display-box">
-        <span class="invitation-code-text">{{ invitacionGenerada() }}</span>
-        <button type="button" mat-icon-button (click)="copiarCodigo()" class="btn-copy-code" aria-label="Copiar código">
-          <mat-icon>{{ copiado() ? 'check' : 'content_copy' }}</mat-icon>
+      
+      <!-- Barra superior fija con botón para cerrar visible -->
+      <div class="success-card-header">
+        <div class="success-header-badge">
+          <mat-icon>check_circle</mat-icon>
+          <span>Colaborador Creado</span>
+        </div>
+        <button
+          type="button"
+          mat-icon-button
+          class="btn-close-success"
+          (click)="cerrarConExito()"
+          aria-label="Cerrar ventana"
+        >
+          <mat-icon>close</mat-icon>
         </button>
       </div>
-      @if (copiado()) {
-        <span class="copy-success-hint">¡Código copiado al portapapeles!</span>
-      }
 
-      <!-- Alerta si ya se despachó el correo automáticamente -->
-      @if (correoEnviadoExitoso()) {
-        <div class="email-dispatched-banner">
-          <mat-icon class="dispatched-icon">mark_email_read</mat-icon>
-          <div class="dispatched-content">
-            <span class="dispatched-title">Código enviado a: <strong>{{ correoEnviadoExitoso() }}</strong></span>
-            <span class="dispatched-note">🛡️ Garantía de privacidad: Este correo NO fue almacenado en la base de datos.</span>
-          </div>
+      <!-- Contenedor con deslizador (scroll vertical) -->
+      <div class="success-scrollable-body">
+        <div class="success-icon-badge">
+          <mat-icon>vpn_key</mat-icon>
         </div>
-      }
-
-      <!-- Formulario interactivo para enviar o reenviar el código a un correo sin guardarlo -->
-      <div class="email-send-section">
-        <div class="send-section-header">
-          <mat-icon class="send-icon">forward_to_inbox</mat-icon>
-          <span class="send-title">{{ correoEnviadoExitoso() ? 'Reenviar código a otro correo' : 'Enviar código por correo electrónico' }}</span>
-        </div>
-        <p class="send-desc">
-          Ingresa el correo al que deseas hacer llegar este código. Por privacidad, este correo <strong>no se guardará</strong> en el sistema.
+        <h2>¡Código de Acceso Listo!</h2>
+        <p class="success-subtitle">
+          Se ha creado la ficha de <strong>{{ usuarioRecienCreado()?.nombre }}</strong> (@{{ usuarioRecienCreado()?.usuario }}).
+          Entrega este código para que active su cuenta e inicie sesión con Google:
         </p>
 
-        <div class="send-input-row">
-          <mat-form-field appearance="outline" class="flex-input" subscriptSizing="dynamic">
-            <mat-label>Correo de entrega (no se guarda)</mat-label>
-            <input
-              matInput
-              type="email"
-              [formControl]="correoReenvioControl"
-              placeholder="colaborador@correo.com"
-              (keydown.enter)="$event.preventDefault(); enviarCodigoPorCorreo()"
-            >
-            <mat-icon matPrefix>mail_outline</mat-icon>
-          </mat-form-field>
-
-          <button
-            type="button"
-            mat-flat-button
-            color="primary"
-            class="btn-send-mail"
-            (click)="enviarCodigoPorCorreo()"
-            [disabled]="enviandoCorreoManual() || correoReenvioControl.invalid"
-          >
-            <mat-icon>{{ enviandoCorreoManual() ? 'sync' : 'send' }}</mat-icon>
-            <span>{{ enviandoCorreoManual() ? 'Enviando...' : 'Enviar' }}</span>
+        <!-- Caja destacada del código -->
+        <div class="code-display-box">
+          <span class="invitation-code-text">{{ invitacionGenerada() }}</span>
+          <button type="button" mat-icon-button (click)="copiarCodigo()" class="btn-copy-code" aria-label="Copiar código">
+            <mat-icon>{{ copiado() ? 'check' : 'content_copy' }}</mat-icon>
           </button>
         </div>
+        @if (copiado()) {
+          <span class="copy-success-hint">¡Código copiado al portapapeles!</span>
+        }
 
-        @if (mensajeEnvioManual(); as msg) {
-          <div class="manual-feedback-alert" [class.feedback-success]="msg.tipo === 'exito'" [class.feedback-error]="msg.tipo === 'error'">
-            <mat-icon>{{ msg.tipo === 'exito' ? 'check_circle' : 'error_outline' }}</mat-icon>
-            <span>{{ msg.texto }}</span>
+        <!-- Alerta si ya se despachó el correo automáticamente -->
+        @if (correoEnviadoExitoso()) {
+          <div class="email-dispatched-banner">
+            <mat-icon class="dispatched-icon">mark_email_read</mat-icon>
+            <div class="dispatched-content">
+              <span class="dispatched-title">Código enviado a: <strong>{{ correoEnviadoExitoso() }}</strong></span>
+              <span class="dispatched-note">🛡️ Garantía de privacidad: Este correo NO fue almacenado en la base de datos.</span>
+            </div>
           </div>
         }
+
+        <!-- Formulario interactivo para enviar o reenviar el código a un correo sin guardarlo -->
+        <div class="email-send-section">
+          <div class="send-section-header">
+            <mat-icon class="send-icon">forward_to_inbox</mat-icon>
+            <span class="send-title">{{ correoEnviadoExitoso() ? 'Reenviar código a otro correo' : 'Enviar código por correo electrónico' }}</span>
+          </div>
+          <p class="send-desc">
+            Ingresa el correo al que deseas hacer llegar este código. Por privacidad, este correo <strong>no se guardará</strong> en el sistema.
+          </p>
+
+          <div class="send-input-row">
+            <mat-form-field appearance="outline" class="flex-input" subscriptSizing="dynamic">
+              <mat-label>Correo de entrega (no se guarda)</mat-label>
+              <input
+                matInput
+                type="email"
+                [formControl]="correoReenvioControl"
+                placeholder="colaborador@correo.com"
+                (keydown.enter)="$event.preventDefault(); enviarCodigoPorCorreo()"
+              >
+              <mat-icon matPrefix>mail_outline</mat-icon>
+            </mat-form-field>
+
+            <button
+              type="button"
+              mat-flat-button
+              color="primary"
+              class="btn-send-mail"
+              (click)="enviarCodigoPorCorreo()"
+              [disabled]="enviandoCorreoManual() || correoReenvioControl.invalid"
+            >
+              <mat-icon>{{ enviandoCorreoManual() ? 'sync' : 'send' }}</mat-icon>
+              <span>{{ enviandoCorreoManual() ? 'Enviando...' : 'Enviar' }}</span>
+            </button>
+          </div>
+
+          @if (mensajeEnvioManual(); as msg) {
+            <div class="manual-feedback-alert" [class.feedback-success]="msg.tipo === 'exito'" [class.feedback-error]="msg.tipo === 'error'">
+              <mat-icon>{{ msg.tipo === 'exito' ? 'check_circle' : 'error_outline' }}</mat-icon>
+              <span>{{ msg.texto }}</span>
+            </div>
+          }
+        </div>
+
+        <p class="privacy-note">
+          El colaborador ingresará este código en la pantalla de inicio de sesión de MesaLista y vinculará su cuenta personal de Google sin contraseñas.
+        </p>
       </div>
 
-      <p class="privacy-note">
-        El colaborador ingresará este código en la pantalla de inicio de sesión de MesaLista y vinculará su cuenta personal de Google.
-      </p>
-
+      <!-- Pie de acción fijo y siempre visible -->
       <div class="success-dialog-actions">
         <button type="button" mat-flat-button color="primary" class="btn-confirm" (click)="cerrarConExito()">
-          Finalizar y Cerrar
+          <mat-icon>done_all</mat-icon>
+          <span>Finalizar y Cerrar</span>
         </button>
       </div>
     </div>
