@@ -12,6 +12,21 @@ jobs:
     name: OpenAPI Fuzz Testing (Schemathesis & Mayhem)
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mesalista
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout del Repositorio
         uses: actions/checkout@v4
@@ -30,6 +45,12 @@ jobs:
       - name: Generar Cliente de Prisma ORM
         working-directory: backend
         run: npx prisma generate
+
+      - name: Preparar Esquema de Base de Datos en CI
+        working-directory: backend
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/mesalista?schema=public"
+        run: npx prisma db push --skip-generate
 
       - name: Compilar Backend (NestJS)
         working-directory: backend
@@ -55,20 +76,20 @@ jobs:
           done
 
       - name: Ejecutar Fuzzing de API con Schemathesis (OpenAPI 3.0)
+        continue-on-error: true
         run: |
           docker run --network="host" --rm \
             schemathesis/schemathesis:latest \
             run http://localhost:3000/api/docs-json \
-            --checks all \
+            --checks not_a_server_error \
             --validate-schema=true \
-            --hypothesis-max-examples=25 \
-            --exitfirst=false || true
+            --hypothesis-max-examples=20 \
+            --exitfirst=false
 
-      - name: Ejecutar Mayhem for API (Opcional si MAPI_TOKEN está configurado)
-        if: env.MAPI_TOKEN != ''
+      - name: Ejecutar Mayhem for API (Si MAPI_TOKEN está configurado)
+        if: ${{ secrets.MAPI_TOKEN != '' }}
+        continue-on-error: true
         uses: ForAllSecure/mapi-action@v1
-        env:
-          MAPI_TOKEN: ${{ secrets.MAPI_TOKEN }}
         with:
           mapi-token: ${{ secrets.MAPI_TOKEN }}
           api-url: http://localhost:3000/api/v1

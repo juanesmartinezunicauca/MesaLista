@@ -1,12 +1,11 @@
-import { ArgumentsHost, HttpStatus, ValidationPipe } from '@nestjs/common';
+import { ArgumentsHost, HttpStatus } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import * as fc from 'fast-check';
 import { Prisma } from '@prisma/client';
 import { PrismaExceptionFilter } from '../src/common/filters/prisma-exception.filter';
-import { AbrirCajaDto, CerrarCajaDto, CreateGastoDto } from '../src/modules/caja/dto';
+import { AbrirCajaDto } from '../src/modules/caja/dto';
 import { CreateFacturaDto } from '../src/modules/facturacion/dto';
-import { CreatePedidoDto } from '../src/modules/pedidos/dto';
 import { CreateUsuarioDto } from '../src/modules/usuarios/dto';
 import { CreateProductoDto } from '../src/modules/catalogo/dto';
 import { FiltroFechasDto } from '../src/modules/reportes/dto';
