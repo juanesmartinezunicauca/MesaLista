@@ -85,10 +85,13 @@ export class CatalogoService {
     }
 
     if (query?.busqueda) {
-      where.nombre = {
-        contains: query.busqueda.trim(),
-        mode: 'insensitive',
-      };
+      const busquedaLimpia = query.busqueda.replace(/\0/g, '').trim();
+      if (busquedaLimpia) {
+        where.nombre = {
+          contains: busquedaLimpia,
+          mode: 'insensitive',
+        };
+      }
     }
 
     return this.prisma.producto.findMany({

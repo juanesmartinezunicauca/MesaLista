@@ -1,4 +1,4 @@
-import { ValidationPipe } from '@nestjs/common';
+import { HttpStatus, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { json, urlencoded } from 'express';
@@ -27,6 +27,22 @@ async function bootstrap() {
   // Límite controlado de payload para permitir imágenes en base64 evitando saturación por DoS
   app.use(json({ limit: '2mb' }));
   app.use(urlencoded({ extended: true, limit: '2mb' }));
+
+  // Blindaje contra inyección de bytes nulos (CWE-158 / Null Byte Poisoning)
+  app.use((req: any, res: any, next: any) => {
+    if (req.query) {
+      for (const [key, val] of Object.entries(req.query)) {
+        if (typeof val === 'string' && val.includes('\0')) {
+          return res.status(HttpStatus.BAD_REQUEST).json({
+            statusCode: HttpStatus.BAD_REQUEST,
+            error: 'BadRequest',
+            message: `El parámetro '${key}' contiene caracteres nulos o secuencias no permitidas.`,
+          });
+        }
+      }
+    }
+    next();
+  });
 
   // OWASP A05: CORS restringido para entornos autorizados (desarrollo local, LAN y dominios en Vercel)
   const configuredOrigins = process.env.CORS_ORIGIN
