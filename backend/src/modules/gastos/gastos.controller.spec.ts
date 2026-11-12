@@ -18,3 +18,4 @@ describe('GastosController (Unit Tests)', () => {
     expect(controller).toBeDefined();
   });
 });
+

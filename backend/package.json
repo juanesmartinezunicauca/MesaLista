@@ -65,6 +65,7 @@
     "@types/passport": "^1.0.17",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^7.0.0",
+    "fast-check": "^4.10.2",
     "jest": "^30.0.0",
     "jest-html-reporters": "^3.1.7",
     "oxlint": "^1.58.0",

@@ -2,7 +2,7 @@
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": "..",
   "testEnvironment": "node",
-  "testRegex": "test/fuzzy-testing\\.spec\\.ts$",
+  "testRegex": "(test/.*fuzz.*\\.spec\\.ts$|.*\\.fuzz\\.spec\\.ts$)",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
@@ -20,4 +20,3 @@
     ]
   ]
 }
-

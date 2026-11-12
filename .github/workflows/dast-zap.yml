@@ -41,3 +41,4 @@ jobs:
           issue_title: '🚨 Alerta de Seguridad DAST - OWASP ZAP'
           allow_issue_writing: false
           cmd_options: '-a -j'
+

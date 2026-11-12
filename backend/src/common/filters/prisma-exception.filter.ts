@@ -8,19 +8,30 @@ import {
 import { Prisma } from '@prisma/client';
 import { Response } from 'express';
 
-@Catch(Prisma.PrismaClientKnownRequestError)
+@Catch(Prisma.PrismaClientKnownRequestError, Prisma.PrismaClientValidationError)
 export class PrismaExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(PrismaExceptionFilter.name);
 
-  catch(exception: Prisma.PrismaClientKnownRequestError, host: ArgumentsHost) {
+  catch(
+    exception: Prisma.PrismaClientKnownRequestError | Prisma.PrismaClientValidationError,
+    host: ArgumentsHost,
+  ) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Error interno en la base de datos.';
     let error = 'DatabaseError';
+    let code: string | undefined = undefined;
 
-    switch (exception.code) {
+    if (exception instanceof Prisma.PrismaClientValidationError) {
+      status = HttpStatus.BAD_REQUEST;
+      message = 'Los datos suministrados no cumplen con el esquema o tipos requeridos por el modelo de datos.';
+      error = 'BadRequest';
+      code = 'VALIDATION_ERROR';
+    } else {
+      code = exception.code;
+      switch (exception.code) {
       // P2000: El valor proporcionado es demasiado largo para el tipo de columna (String length overflow)
       case 'P2000': {
         status = HttpStatus.BAD_REQUEST;
@@ -85,12 +96,13 @@ export class PrismaExceptionFilter implements ExceptionFilter {
         this.logger.error(`Error Prisma no controlado [${exception.code}]: ${exception.message}`, exception.stack);
         break;
     }
+  }
 
     response.status(status).json({
       statusCode: status,
       error,
       message,
-      code: exception.code,
+      code,
       timestamp: new Date().toISOString(),
     });
   }
