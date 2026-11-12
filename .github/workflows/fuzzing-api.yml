@@ -99,4 +99,5 @@ jobs:
           api-spec: https://mesalista-p0pf.onrender.com/api/docs-json
           duration: auto
           run-args: |
-            --header Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsInVzdWFyaW8iOiJhZG1pbiIsInJvbCI6ImFkbWluaXN0cmFkb3IiLCJub21icmUiOiJKdWFuIEVzdGViYW4gTWFydGluZXoiLCJpYXQiOjE3OTQ0NjI4MTAsImV4cCI6MTc5NDUwNjAxMH0.cshletivY6oYGHBRr2OQUWoEWVuO_-qxpTVllpq3Nts
+            --header
+            Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsInVzdWFyaW8iOiJhZG1pbiIsInJvbCI6ImFkbWluaXN0cmFkb3IiLCJub21icmUiOiJKdWFuIEVzdGViYW4gTWFydGluZXoiLCJpYXQiOjE3OTQ0NjI4MTAsImV4cCI6MTc5NDUwNjAxMH0.cshletivY6oYGHBRr2OQUWoEWVuO_-qxpTVllpq3Nts
