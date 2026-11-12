@@ -588,10 +588,7 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
     }
 
     const zona = this.zonaSeleccionada();
-    const zonaCorta = zona.nombre.includes('(')
-      ? zona.nombre.split('(')[0].trim()
-      : zona.nombre.split(':')[0].trim();
-    const direccion = `${dir} [${zonaCorta}]`;
+    const direccion = `${dir} [${zona.nombre}]`;
     const notasArray = [
       this.referenciaUbicacion().trim() ? `Ref: ${this.referenciaUbicacion().trim()}` : '',
       this.observaciones().trim() ? `Obs: ${this.observaciones().trim()}` : '',

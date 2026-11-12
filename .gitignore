@@ -12,6 +12,7 @@ out-tsc/
 coverage/
 reports/
 backend/reports/
+performance/reports/
 .angular/
 *.tsbuildinfo
 
