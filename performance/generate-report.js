@@ -3,6 +3,7 @@ const path = require('node:path');
 
 const INPUT_PATH = path.resolve(process.cwd(), 'performance', 'reports', 'backend-results.json');
 const OUTPUT_PATH = path.resolve(process.cwd(), 'performance', 'reports', 'reporte-backend.html');
+const P95_THRESHOLD_MS = Number(process.env.PERF_P95_THRESHOLD_MS) || 1000;
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -163,7 +164,7 @@ function extractMetrics(raw) {
 
 function buildHtml(metrics) {
   const p95 = metrics.responseTime.p95;
-  const p95Ok = typeof p95 === 'number' ? p95 < 1000 : false;
+  const p95Ok = typeof p95 === 'number' ? p95 < P95_THRESHOLD_MS : false;
   const err500Ok = metrics.code500 === 0 && metrics.code5xx === 0;
   const overallPass = p95Ok && err500Ok && metrics.networkErrors === 0;
 
@@ -182,7 +183,7 @@ function buildHtml(metrics) {
       ? metrics.endpoints
           .map((ep) => {
             const s = ep.summary || {};
-            const epP95Ok = typeof s.p95 === 'number' ? s.p95 < 1000 : true;
+            const epP95Ok = typeof s.p95 === 'number' ? s.p95 < P95_THRESHOLD_MS : true;
             const epErrOk = ep.code5xx === 0;
             return `
               <tr>
@@ -433,7 +434,7 @@ function buildHtml(metrics) {
       <div class="card">
         <div class="card-label">Latencia p95</div>
         <div class="card-value ${p95Ok ? 'ok' : 'err'}">${formatMs(p95)}</div>
-        <div class="card-sub">Umbral objetivo: &lt; 1000 ms</div>
+        <div class="card-sub">Umbral objetivo: &lt; ${P95_THRESHOLD_MS} ms</div>
       </div>
 
       <div class="card">
