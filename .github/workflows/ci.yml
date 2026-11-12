@@ -2,9 +2,9 @@ name: CI/CD Pipeline - MesaLista
 
 on:
   push:
-    branches: [ develop, main, chore/ci-cd-github-actions-codeql ]
+    branches: [ develop, main, '**' ]
   pull_request:
-    branches: [ develop, main ]
+    types: [ opened, synchronize, reopened ]
 
 jobs:
   backend-qa:
@@ -19,10 +19,10 @@ jobs:
       - name: Checkout del Repositorio
         uses: actions/checkout@v4
 
-      - name: Configurar Node.js 24.x
+      - name: Configurar Node.js 20.x
         uses: actions/setup-node@v4
         with:
-          node-version: 24.x
+          node-version: 20.x
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
 
@@ -41,6 +41,34 @@ jobs:
       - name: Compilación del Backend (NestJS)
         run: npm run build
 
+  fuzz-testing:
+    name: Fuzz Testing (Fast-Check & Property-Based)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      NODE_OPTIONS: "--experimental-vm-modules"
+    steps:
+      - name: Checkout del Repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar Dependencias
+        run: npm ci || npm install
+
+      - name: Generar Cliente de Prisma ORM
+        run: npx prisma generate
+
+      - name: Ejecutar Pruebas Fuzzy con Fast-Check
+        run: npm run test:fuzz
+
   frontend-qa:
     name: Frontend (Build & Validate)
     runs-on: ubuntu-latest
@@ -51,10 +79,10 @@ jobs:
       - name: Checkout del Repositorio
         uses: actions/checkout@v4
 
-      - name: Configurar Node.js 24.x
+      - name: Configurar Node.js 20.x
         uses: actions/setup-node@v4
         with:
-          node-version: 24.x
+          node-version: 20.x
 
       - name: Instalar Dependencias
         run: npm install
