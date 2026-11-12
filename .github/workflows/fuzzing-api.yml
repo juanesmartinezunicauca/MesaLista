@@ -11,6 +11,8 @@ jobs:
   api-fuzz:
     name: OpenAPI Fuzz Testing (Schemathesis & Mayhem)
     runs-on: ubuntu-latest
+    env:
+      MAYHEM_TOKEN: ${{ secrets.MAYHEM_TOKEN || secrets.MAPI_TOKEN }}
 
     services:
       postgres:
@@ -87,11 +89,11 @@ jobs:
             --exitfirst=false
 
       - name: Ejecutar Mayhem for API (Si MAYHEM_TOKEN o MAPI_TOKEN está configurado)
-        if: ${{ secrets.MAYHEM_TOKEN != '' || secrets.MAPI_TOKEN != '' }}
+        if: env.MAYHEM_TOKEN != ''
         continue-on-error: true
         uses: ForAllSecure/mapi-action@v2
         with:
-          mayhem-token: ${{ secrets.MAYHEM_TOKEN || secrets.MAPI_TOKEN }}
+          mayhem-token: ${{ env.MAYHEM_TOKEN }}
           target: juanesmartinezunicauca/mesalista/api
           api-url: https://mesalista-p0pf.onrender.com/api/v1
           api-spec: https://mesalista-p0pf.onrender.com/api/docs-json
