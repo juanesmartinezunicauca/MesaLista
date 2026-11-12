@@ -1,222 +1,398 @@
-# MesaLista
+# MesaLista POS 🍽️ — Sistema Integral de Gestión Restaurantera y Punto de Venta
 
-Sistema POS y de gestión operativa para restaurantes y locales gastronómicos: control de mesas, pedidos, comandas a cocina, caja e inventario.
+[![NestJS](https://img.shields.io/badge/Backend-NestJS%2011-ea2845?style=flat&logo=nestjs)](https://nestjs.com/)
+[![Angular](https://img.shields.io/badge/Frontend-Angular%2019%2B-dd0031?style=flat&logo=angular)](https://angular.dev/)
+[![Prisma](https://img.shields.io/badge/ORM-Prisma%20ORM-2d3748?style=flat&logo=prisma)](https://www.prisma.io/)
+[![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL%2016-336791?style=flat&logo=postgresql)](https://www.postgresql.org/)
+[![OpenAPI](https://img.shields.io/badge/Docs-OpenAPI%203.0%20%2F%20Swagger-85ea2d?style=flat&logo=swagger)](http://localhost:3000/api/docs)
+[![Arc42](https://img.shields.io/badge/Architecture-Arc42%20v8.2-blue)](docs/arquitectura/arc42.md)
+[![IEEE](https://img.shields.io/badge/Standard-IEEE%201063%20%7C%20ISO%2026514-informational)](docs/manual-tecnico-usuario.md)
+[![Security](https://img.shields.io/badge/Security-OWASP%20Top%2010-brightgreen)](OWASP_COMPLIANCE.md)
 
-## Visión General
-- **Cliente Piloto:** Restaurante nocturno Luigie's (Popayán, Cauca, Colombia)
-- **Equipo de Desarrollo:** Trinity (Universidad del Cauca, 2026)
-- **Enfoque Arquitectónico:** Local-First / Offline-First en red de área local (LAN).
+---
 
-## Estructura del Proyecto (Monorepo)
-```text
-MesaLista/
-├── docker-compose.yml          # Orquestación con Docker (PostgreSQL, Backend, Frontend)
-├── configurar_postgres.bat     # Script de configuración rápida de PostgreSQL local (Windows)
-├── OWASP_COMPLIANCE.md         # Matriz técnica de cumplimiento OWASP Top 10 (2025)
-├── README.md                   # Documentación general y guía de ejecución
-├── backend/                    # API REST con NestJS 12, Prisma ORM, PostgreSQL
-└── frontend/                   # SPA con Angular 22, Material/SCSS, Standalone Components
+## 📌 1. Visión General del Sistema
+
+**MesaLista POS** es una solución de Punto de Venta y Gestión Operativa diseñada bajo un enfoque híbrido **Cloud & Local-First (LAN)** para locales gastronómicos de alta rotación, implementada y validada en su fase piloto con el **Restaurante Nocturno Luigie's** (Popayán, Cauca, Colombia).
+
+El sistema centraliza y sincroniza en tiempo real las operaciones clave del restaurante:
+- **Gestión de Salón y Mesas:** Plano interactivo visual, control de estados (libre, ocupada, atendida, sucia), cambio de ubicación y comandería rápida por mesero.
+- **Cocina y Barra (KDS - Kitchen Display System):** Cola visual de pedidos en tiempo real con tiempos de preparación, estados de cocción y despachos parciales.
+- **Domicilios y Pedidos Externos:** Registro de clientes de domicilio, cálculo de costos de despacho, trazabilidad de ruta y panel público de recepción de pedidos.
+- **Arqueo y Control de Turnos de Caja:** Apertura con base inicial, registro de egresos/gastos menores en tiempo real, arqueo ciego o supervisado y balance de cierre.
+- **Facturación y Liquidación:** Múltiples medios de pago (efectivo, datáfono, transferencia QR), gestión voluntaria de propina (10%), anulación auditada y soporte de impresión térmica ESC/POS.
+- **Autenticación Federada de Alta Seguridad:** Acceso exclusivo corporativo mediante **Google OAuth 2.0 (Identity Services)** con enrolamiento por tokens efímeros y control de acceso basado en roles (**RBAC**).
+
+---
+
+## 📚 2. Estándares y Documentación Técnica del Repositorio
+
+El proyecto implementa los estándares internacionales de arquitectura, especificación de APIs y documentación de software:
+
+| Documento | Estándar / Marco | Descripción |
+|---|---|---|
+| [**Swagger UI Interactivo**](http://localhost:3000/api/docs) | **OpenAPI Specification 3.0** | Catálogo vivo de endpoints, esquemas DTO, ejemplos y autenticación Bearer interactiva en `/api/docs`. |
+| [**Arc42 Architectural Blueprint**](docs/arquitectura/arc42.md) | **Arc42 v8.2** | Especificación integral de arquitectura: contexto, bloques C4, vistas de ejecución, ADRs y análisis de calidad ATAM. |
+| [**Manual Técnico y de Usuario**](docs/manual-tecnico-usuario.md) | **IEEE 1063 & ISO/IEC/IEEE 26514** | Guía de instalación paso a paso, diccionario de base de datos, manual por roles operativos y resolución de fallos. |
+| [**Guía de Sustentación de Autenticación**](docs/sustentacion-auth.md) | **OAuth 2.0 RFC 6749 & OIDC** | Trazabilidad archivo por archivo del flujo de autenticación Google, mitigación Anti-Account Takeover y banco de preguntas para evaluación oral. |
+| [**Matriz de Cumplimiento OWASP**](OWASP_COMPLIANCE.md) | **OWASP Top 10 (2025/2026)** | Auditoría técnica de mitigación de vulnerabilidades (Inyecciones, Broken Auth, SSRF, DoS, Exposición de Datos). |
+
+---
+
+## 🛠️ 3. Stack Tecnológico
+
+```mermaid
+flowchart LR
+    subgraph Client["Frontend (SPA)"]
+        A[Angular 19 Standalone] --> B[Signals & RxJS Reactive State]
+        B --> C[Tailwind CSS & SCSS]
+        C --> D[Google Identity Services GIS]
+    end
+    
+    subgraph Server["Backend API"]
+        E[NestJS 11+ REST] --> F[Prisma ORM 6]
+        E --> G[Passport JWT & Class-Validator]
+        E --> H[Swagger OpenAPI 3.0]
+        E --> I[Brevo API Mailer]
+    end
+
+    subgraph Data["Infraestructura & Datos"]
+        J[(PostgreSQL 16 Neon / Local)]
+        K[Docker & Docker Compose]
+        L[Impresoras ESC/POS TCP/USB]
+    end
+
+    Client -->|HTTPS / JSON + Bearer JWT| Server
+    Server -->|Pool TCP / SSL| Data
 ```
 
-> [!TIP]
-> 🛡️ **Seguridad y Auditoría:** Consulta la [Matriz de Cumplimiento OWASP Top 10](OWASP_COMPLIANCE.md) para revisar en detalle cómo el proyecto mitiga cada vulnerabilidad con hipervínculos directos a las líneas del código fuente.
-
-## Requisitos Previos
-Antes de comenzar, asegúrate de contar con:
-- **Node.js**: v18.x o superior (recomendado v20+ LTS)
-- **npm**: v9.x o superior
-- **PostgreSQL**: v16+ (ejecutándose en el puerto estándar `5432`) **O** **Docker / Docker Desktop**
-- **Git**
+- **Frontend:** Angular 19/20+, TypeScript 5+, RxJS 7+, Standalone Components, Reactive Forms, SCSS modular.
+- **Backend:** NestJS 11+, Node.js 20+ LTS, TypeScript 5+, Passport.js, Helmet, Express.
+- **Capa de Persistencia:** Prisma ORM, PostgreSQL 16 (Compatible con Neon Cloud Serverless y PostgreSQL Local).
+- **Seguridad & Comunicaciones:** Google Identity Services (`@google/accounts`), JWT (`RS256/HS256`), Brevo REST API v3 (Emails transaccionales sin bloqueo de puertos SMTP).
+- **Hardware Integrado:** Soporte para impresoras de recibos térmicas de 80mm y 58mm vía socket TCP/LAN o driver nativo.
 
 ---
 
-## 🚀 Guía de Ejecución en Desarrollo Local
+## 📋 4. Requisitos Previos
 
-> [!NOTE]
-> Si abriste la terminal desde la carpeta contenedora superior (`MESALISTA_V1.0`), ingresa primero a la carpeta del proyecto:
-> ```bash
-> cd MesaLista
-> ```
-
-Para trabajar en desarrollo local se requieren dos terminales abiertas simultáneamente (una para el Backend y otra para el Frontend), además de tener la base de datos activa.
-
-### Paso 1: Base de Datos PostgreSQL
-
-Puedes preparar la base de datos de dos formas:
-
-#### Opción A: PostgreSQL local instalado en Windows
-Si tienes PostgreSQL instalado en tu equipo, puedes ejecutar el script automatizado (haciendo clic derecho y seleccionando "Ejecutar como administrador" o desde la consola):
-```cmd
-.\configurar_postgres.bat
-```
-*Este script inicia el servicio de PostgreSQL, asegura el usuario `postgres` con contraseña `postgres` y crea la base de datos `mesalista`.*
-
-#### Opción B: PostgreSQL mediante Docker
-Si tienes Docker y no deseas instalar PostgreSQL directamente en Windows:
-```bash
-docker compose up postgres -d
-```
+Antes de ejecutar el proyecto, asegúrate de tener instalado:
+- **Node.js:** v20.x LTS o superior ([Descargar](https://nodejs.org/))
+- **npm:** v9.x o superior
+- **Base de Datos PostgreSQL:** v15+ en local **O** una cadena de conexión a un clúster PostgreSQL en la nube ([Neon.tech](https://neon.tech), Supabase, etc.).
+- **Docker & Docker Compose** *(Opcional, si deseas levantar todo el entorno mediante contenedores)*.
+- **Google Cloud Console:** Client ID configurado en OAuth 2.0 Web Client con orígenes autorizados `http://localhost:4200`.
 
 ---
 
-### Paso 2: Ejecución del Backend (NestJS)
+## ⚙️ 5. Configuración de Variables de Entorno
 
-En tu **primera terminal**:
-
-1. **Entrar a la carpeta del backend:**
-   ```bash
-   cd backend
-   ```
-   *(O desde la raíz de `MesaLista`: `cd MesaLista/backend` si te encuentras afuera)*
-
-2. **Instalar dependencias:**
-   ```bash
-   npm install
-   ```
-
-3. **Configurar el archivo de entorno (`.env`):**
-   Copia el archivo `.env.example` para generar tu `.env`:
-   - En **PowerShell**:
-     ```powershell
-     Copy-Item .env.example .env
-     ```
-   - En **CMD (Símbolo del sistema)**:
-     ```cmd
-     copy .env.example .env
-     ```
-   - En **Bash / Linux / Git Bash**:
-     ```bash
-     cp .env.example .env
-     ```
-   *(Verifica que `DATABASE_URL` apunte a tu PostgreSQL local y que `JWT_SECRET` esté definido).*
-
-4. **Sincronizar la base de datos y cargar datos iniciales (Seed):**
-   ```bash
-   # Genera el cliente tipado de Prisma
-   npx prisma generate
-
-   # Aplica el esquema Prisma sobre la base de datos
-   npx prisma db push
-
-   # Ejecuta el seed (crea usuario administrador inicial y las 6 mesas)
-   npx prisma db seed
-   ```
-
-5. **Iniciar el servidor backend en modo desarrollo:**
-   ```bash
-   npm run start:dev
-   ```
-   - El backend iniciará en: `http://localhost:3000`
-   - Prefijo de la API REST: `http://localhost:3000/api/v1`
-
----
-
-### Paso 3: Ejecución del Frontend (Angular)
-
-En tu **segunda terminal**:
-
-1. **Entrar a la carpeta del frontend:**
-   ```bash
-   cd frontend
-   ```
-   *(O desde la raíz de `MesaLista`: `cd MesaLista/frontend`)*
-
-2. **Instalar dependencias:**
-   ```bash
-   npm install
-   ```
-
-3. **Iniciar el servidor de desarrollo de Angular:**
-   ```bash
-   npm start
-   # o también:
-   npm run dev
-   ```
-   - El frontend estará disponible en: `http://localhost:4200`
-   - La aplicación se recarga automáticamente al guardar cambios en el código.
-
----
-
-## ⚡ Comandos Rápidos desde la Raíz (`MesaLista/`)
-
-Si no deseas navegar con `cd` en cada terminal, puedes correr los proyectos directamente desde la raíz `MesaLista/` usando el parámetro `--prefix`:
+### 5.1 Backend (`backend/.env`)
+Copia la plantilla `backend/.env.example` como `backend/.env`:
 
 ```bash
-# Terminal 1 - Backend:
-npm --prefix backend run start:dev
+# Windows PowerShell:
+Copy-Item backend/.env.example backend/.env
 
-# Terminal 2 - Frontend:
-npm --prefix frontend start
+# Linux / macOS / Bash:
+cp backend/.env.example backend/.env
 ```
 
-*(Si tu terminal se encuentra en la carpeta padre `MESALISTA_V1.0`, añade la ruta: `npm --prefix MesaLista/backend run start:dev` y `npm --prefix MesaLista/frontend start`).*
+Edita `backend/.env` con tus credenciales reales (este archivo está en `.gitignore` y **nunca** se versiona):
+
+```ini
+# Servidor HTTP
+PORT=3000
+NODE_ENV=development
+
+# Base de datos PostgreSQL (Ejemplo Neon Cloud o Local)
+DATABASE_URL="postgresql://usuario:contraseña@ep-ejemplo.us-east-2.aws.neon.tech/mesalista?sslmode=require"
+
+# Seguridad JWT (Generar con: openssl rand -hex 32)
+JWT_SECRET="CAMBIE_ESTO_POR_UNA_CLAVE_ALEATORIA_SUPER_SEGURA_DE_32_BYTES"
+JWT_EXPIRES_IN="12h"
+
+# CORS (Orígenes autorizados separados por coma)
+CORS_ORIGIN="http://localhost:4200"
+
+# Google OAuth 2.0
+GOOGLE_CLIENT_ID="123456789012-ejemplo.apps.googleusercontent.com"
+
+# Impresora térmica ESC/POS (opcional)
+PRINTER_INTERFACE="tcp://192.168.1.200:9100"
+
+# Despacho de Correo Electrónico (Brevo REST API - Invitaciones de Empleados)
+BREVO_API_KEY="xkeysib-tu-api-key-de-brevo"
+BREVO_SENDER_EMAIL="notificaciones@tudominio.com"
+```
+
+### 5.2 Frontend (`frontend/src/environments/`)
+Configura las variables públicas en `frontend/src/environments/environment.ts`:
+
+```typescript
+export const environment = {
+  production: false,
+  apiUrl: 'http://localhost:3000/api/v1',
+  googleClientId: '123456789012-ejemplo.apps.googleusercontent.com',
+};
+```
 
 ---
 
-## 🐳 Opción con Docker Compose (Todo en uno)
+## 🚀 6. Guía de Instalación y Ejecución Local
 
-Si prefieres correr toda la solución contenedorizada (Base de datos, Backend y Frontend):
-
-1. Asegúrate de definir la variable `JWT_SECRET` (por ejemplo copiando el `.env.example` a `backend/.env`).
-2. Desde la carpeta `MesaLista/`, ejecuta:
-   ```bash
-   docker compose up --build
-   ```
-3. Puertos asignados:
-   - **Frontend:** `http://localhost:80`
-   - **Backend API:** `http://localhost:3000/api/v1`
-   - **PostgreSQL:** Puerto 5432 interno en la red Docker.
-
-Para detener todos los servicios:
+### Paso 1: Dependencias del Backend y Base de Datos
+En tu primera terminal:
 ```bash
+cd backend
+npm install
+
+# Generar el cliente tipado de Prisma
+npx prisma generate
+
+# Sincronizar el modelo relacional en PostgreSQL
+npx prisma db push
+
+# Poblar datos iniciales (Mesas del 1 al 6 y usuario super-admin inicial)
+npx prisma db seed
+
+# Iniciar servidor en desarrollo con hot-reload
+npm run start:dev
+```
+> El backend quedará escuchando en: `http://localhost:3000`  
+> Documentación interactiva Swagger: `http://localhost:3000/api/docs`
+
+### Paso 2: Dependencias y Ejecución del Frontend
+En tu segunda terminal:
+```bash
+cd frontend
+npm install
+
+# Iniciar la SPA de Angular
+npm start
+```
+> La interfaz gráfica estará disponible en: `http://localhost:4200`
+
+---
+
+## 🐳 7. Ejecución con Docker Compose (Todo en Uno)
+
+Si prefieres levantar el stack completo sin instalar PostgreSQL ni Node en tu máquina anfitriona:
+
+```bash
+# Iniciar todos los servicios (Base de datos PostgreSQL, Backend NestJS y Frontend Nginx)
+docker compose up --build -d
+
+# Ver logs en vivo
+docker compose logs -f
+
+# Detener los contenedores
 docker compose down
 ```
 
----
-
-## 🔑 Credenciales de Acceso por Defecto
-
-Tras ejecutar el seed (`npx prisma db seed`), puedes ingresar a la plataforma con las siguientes credenciales:
-
-| Campo | Valor |
-|---|---|
-| **URL Frontend** | `http://localhost:4200` |
-| **Usuario** | `admin` |
-| **Contraseña** | `admin123` |
-| **Rol** | `administrador` |
-
-> [!TIP]
-> El seed deja registradas 6 mesas (1 a 6) en estado libre listas para operar comandas.
+Puertos expuestos por Docker:
+- **Frontend Web:** `http://localhost:80`
+- **Backend API & Swagger:** `http://localhost:3000/api/v1` y `http://localhost:3000/api/docs`
+- **PostgreSQL:** `localhost:5432`
 
 ---
 
-## 🧪 Pruebas Unitarias
+## 🔐 8. Roles de Usuario y Flujo de Autenticación
 
-- **Backend (Jest):**
-  ```bash
-  cd backend
-  npm test
-  ```
-- **Frontend (Vitest):**
-  ```bash
-  cd frontend
-  npm test
-  ```
+El acceso al sistema está blindado mediante **Google OAuth 2.0**:
 
+```mermaid
+flowchart TD
+    A[Usuario pulsa 'Iniciar sesión con Google'] --> B[Google One Tap / GIS Popup]
+    B -->|ID Token firmado JWT| C[Frontend envía ID Token a POST /auth/google]
+    C --> D[Backend valida firma criptográfica con Google Auth Library]
+    D --> E{¿Email existe en tabla 'usuario'?}
+    E -->|No| F[401 Unauthorized: Usuario no registrado en nómina]
+    E -->|Sí, pero inactivo| G[401 Unauthorized: Cuenta desactivada]
+    E -->|Sí y activo| H[Enlaza google_id si es primera vez]
+    H --> I[Backend emite JWT con id_usuario, rol y nombre]
+    I --> J[Frontend almacena JWT y redirige según Rol]
+```
 
+### Roles del Sistema (RBAC)
+- **`super_admin` / `administrador`:** Acceso integral a métricas, catálogo, nómina de empleados, caja y reportes.
+- **`cajero`:** Gestión exclusiva del turno de caja, egresos menores, arqueo físico y cobro de pedidos.
+- **`mesero`:** Asignación visual de comandas a mesas, traslado de cuentas y visualización de pedidos activos.
+- **`cocinero`:** Panel KDS en cocina, cambio de estados a "en preparación" y "listo para entregar".
+- **`domiciliario`:** Despacho, trazabilidad de pedidos fuera de salón y confirmación de entrega.
 
 ---
 
-## 📊 Calidad y Análisis Estático de Código (SonarQube)
+## 📡 9. Ejemplos de Uso de la API (cURL / HTTP)
 
-Para auditar métricas de mantenibilidad, deuda técnica, bugs, vulnerabilidades y cobertura de pruebas:
+Todos los endpoints (excepto el login de Google y webhook/recepción pública) requieren la cabecera `Authorization: Bearer <TOKEN_JWT>`.
 
-1. **Iniciar servidor SonarQube local (Docker):**
-   ```cmd
-   .\iniciar_sonarqube.bat
-   ```
-2. **Ejecutar análisis automatizado:**
-   ```cmd
-   .\ejecutar_sonar_scan.bat
-   ```
-> Consulta la [Guía Completa de SonarQube](GUIA_SONARQUBE.md) para detalles sobre generación de tokens, interpretación de Quality Gates y configuración en GitHub Actions / SonarCloud.
+### 9.1 Autenticación con Google OAuth
+```bash
+curl -X POST http://localhost:3000/api/v1/auth/google \
+  -H "Content-Type: application/json" \
+  -d '{
+    "credential": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEy..."
+  }'
+```
+**Respuesta (`201 Created`):**
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "usuario": {
+    "id_usuario": 1,
+    "nombre": "Juan Esteban Martínez",
+    "usuario": "admin",
+    "email": "jesmartinez@unicauca.edu.co",
+    "rol": "administrador",
+    "estado": "activo"
+  }
+}
+```
+
+---
+
+### 9.2 Consultar Estado Operativo de Caja
+```bash
+curl -X GET http://localhost:3000/api/v1/caja/estado \
+  -H "Authorization: Bearer $TOKEN"
+```
+**Respuesta (`200 OK`):**
+```json
+{
+  "cajaAbierta": true,
+  "caja": {
+    "id_caja": 14,
+    "monto_apertura": 150000.00,
+    "total_ventas_efectivo": 420000.00,
+    "total_gastos": 35000.00,
+    "saldo_esperado": 535000.00,
+    "fecha_apertura": "2026-11-12T18:00:00.000Z",
+    "estado": "abierta"
+  }
+}
+```
+
+---
+
+### 9.3 Listar Mesas del Salón
+```bash
+curl -X GET http://localhost:3000/api/v1/mesas \
+  -H "Authorization: Bearer $TOKEN"
+```
+**Respuesta (`200 OK`):**
+```json
+[
+  {
+    "id_mesa": 1,
+    "numero_mesa": "Mesa 1",
+    "capacidad": 4,
+    "estado": "libre",
+    "posicion_x": 120,
+    "posicion_y": 80
+  },
+  {
+    "id_mesa": 2,
+    "numero_mesa": "Mesa 2",
+    "capacidad": 6,
+    "estado": "ocupada",
+    "posicion_x": 280,
+    "posicion_y": 80
+  }
+]
+```
+
+---
+
+### 9.4 Crear una Comanda / Pedido de Mesa
+```bash
+curl -X POST http://localhost:3000/api/v1/pedidos \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id_mesa": 2,
+    "tipo_pedido": "mesa",
+    "observaciones": "Sin cebolla en la hamburguesa especial",
+    "items": [
+      {
+        "id_producto": 5,
+        "cantidad": 2,
+        "notas": "Término medio"
+      },
+      {
+        "id_producto": 12,
+        "cantidad": 2,
+        "notas": "Con hielo"
+      }
+    ]
+  }'
+```
+**Respuesta (`201 Created`):**
+```json
+{
+  "id_pedido": 88,
+  "id_mesa": 2,
+  "estado": "pendiente",
+  "total": 54000.00,
+  "fecha_creacion": "2026-11-12T20:15:30.000Z"
+}
+```
+
+---
+
+### 9.5 Facturar y Liquidar un Pedido
+```bash
+curl -X POST http://localhost:3000/api/v1/facturacion \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id_pedido": 88,
+    "metodo_pago": "efectivo",
+    "monto_recibido": 60000.00,
+    "incluye_propina": true,
+    "porcentaje_propina": 10
+  }'
+```
+**Respuesta (`201 Created`):**
+```json
+{
+  "id_factura": 45,
+  "id_pedido": 88,
+  "subtotal": 54000.00,
+  "propina": 5400.00,
+  "total": 59400.00,
+  "cambio": 600.00,
+  "metodo_pago": "efectivo",
+  "fecha_emision": "2026-11-12T21:05:12.000Z"
+}
+```
+
+---
+
+## 🧪 10. Pruebas y Aseguramiento de Calidad
+
+```bash
+# Backend - Pruebas Unitarias y de Integración con Jest
+cd backend
+npm test
+
+# Backend - Cobertura de Código
+npm run test:cov
+
+# Frontend - Pruebas Unitarias con Vitest
+cd frontend
+npm test
+
+# Análisis de Calidad y Deuda Técnica con SonarQube
+cd ..
+.\ejecutar_sonar_scan.bat
+```
+
+---
+
+## 👥 11. Equipo de Desarrollo y Créditos
+
+Proyecto desarrollado como parte de la asignatura **Programación II**, Universidad del Cauca (2026):
+- **Equipo Trinity** — Ingeniería de Sistemas.
+- **Cliente:** Luigie's Restaurante Nocturno (Popayán, Cauca).
+- **Licencia:** MIT License.
