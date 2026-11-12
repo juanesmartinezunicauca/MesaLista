@@ -84,9 +84,8 @@ jobs:
             schemathesis/schemathesis:latest \
             run http://localhost:3000/api/docs-json \
             --checks not_a_server_error \
-            --validate-schema=true \
-            --hypothesis-max-examples=20 \
-            --exitfirst=false
+            --max-examples 20 \
+            --wait-for-schema 30
 
       - name: Ejecutar Mayhem for API (Si MAYHEM_TOKEN o MAPI_TOKEN está configurado)
         if: env.MAYHEM_TOKEN != ''
