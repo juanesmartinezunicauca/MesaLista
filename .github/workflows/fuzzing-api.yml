@@ -1,0 +1,96 @@
+name: "API Fuzz Testing - OpenAPI & Schemathesis"
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    types: [ opened, synchronize, reopened ]
+  workflow_dispatch:
+
+jobs:
+  api-fuzz:
+    name: OpenAPI Fuzz Testing (Schemathesis & Mayhem)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mesalista
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout del Repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 24.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar Dependencias del Backend
+        working-directory: backend
+        run: npm ci || npm install
+
+      - name: Generar Cliente de Prisma ORM
+        working-directory: backend
+        run: npx prisma generate
+
+      - name: Preparar Esquema de Base de Datos en CI
+        working-directory: backend
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/mesalista?schema=public"
+        run: npx prisma db push --skip-generate
+
+      - name: Compilar Backend (NestJS)
+        working-directory: backend
+        run: npm run build
+
+      - name: Iniciar Backend en Segundo Plano para Fuzzing
+        working-directory: backend
+        env:
+          PORT: 3000
+          NODE_ENV: test
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/mesalista?schema=public"
+          JWT_SECRET: "test_secret_for_ci_fuzzing_super_long_32_bytes_random"
+          CORS_ORIGIN: "http://localhost:4200"
+        run: |
+          node dist/main &
+          echo "Esperando a que la API y Swagger inicien en http://localhost:3000/api/docs..."
+          for i in {1..30}; do
+            if curl -s http://localhost:3000/api/docs-json > /dev/null; then
+              echo "✅ Swagger OpenAPI 3.0 detectado y listo para Fuzz Testing."
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Ejecutar Fuzzing de API con Schemathesis (OpenAPI 3.0)
+        continue-on-error: true
+        run: |
+          docker run --network="host" --rm \
+            schemathesis/schemathesis:latest \
+            run http://localhost:3000/api/docs-json \
+            --checks not_a_server_error \
+            --validate-schema=true \
+            --hypothesis-max-examples=20 \
+            --exitfirst=false
+
+      - name: Ejecutar Mayhem for API (Si MAPI_TOKEN está configurado)
+        if: ${{ secrets.MAPI_TOKEN != '' }}
+        continue-on-error: true
+        uses: ForAllSecure/mapi-action@v1
+        with:
+          mapi-token: ${{ secrets.MAPI_TOKEN }}
+          api-url: http://localhost:3000/api/v1
+          api-spec: http://localhost:3000/api/docs-json

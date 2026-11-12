@@ -1,5 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { json, urlencoded } from 'express';
 import helmet from 'helmet';
 import { PrismaExceptionFilter } from './common/filters';
@@ -9,7 +10,19 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // OWASP A05: Protección de cabeceras HTTP de seguridad con Helmet
-  app.use(helmet());
+  // Configuración de CSP compatible con Swagger UI en /api/docs
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: [`'self'`],
+          styleSrc: [`'self'`, `'unsafe-inline'`],
+          imgSrc: [`'self'`, 'data:', 'validator.swagger.io'],
+          scriptSrc: [`'self'`, `'unsafe-inline'`],
+        },
+      },
+    }),
+  );
 
   // Límite controlado de payload para permitir imágenes en base64 evitando saturación por DoS
   app.use(json({ limit: '2mb' }));
@@ -42,7 +55,6 @@ async function bootstrap() {
     credentials: true,
   });
 
-
   // Prefijo global de API — todos los endpoints quedan bajo /api/v1/...
   app.setGlobalPrefix('api/v1');
 
@@ -60,6 +72,53 @@ async function bootstrap() {
 
   // Filtro global de excepciones de base de datos Prisma
   app.useGlobalFilters(new PrismaExceptionFilter());
+
+  // =========================================================================
+  // Configuración OpenAPI Specification 3.0 / Swagger UI interactivo
+  // Disponible en: http://localhost:3000/api/docs
+  // =========================================================================
+  const config = new DocumentBuilder()
+    .setTitle('MesaLista POS API')
+    .setDescription(
+      'Documentación técnica interactiva de la API REST de MesaLista POS (Restaurante Luigie\'s).\n\n' +
+      'Estándar OpenAPI 3.0 para comandería, mesas interactivas, KDS, domicilios, facturación y arqueo de caja.\n\n' +
+      '### Autenticación Bearer (JWT):\n' +
+      'Para probar rutas protegidas, inicia sesión en `/api/v1/auth/google` o `/api/v1/auth/login`, ' +
+      'copia el `accessToken` y presiona el botón **Authorize** arriba a la derecha ingresando el token Bearer.',
+    )
+    .setVersion('1.0.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'Authorization',
+        description: 'Ingresa el token JWT emitido por MesaLista POS (sin prefijo Bearer)',
+        in: 'header',
+      },
+      'JWT-auth',
+    )
+    .addTag('Autenticación', 'Endpoints de federación Google OAuth 2.0, login y gestión de sesión')
+    .addTag('Usuarios', 'Gestión de colaboradores, roles RBAC y tokens de enrolamiento efímeros')
+    .addTag('Mesas', 'Control operativo de salón, comandería interactiva y liberación de mesas')
+    .addTag('Catálogo', 'Gestión de productos, categorías, inventario y ajustes de merma')
+    .addTag('Pedidos', 'Gestión de comandas para salón y cola KDS de cocina')
+    .addTag('Domicilios', 'Gestión integral de pedidos con entrega a domicilio y recepción cliente')
+    .addTag('Facturación', 'Cobro, cálculo de propina, registro de pagos y anulación formal')
+    .addTag('Caja', 'Apertura de turno, control de gastos menores, arqueo físico y cierre contable')
+    .addTag('Reportes', 'Métricas analíticas operativas y financieras ejecutivas')
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document, {
+    customSiteTitle: 'MesaLista POS — Swagger Documentation (OpenAPI 3.0)',
+    swaggerOptions: {
+      persistAuthorization: true,
+      filter: true,
+      displayRequestDuration: true,
+      docExpansion: 'none',
+    },
+  });
 
   await app.listen(process.env.PORT ?? 3000);
 }

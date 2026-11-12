@@ -2,9 +2,9 @@ name: CI/CD Pipeline - MesaLista
 
 on:
   push:
-    branches: [ develop, main, chore/ci-cd-github-actions-codeql ]
-  pull_request:
     branches: [ develop, main ]
+  pull_request:
+    types: [ opened, synchronize, reopened ]
 
 jobs:
   backend-qa:
@@ -40,6 +40,37 @@ jobs:
 
       - name: Compilación del Backend (NestJS)
         run: npm run build
+
+  fuzz-testing:
+    name: Fuzz Testing (Fast-Check & Property-Based)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      NODE_OPTIONS: "--experimental-vm-modules"
+    steps:
+      - name: Checkout del Repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 24.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar Dependencias
+        run: npm ci || npm install
+
+      - name: Generar Cliente de Prisma ORM
+        run: npx prisma generate
+
+      - name: Asegurar Directorio de Reportes Fuzzy
+        run: mkdir -p reports/fuzzy-testing
+
+      - name: Ejecutar Pruebas Fuzzy con Fast-Check
+        run: npm run test:fuzz
 
   frontend-qa:
     name: Frontend (Build & Validate)
