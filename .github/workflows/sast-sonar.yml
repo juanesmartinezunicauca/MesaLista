@@ -11,6 +11,8 @@ jobs:
   sonarcloud:
     name: SonarQube Cloud Analysis (SAST)
     runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - name: Checkout del Repositorio
         uses: actions/checkout@v4
@@ -39,13 +41,13 @@ jobs:
         run: npm run test:cov -- --passWithNoTests --runInBand
 
       - name: Ejecutar Análisis SonarQube Cloud (Si SONAR_TOKEN está configurado)
-        if: ${{ secrets.SONAR_TOKEN != '' }}
+        if: env.SONAR_TOKEN != ''
         uses: sonarsource/sonarcloud-github-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
 
       - name: Aviso de configuración SONAR_TOKEN
-        if: ${{ secrets.SONAR_TOKEN == '' }}
+        if: env.SONAR_TOKEN == ''
         run: |
           echo "::notice ::Las pruebas y cobertura LCOV se ejecutaron con éxito. Para habilitar el reporte en SonarCloud, agregue el secreto SONAR_TOKEN en Settings -> Secrets and variables -> Actions."

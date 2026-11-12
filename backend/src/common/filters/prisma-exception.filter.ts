@@ -8,12 +8,21 @@ import {
 import { Prisma } from '@prisma/client';
 import { Response } from 'express';
 
-@Catch(Prisma.PrismaClientKnownRequestError, Prisma.PrismaClientValidationError)
+@Catch(
+  Prisma.PrismaClientKnownRequestError,
+  Prisma.PrismaClientValidationError,
+  Prisma.PrismaClientUnknownRequestError,
+  Prisma.PrismaClientRustPanicError,
+)
 export class PrismaExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(PrismaExceptionFilter.name);
 
   catch(
-    exception: Prisma.PrismaClientKnownRequestError | Prisma.PrismaClientValidationError,
+    exception:
+      | Prisma.PrismaClientKnownRequestError
+      | Prisma.PrismaClientValidationError
+      | Prisma.PrismaClientUnknownRequestError
+      | Prisma.PrismaClientRustPanicError,
     host: ArgumentsHost,
   ) {
     const ctx = host.switchToHttp();
@@ -29,6 +38,16 @@ export class PrismaExceptionFilter implements ExceptionFilter {
       message = 'Los datos suministrados no cumplen con el esquema o tipos requeridos por el modelo de datos.';
       error = 'BadRequest';
       code = 'VALIDATION_ERROR';
+    } else if (exception instanceof Prisma.PrismaClientUnknownRequestError) {
+      status = HttpStatus.BAD_REQUEST;
+      message = 'La petición contiene caracteres, secuencias de bytes o parámetros no admitidos por la base de datos.';
+      error = 'BadRequest';
+      code = 'DB_REQUEST_ERROR';
+    } else if (exception instanceof Prisma.PrismaClientRustPanicError) {
+      status = HttpStatus.BAD_REQUEST;
+      message = 'Error en el motor de consulta por datos anómalos o fuera de rango.';
+      error = 'BadRequest';
+      code = 'DB_PANIC_ERROR';
     } else {
       code = exception.code;
       switch (exception.code) {

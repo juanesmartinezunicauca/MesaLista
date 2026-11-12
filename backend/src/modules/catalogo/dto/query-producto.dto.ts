@@ -19,7 +19,8 @@ export class QueryProductoDto {
   @Transform(({ value }) => {
     if (value === 'true' || value === true) return true;
     if (value === 'false' || value === false) return false;
-    return undefined;
+    if (value === undefined || value === null || value === '') return undefined;
+    return value;
   })
   @IsBoolean({ message: 'El parámetro disponible debe ser un valor booleano.' })
   disponible?: boolean;
@@ -29,6 +30,7 @@ export class QueryProductoDto {
     example: 'Margarita',
   })
   @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.replace(/\0/g, '').trim() : value))
   @IsString()
   busqueda?: string;
 }
