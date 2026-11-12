@@ -14,6 +14,7 @@
     "start:backend": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
+    "start:iast": "node -r @contrast/agent dist/main",
     "lint": "oxlint src/ test/",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
@@ -26,6 +27,7 @@
     "db:purge-and-setup": "node prisma/purge-and-setup-superadmin.js"
   },
   "dependencies": {
+    "@contrast/agent": "^5.69.0",
     "@nestjs/common": "^12.0.1",
     "@nestjs/config": "^12.0.0",
     "@nestjs/core": "^12.0.1",

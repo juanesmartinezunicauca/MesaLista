@@ -1,16 +1,17 @@
-name: "CodeQL Analysis"
+name: "SAST - GitHub CodeQL Security Analysis"
 
 on:
   push:
-    branches: [ "main", "develop" ]
+    branches: [ main, develop, '**' ]
   pull_request:
-    branches: [ "main", "develop" ]
+    branches: [ main, develop ]
   schedule:
     - cron: '0 6 * * 1'
+  workflow_dispatch:
 
 jobs:
   analyze:
-    name: Analyze (JavaScript / TypeScript)
+    name: CodeQL SAST Analysis (JavaScript / TypeScript)
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -23,16 +24,16 @@ jobs:
         language: [ 'javascript-typescript' ]
 
     steps:
-    - name: Checkout del Repositorio
-      uses: actions/checkout@v4
+      - name: Checkout del Repositorio
+        uses: actions/checkout@v4
 
-    - name: Inicializar CodeQL
-      uses: github/codeql-action/init@v3
-      with:
-        languages: ${{ matrix.language }}
-        queries: security-extended,security-and-quality
+      - name: Inicializar Motor CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended,security-and-quality
 
-    - name: Ejecutar Análisis de Seguridad CodeQL
-      uses: github/codeql-action/analyze@v3
-      with:
-        category: "/language:${{matrix.language}}"
+      - name: Ejecutar Análisis de Seguridad CodeQL
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{matrix.language}}"

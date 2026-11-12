@@ -1,0 +1,45 @@
+name: "SAST - SonarQube Cloud"
+
+on:
+  push:
+    branches: [ main, develop, '**' ]
+  pull_request:
+    types: [ opened, synchronize, reopened ]
+  workflow_dispatch:
+
+jobs:
+  sonarcloud:
+    name: SonarQube Cloud Analysis (SAST)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del Repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Clave para que SonarQube evalúe el historial de git y cobertura
+
+      - name: Configurar Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar Dependencias del Backend
+        working-directory: backend
+        run: npm ci || npm install
+
+      - name: Generar Cliente de Prisma ORM
+        working-directory: backend
+        run: npx prisma generate
+
+      - name: Ejecutar Pruebas con Cobertura (LCOV)
+        working-directory: backend
+        env:
+          NODE_OPTIONS: "--experimental-vm-modules"
+        run: npm run test:cov -- --passWithNoTests --runInBand
+
+      - name: Ejecutar Análisis SonarQube Cloud
+        uses: sonarsource/sonarcloud-github-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

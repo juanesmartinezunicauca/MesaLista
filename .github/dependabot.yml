@@ -1,0 +1,41 @@
+# =====================================================================
+#  SCA (Software Composition Analysis) — GitHub Dependabot
+#  Auditoría y actualización continua de dependencias de MesaLista
+# =====================================================================
+version: 2
+updates:
+  # Auditoría y actualización semanal de dependencias del Backend (NestJS / Node.js)
+  - package-ecosystem: "npm"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Bogota"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(deps-backend)"
+
+  # Auditoría y actualización semanal de dependencias del Frontend (Angular 22)
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Bogota"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(deps-frontend)"
+
+  # Auditoría y actualización semanal de GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Bogota"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(deps-actions)"
