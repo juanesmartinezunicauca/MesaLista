@@ -86,11 +86,13 @@ jobs:
             --hypothesis-max-examples=20 \
             --exitfirst=false
 
-      - name: Ejecutar Mayhem for API (Si MAPI_TOKEN está configurado)
-        if: ${{ secrets.MAPI_TOKEN != '' }}
+      - name: Ejecutar Mayhem for API (Si MAYHEM_TOKEN o MAPI_TOKEN está configurado)
+        if: ${{ secrets.MAYHEM_TOKEN != '' || secrets.MAPI_TOKEN != '' }}
         continue-on-error: true
-        uses: ForAllSecure/mapi-action@v1
+        uses: ForAllSecure/mapi-action@v2
         with:
-          mapi-token: ${{ secrets.MAPI_TOKEN }}
+          mayhem-token: ${{ secrets.MAYHEM_TOKEN || secrets.MAPI_TOKEN }}
+          target: juanesmartinezunicauca/mesalista/api
           api-url: http://localhost:3000/api/v1
           api-spec: http://localhost:3000/api/docs-json
+          duration: auto
