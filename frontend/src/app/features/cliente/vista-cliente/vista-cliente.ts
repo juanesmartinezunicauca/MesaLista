@@ -183,6 +183,20 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
     }
   }
 
+  onNombreInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const clean = input.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]/g, '');
+    input.value = clean;
+    this.nombreCliente.set(clean);
+  }
+
+  onTelefonoInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const clean = input.value.replace(/\D/g, '').slice(0, 10);
+    input.value = clean;
+    this.telefonoContacto.set(clean);
+  }
+
   ngOnInit(): void {
     this.cargarCatalogo();
     this.cargarEstadoServicio();
@@ -487,18 +501,41 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this.telefonoContacto().trim() || this.telefonoContacto().trim().length < 7) {
+    const clienteNombre = this.nombreCliente().trim();
+    const tel = this.telefonoContacto().trim();
+    const dir = this.direccionEntrega().trim();
+
+    if (!clienteNombre) {
+      this.snackBar.open('Por favor ingresa tu nombre completo.', 'Entendido', { duration: 3500 });
+      return;
+    }
+
+    if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]{2,100}$/.test(clienteNombre)) {
       this.snackBar.open(
-        'Por favor ingresa un número de teléfono o celular válido para coordinar la entrega.',
+        'El nombre solo debe contener letras y espacios (sin números ni caracteres especiales).',
         'Entendido',
         { duration: 4000 }
       );
       return;
     }
 
-    if (!this.direccionEntrega().trim() || this.direccionEntrega().trim().length < 5) {
+    if (!tel) {
+      this.snackBar.open('Por favor ingresa tu número de teléfono o celular.', 'Entendido', { duration: 3500 });
+      return;
+    }
+
+    if (!/^[0-9]{10}$/.test(tel)) {
       this.snackBar.open(
-        'Por favor ingresa una dirección de entrega válida (calle, carrera, barrio).',
+        'El teléfono debe tener exactamente 10 dígitos numéricos (ej. 3123456789).',
+        'Entendido',
+        { duration: 4500 }
+      );
+      return;
+    }
+
+    if (!dir || dir.length < 5) {
+      this.snackBar.open(
+        'Por favor ingresa una dirección de entrega válida (mínimo 5 caracteres).',
         'Entendido',
         { duration: 4000 }
       );
@@ -551,8 +588,7 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
     }
 
     const zona = this.zonaSeleccionada();
-    const clienteNombre = this.nombreCliente().trim();
-    const direccion = `${this.direccionEntrega().trim()} [${zona.nombre.split(':')[0]}]`;
+    const direccion = `${dir} [${zona.nombre}]`;
     const notasArray = [
       this.referenciaUbicacion().trim() ? `Ref: ${this.referenciaUbicacion().trim()}` : '',
       this.observaciones().trim() ? `Obs: ${this.observaciones().trim()}` : '',

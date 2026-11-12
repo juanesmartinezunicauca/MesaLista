@@ -287,6 +287,17 @@
             }
         }
 
+        // Tarjeta de Utilidades del Día
+        .utility-card {
+            border-left: 4px solid #10b981;
+            background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
+
+            &.deficit {
+                border-left-color: #ef4444;
+                background: linear-gradient(180deg, #ffffff 0%, #fef2f2 100%);
+            }
+        }
+
         // Tarjeta Azul Destacada (Efectivo Esperado)
         .highlight-blue {
             background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);

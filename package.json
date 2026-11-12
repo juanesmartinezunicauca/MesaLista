@@ -8,6 +8,12 @@
     "test:backend": "npm --prefix backend run test",
     "test:frontend": "npm --prefix frontend run test",
     "start:backend": "npm --prefix backend run start:dev",
-    "start:frontend": "npm --prefix frontend run dev"
+    "start:frontend": "npm --prefix frontend run dev",
+    "perf:backend": "npx artillery run performance/load-test.yml --output performance/reports/backend-results.json && node performance/generate-report.js",
+    "perf:frontend": "node performance/run-lighthouse.js"
+  },
+  "devDependencies": {
+    "artillery": "^2.0.34",
+    "lighthouse": "^13.6.0"
   }
 }

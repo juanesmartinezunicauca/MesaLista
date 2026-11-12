@@ -1,0 +1,27 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 10
+      arrivalRate: 5
+      name: "Calentamiento"
+    - duration: 20
+      arrivalRate: 15
+      name: "Carga sostenida"
+  plugins:
+    metrics-by-endpoint: {}
+    ensure:
+      thresholds:
+        - http.response_time.p95: 1000
+      conditions:
+        - expression: "http.codes.500 == undefined or http.codes.500 == 0"
+          strict: true
+
+scenarios:
+  - name: "Flujo público de consulta de catálogo y domicilios"
+    flow:
+      - get:
+          url: "/api/v1/catalogo/productos"
+      - get:
+          url: "/api/v1/catalogo/categorias"
+      - get:
+          url: "/api/v1/domicilios/estado-servicio"

@@ -145,6 +145,8 @@ describe('CajaService', () => {
       expect(estado.resumen?.ventas_tarjeta).toBe(30000);
       expect(estado.resumen?.total_gastos).toBe(15000);
       expect(estado.resumen?.gastos_efectivo).toBe(15000);
+      expect(estado.resumen?.utilidad_del_dia).toBe(60000);
+      expect(estado.resumen?.margen_utilidad_porcentaje).toBe(80);
       // Efectivo esperado: 100.000 (base) + 50.000 (ventas efectivo) - 15.000 (gastos efectivo) = 135.000
       expect(estado.resumen?.efectivo_esperado).toBe(135000);
       expect(estado.movimientos.length).toBe(3);

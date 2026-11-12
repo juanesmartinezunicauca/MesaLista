@@ -115,6 +115,22 @@ export class CajaService {
             pagos: {
               include: { medioPago: true },
             },
+            pedidos: {
+              include: {
+                items: {
+                  include: {
+                    producto: {
+                      select: {
+                        id_producto: true,
+                        nombre: true,
+                        costo: true,
+                        precio_venta: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
           orderBy: { fecha_hora: 'desc' },
         },
@@ -148,6 +164,7 @@ export class CajaService {
     let totalPropinas = 0;
     let transaccionesValidas = 0;
     let totalFacturasAnuladas = 0;
+    let totalCostoInsumos = 0;
 
     for (const f of caja.facturas) {
       if (f.estado === EstadoFactura.anulada) {
@@ -158,6 +175,19 @@ export class CajaService {
       transaccionesValidas++;
       totalVentas += Number(f.valor_total);
       totalPropinas += Number(f.propina);
+
+      // Calcular costo estimado de insumos vendidos en pedidos de la factura
+      if (Array.isArray((f as any).pedidos)) {
+        for (const ped of (f as any).pedidos) {
+          if (Array.isArray(ped.items)) {
+            for (const it of ped.items) {
+              const cant = Number(it.cantidad) || 0;
+              const costo = Number(it.producto?.costo) || 0;
+              totalCostoInsumos += cant * costo;
+            }
+          }
+        }
+      }
 
       for (const p of f.pagos) {
         const metodo = normalizarMedioPago(p.medioPago?.nombre);
@@ -198,6 +228,17 @@ export class CajaService {
     totalPropinas = redondearMoneda(totalPropinas);
     totalGastos = redondearMoneda(totalGastos);
     gastosEfectivo = redondearMoneda(gastosEfectivo);
+    totalCostoInsumos = redondearMoneda(totalCostoInsumos);
+
+    const ventasNetas = redondearMoneda(totalVentas - totalPropinas);
+
+    // Utilidades del día:
+    // 1. Utilidad Operativa de Caja = Ventas Netas - Gastos Registrados en Caja
+    const utilidadOperativa = redondearMoneda(ventasNetas - totalGastos);
+    // 2. Utilidad Neta Real = Ventas Netas - Costo Estimado de Insumos - Gastos Registrados
+    const utilidadNeta = redondearMoneda(ventasNetas - totalCostoInsumos - totalGastos);
+    // 3. Margen de Utilidad porcentual sobre ventas netas
+    const margenUtilidadPorcentaje = ventasNetas > 0 ? redondearMoneda((utilidadOperativa / ventasNetas) * 100) : 0;
 
     // Efectivo esperado en cajón: Base Inicial + Ventas en Efectivo - Gastos retirados en Efectivo
     const efectivoEsperado = redondearMoneda(valorBase + ventasEfectivo - gastosEfectivo);
@@ -244,7 +285,7 @@ export class CajaService {
       resumen: {
         valor_base: valorBase,
         total_ventas: totalVentas,
-        ventas_netas: redondearMoneda(totalVentas - totalPropinas),
+        ventas_netas: ventasNetas,
         total_propinas: totalPropinas,
         total_transacciones: transaccionesValidas,
         total_facturas_anuladas: totalFacturasAnuladas,
@@ -256,6 +297,10 @@ export class CajaService {
         desglose_gastos: desgloseGastos,
         total_movimientos_gasto: caja.gastos.length,
         efectivo_esperado: efectivoEsperado,
+        costo_insumos: totalCostoInsumos,
+        utilidad_del_dia: utilidadOperativa,
+        utilidad_neta: utilidadNeta,
+        margen_utilidad_porcentaje: margenUtilidadPorcentaje,
       },
       movimientos,
     };
@@ -411,6 +456,8 @@ export class CajaService {
       valor_final_teorico: valorTeorico,
       valor_final_fisico: valorFisico,
       diferencia,
+      utilidad_del_dia: estadoActual.resumen.utilidad_del_dia,
+      utilidad_neta: estadoActual.resumen.utilidad_neta,
       observacion: cajaCerrada.observacion || undefined,
       tipo_cuadre: diferencia === 0 ? 'exacto' : diferencia > 0 ? 'sobrante' : 'faltante',
       cajero_cierre: cajaCerrada.usuarioCierre?.nombre || 'Cajero',

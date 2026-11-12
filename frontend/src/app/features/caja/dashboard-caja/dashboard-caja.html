@@ -161,7 +161,48 @@
         </mat-card-content>
       </mat-card>
 
-      <!-- 4. Efectivo Esperado (Destacado Azul) -->
+      <!-- 4. Utilidades del Día -->
+      <mat-card class="summary-card utility-card" [class.deficit]="utilidadDia < 0">
+        <mat-card-content>
+          <div class="card-header-row">
+            <div class="card-icon-title">
+              <mat-icon class="icon-title" [class.text-success]="utilidadDia >= 0" [class.text-danger]="utilidadDia < 0">
+                {{ utilidadDia >= 0 ? 'monetization_on' : 'trending_down' }}
+              </mat-icon>
+              <span>UTILIDADES DEL DÍA</span>
+            </div>
+            <div class="trend-badge" [class.positive]="utilidadDia >= 0" [class.negative]="utilidadDia < 0">
+              <mat-icon>{{ utilidadDia >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
+            </div>
+          </div>
+
+          <div class="amount-display" [class.text-success]="utilidadDia >= 0" [class.text-danger]="utilidadDia < 0">
+            {{ utilidadDia < 0 ? '- $' : '$' }} {{ (utilidadDia < 0 ? -utilidadDia : utilidadDia) | number:'1.0-0' }}
+          </div>
+          <span [class.subtext-green]="utilidadDia >= 0" [class.subtext-red]="utilidadDia < 0">
+            {{ utilidadDia >= 0 ? 'Balance positivo del turno' : 'Déficit operativo' }} • Margen: {{ margenUtilidad }}%
+          </span>
+
+          <div class="details-bottom">
+            <div class="info-row">
+              <span class="info-label">Ventas Netas:</span>
+              <span class="info-val text-success">+$ {{ ventasNetas | number:'1.0-0' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Egresos:</span>
+              <span class="info-val text-danger">-$ {{ gastosRetiros | number:'1.0-0' }}</span>
+            </div>
+            @if (costoInsumos > 0) {
+              <div class="info-row">
+                <span class="info-label">Costo Insumos:</span>
+                <span class="info-val">-$ {{ costoInsumos | number:'1.0-0' }}</span>
+              </div>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- 5. Efectivo Esperado (Destacado Azul) -->
       <mat-card class="summary-card highlight-blue">
         <mat-card-content>
           <div class="card-header-row white-text">

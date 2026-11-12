@@ -105,6 +105,10 @@ export class DashboardCajaComponent implements OnInit {
     return this.resumen()?.total_ventas || 0;
   }
 
+  get ventasNetas(): number {
+    return this.resumen()?.ventas_netas ?? (this.ventasDia - (this.resumen()?.total_propinas || 0));
+  }
+
   get totalTransacciones(): number {
     return this.resumen()?.total_transacciones || 0;
   }
@@ -131,6 +135,22 @@ export class DashboardCajaComponent implements OnInit {
 
   get efectivoEsperado(): number {
     return this.resumen()?.efectivo_esperado || 0;
+  }
+
+  get utilidadDia(): number {
+    return this.resumen()?.utilidad_del_dia ?? (this.ventasNetas - this.gastosRetiros);
+  }
+
+  get utilidadNeta(): number {
+    return this.resumen()?.utilidad_neta ?? this.utilidadDia;
+  }
+
+  get costoInsumos(): number {
+    return this.resumen()?.costo_insumos ?? 0;
+  }
+
+  get margenUtilidad(): number {
+    return this.resumen()?.margen_utilidad_porcentaje ?? (this.ventasNetas > 0 ? Math.round((this.utilidadDia / this.ventasNetas) * 100) : 0);
   }
 
   get desgloseGastosArray(): Array<{ tipo: string; monto: number }> {

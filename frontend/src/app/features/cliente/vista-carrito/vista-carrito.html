@@ -195,7 +195,7 @@
                 <span>${{ carritoService.totalPrecio() | number:'1.0-0' }} COP</span>
               </div>
               <div class="sum-row">
-                <span>Costo de envío ({{ zonaSeleccionada().nombre.split(':')[0] }}):</span>
+                <span>Costo de envío ({{ zonaSeleccionada().nombre }}):</span>
                 <span class="shipping-charge">+${{ costoEnvio() | number:'1.0-0' }} COP</span>
               </div>
               <mat-divider></mat-divider>
@@ -234,25 +234,32 @@
                   <input
                     id="nombreClienteInput"
                     type="text"
-                    placeholder="Ej. Juan Gómez"
+                    maxlength="100"
+                    placeholder="Ej. Juan Gómez (solo letras)"
                     [value]="nombreCliente()"
-                    (input)="nombreCliente.set($any($event.target).value)"
+                    (input)="onNombreInput($event)"
                   />
                 </div>
+                <small class="field-help-hint">Solo letras y espacios</small>
               </div>
 
               <div class="input-field-group">
-                <label for="telefonoContactoInput">Teléfono o Celular *</label>
+                <label for="telefonoContactoInput">Teléfono o Celular (10 dígitos) *</label>
                 <div class="field-with-icon">
                   <mat-icon>call</mat-icon>
                   <input
                     id="telefonoContactoInput"
                     type="tel"
-                    placeholder="Ej. 312 456 7890"
+                    inputmode="numeric"
+                    maxlength="10"
+                    placeholder="Ej. 3124567890 (exactamente 10 números)"
                     [value]="telefonoContacto()"
-                    (input)="telefonoContacto.set($any($event.target).value)"
+                    (input)="onTelefonoInput($event)"
                   />
                 </div>
+                <small class="field-help-hint">
+                  10 dígitos numéricos ({{ telefonoContacto().length }}/10)
+                </small>
               </div>
 
               <div class="input-field-group">

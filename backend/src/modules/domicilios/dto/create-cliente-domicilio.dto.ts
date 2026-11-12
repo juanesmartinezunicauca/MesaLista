@@ -1,9 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, Length } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, Length, Matches } from 'class-validator';
 
 export class CreateClienteDomicilioDto {
   @ApiProperty({
-    description: 'Nombre completo del cliente receptor',
+    description: 'Nombre completo del cliente receptor (solo letras y espacios)',
     example: 'Laura Gómez',
     minLength: 2,
     maxLength: 100,
@@ -11,17 +11,22 @@ export class CreateClienteDomicilioDto {
   @IsNotEmpty({ message: 'El nombre del cliente es requerido.' })
   @IsString({ message: 'El nombre debe ser una cadena de texto.' })
   @Length(2, 100, { message: 'El nombre debe tener entre 2 y 100 caracteres.' })
+  @Matches(/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/, {
+    message: 'El nombre solo debe contener letras y espacios (sin números ni símbolos especiales).',
+  })
   nombre!: string;
 
   @ApiProperty({
-    description: 'Teléfono o WhatsApp de contacto para el repartidor',
+    description: 'Teléfono o WhatsApp de contacto para el repartidor (exactamente 10 dígitos numéricos)',
     example: '3124567890',
-    minLength: 7,
-    maxLength: 20,
+    minLength: 10,
+    maxLength: 10,
   })
   @IsNotEmpty({ message: 'El teléfono del cliente es requerido.' })
   @IsString({ message: 'El teléfono debe ser una cadena de texto.' })
-  @Length(7, 20, { message: 'El teléfono debe tener entre 7 y 20 caracteres.' })
+  @Matches(/^[0-9]{10}$/, {
+    message: 'El teléfono debe contener exactamente 10 dígitos numéricos (ej. 3123456789).',
+  })
   telefono!: string;
 
   @ApiProperty({
