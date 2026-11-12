@@ -93,25 +93,25 @@ export interface ZonaTarifaPopayan {
 export const ZONAS_DOMICILIO_POPAYAN: ZonaTarifaPopayan[] = [
   {
     id: 'zona-cercana-local',
-    nombre: 'Zona Cercana (Cerca al local: Catay, Campanario, Santa Clara o cercano)',
+    nombre: 'Zona Cercana',
     descripcion: 'Catay, Campanario, Santa Clara, Campamento, Ciudad Jardín o sectores aledaños al local',
     tarifa: 3000,
   },
   {
     id: 'zona-centro-comuneros',
-    nombre: 'Zona Centro (Centro Histórico, Comuneros o aledaños)',
+    nombre: 'Zona Centro',
     descripcion: 'Centro Histórico, Los Comuneros, Los Hoyos, Modelo, Bolívar, Pomona o sectores aledaños',
     tarifa: 4000,
   },
   {
     id: 'zona-sur-esmeralda',
-    nombre: 'Zona Sur (La Esmeralda, Lomas de Granada o cercano)',
+    nombre: 'Zona Sur',
     descripcion: 'La Esmeralda, Lomas de Granada, Chirimía, Alfonso López, Los Sauces, Pandiguando o sectores cercanos',
     tarifa: 6000,
   },
   {
     id: 'zona-norte-bellohorizonte',
-    nombre: 'Zona Norte (Bello Horizonte, La Paz o cercano)',
+    nombre: 'Zona Norte',
     descripcion: 'Bello Horizonte, La Paz, Entre Pinos, Morinda, Pisojé, Torremolinos o sectores cercanos',
     tarifa: 7000,
   },

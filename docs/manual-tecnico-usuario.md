@@ -242,5 +242,6 @@ graph TD
 | **`AggregateError` al despachar invitaciones por correo** | Render Free bloquea conexiones salientes a puertos SMTP 25, 465 y 587. | Configurar `BREVO_API_KEY` y `BREVO_SENDER_EMAIL` en las variables de entorno de Render para que los correos viajen por la API REST HTTPS en el puerto 443. |
 | **`Error interno en la base de datos` al iniciar sesión** | Desincronización de columnas entre Prisma y PostgreSQL Neon. | Ejecutar el script SQL de migración en Neon Console agregando `codigo_invitacion` y `codigo_invitacion_expira`. |
 | **Acceso Denegado (403 Forbidden) en rutas operativas** | El usuario logueado tiene rol `cliente` o el token expiró. | Cerrar sesión y volver a ingresar. Si es un nuevo empleado, asegurarse de canjear el código de invitación `INV-XXXXXX`. |
-| **No se puede facturar una mesa (400 Bad Request)** | No se ha realizado la apertura del turno de caja del día. | Ingresar a la sección Caja y realizar la apertura formal ingresando el fondo base inicial. |
+| **No se puede facturar una mesa (400 Bad Request)** | No se ha realizado la a
+pertura del turno de caja del día. | Ingresar a la sección Caja y realizar la apertura formal ingresando el fondo base inicial. |
 
