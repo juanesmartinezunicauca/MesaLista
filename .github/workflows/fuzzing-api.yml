@@ -89,7 +89,7 @@ jobs:
       - name: Ejecutar Mayhem for API (Si MAPI_TOKEN está configurado)
         if: ${{ secrets.MAPI_TOKEN != '' }}
         continue-on-error: true
-        uses: ForAllSecure/mapi-action@v1
+        uses: ForAllSecure/mapi-action@v2
         with:
           mapi-token: ${{ secrets.MAPI_TOKEN }}
           api-url: http://localhost:3000/api/v1
