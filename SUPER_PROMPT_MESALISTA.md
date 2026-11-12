@@ -452,6 +452,7 @@ La siguiente tabla resume la evolución cronológica del proyecto, vinculando ca
 | **IT-13** | 11/11/2026<br>*(Sprint 4)* | OpenAPI, Arc42 e IEEE 1063 | Swagger OpenAPI 3.0 en `/api/docs`, arquitectura Arc42 v8.2 y manual IEEE | *API Spec & Architecture Prompt* | `c7ac900` |
 | **IT-14** | 11/11/2026 – 12/11/2026<br>*(Sprint 4)* | Ciberseguridad CI/CD (4 Pilares) | SAST (SonarQube/CodeQL), SCA (Dependabot/Audit), IAST (Contrast) y DAST (ZAP) | *DevSecOps Infrastructure Prompt* | `7c26721` / `4c841e8` |
 | **IT-15** | 11/11/2026 – 12/11/2026<br>*(Sprint 4)* | Fuzz Testing & Hardening | Fast-Check en tests, Schemathesis/Mayhem en CI/CD y blindaje de Null Bytes (`\0`) | *Fuzzing & Robustness Prompt* | `bb9c3a1` / `9f5e62f` |
+| **IT-16** | 12/11/2026<br>*(Sprint 4)* | Utilidades de Caja & UX Cliente | Cálculo de utilidades del día en caja, validación estricta (10 dígitos / letras) y zonificación Popayán | *POS Finance & UX Hardening* | `feat(caja-utilidades-cliente)` |
 
 ---
 
@@ -709,6 +710,27 @@ La siguiente tabla resume la evolución cronológica del proyecto, vinculando ca
 - **Validación Humana & Ajustes (HITL):** Se corrigieron las banderas obsoletas de Schemathesis v4 (`--validate-schema` eliminada, reemplazo por `--max-examples`), se desacopló el proceso del backend en segundo plano con `nohup` para evitar bloqueos del runner de GitHub Actions, y se comprobó que el endpoint devuelve un código `400 Bad Request` ante inyecciones de bytes nulos en lugar del fallo 500.
 - **Archivos Impactados:** `backend/test/fast-check.fuzz.spec.ts`, `.github/workflows/fuzzing-api.yml`, `backend/src/main.ts`, `backend/src/common/filters/prisma-exception.filter.ts`, `backend/src/modules/catalogo/dto/query-producto.dto.ts`.
 - **Commit:** `bb9c3a1` / `5a74446` / `283809f` / `f31bdd8` / `9f5e62f`.
+
+---
+
+#### ITERACIÓN 16: Cálculo de Utilidades del Día en Caja, Validación Estricta de Clientes y Zonificación Detallada de Popayán
+- **Fecha / Sprint:** 12 de Noviembre de 2026 (Sprint 4 - Optimización Financiera de POS y Blindaje UX de Clientes)
+- **Necesidad / Problema:**
+  1. El personal de caja requería visualizar en tiempo real las utilidades operativas y netas generadas en el turno (Ventas netas - Gastos del turno - Costo de insumos), junto con el margen porcentual de ganancia.
+  2. En la vista pública de clientes (`/cliente` y `/cliente/carrito`), los campos de entrada carecían de restricciones estrictas: se requería validar que el número telefónico fuera estrictamente numérico de exactamente 10 dígitos (estándar móvil colombiano) y que el nombre completo contuviera exclusivamente letras y espacios.
+  3. La selección de zonas tarifarias de Popayán agrupaba sectores de forma genérica ("Comuna 1"), requiriéndose una especificación urbana mucho más clara y familiar para los clientes: Zona Cercana (Catay, Campanario, Santa Clara), Zona Centro (Centro Histórico, Comuneros), Zona Sur (La Esmeralda, Lomas de Granada) y Zona Norte (Bello Horizonte, La Paz).
+- **Prompt Disparador enviado a la IA:**
+  ```text
+  "Necesito que en la caja se calculen o se muestren las utilidades del día. En la vista del cliente cuando se pide el número de teléfono que valide que sean números y deben ser 10, y los demás campos también valida si por ejemplo es el nombre, que solo sean letras. También mejora lo de la selección de zona del domicilio: casi todo dice comuna 1, especifícalo un poco más: zona norte pon tipo bello horizonte, la paz o cercano; zona sur: esmeralda, lomas de granada o cercano; otra zona centro: centro, comuneros o aledaños; y otra la cercana que es cerca al local: catay, campanario, santa clara o cercano."
+  ```
+- **Solución Generada por la IA:**
+  1. **Cálculo Financiero de Caja:** En `CajaService` (`backend/src/modules/caja/caja.service.ts`), inclusión de pedidos e items con costo unitario de producto para calcular `costoTotalInsumos`, `utilidadOperativa = ventasNetas - totalGastos`, `utilidadNeta = ventasNetas - totalCostos - totalGastos` y `margenUtilidadPorcentaje`.
+  2. **Tarjeta Resumen de Utilidades en Dashboard:** Nueva tarjeta interactiva en `dashboard-caja.html` y `.scss` que muestra monto en verde esmeralda o rojo déficit, balance positivo/negativo y desglose de ventas netas vs egresos.
+  3. **Validación Estricta de Datos de Cliente:** En `CreateClienteDomicilioDto`, reglas `@Matches(/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/)` para nombre y `@Matches(/^[0-9]{10}$/)` para teléfono. En frontend (`vista-carrito` y `vista-cliente`), sanitización en tiempo real mediante `onNombreInput` y `onTelefonoInput`, bloqueo de caracteres inválidos, límites `maxlength="10"`, mensajes de ayuda contextuales y alertas con `snackBar`.
+  4. **Zonificación Refinada de Popayán:** Actualización del array `ZONAS_DOMICILIO_POPAYAN` en `domicilio.model.ts` con descripciones urbanas exactas y barrios emblemáticos solicitados.
+- **Validación Humana & Ajustes (HITL):** Verificación con pruebas unitarias en `caja.service.spec.ts` (14/14 aprobadas), comprobando que las propinas voluntarias se excluyan de las utilidades de la empresa al pertenecer a los meseros. Compilación exitosa de frontend Angular (`ng build`) y backend NestJS (`nest build`) sin advertencias bloqueantes.
+- **Archivos Impactados:** `backend/src/modules/caja/caja.service.ts`, `backend/src/modules/caja/caja.service.spec.ts`, `backend/src/modules/domicilios/dto/create-cliente-domicilio.dto.ts`, `frontend/src/app/core/models/domicilio.model.ts`, `frontend/src/app/core/services/api/caja-api.service.ts`, `frontend/src/app/features/caja/dashboard-caja/`, `frontend/src/app/features/cliente/vista-carrito/`, `frontend/src/app/features/cliente/vista-cliente/`.
+- **Commit:** `feat(caja-utilidades-cliente): utilidades del dia en caja, validacion 10 digitos y zonificacion Popayan`.
 
 ---
 

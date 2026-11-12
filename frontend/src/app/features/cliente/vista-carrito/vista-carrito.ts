@@ -74,6 +74,20 @@ export class VistaCarritoComponent implements OnInit {
     }
   }
 
+  onNombreInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const clean = input.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]/g, '');
+    input.value = clean;
+    this.nombreCliente.set(clean);
+  }
+
+  onTelefonoInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const clean = input.value.replace(/\D/g, '').slice(0, 10);
+    input.value = clean;
+    this.telefonoContacto.set(clean);
+  }
+
   // Estado del envío
   enviandoPedido = signal<boolean>(false);
   pedidoConfirmado = signal<{
@@ -202,15 +216,27 @@ export class VistaCarritoComponent implements OnInit {
       return;
     }
 
-    if (!tel || tel.length < 7) {
-      this.snackBar.open('Por favor ingresa un número de teléfono válido para coordinar la entrega.', 'Cerrar', {
+    if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]{2,100}$/.test(nombre)) {
+      this.snackBar.open('El nombre solo debe contener letras y espacios (sin números ni símbolos especiales).', 'Cerrar', {
         duration: 4000,
       });
       return;
     }
 
-    if (!dir || dir.length < 4) {
-      this.snackBar.open('Por favor ingresa tu dirección de entrega exacta.', 'Cerrar', {
+    if (!tel) {
+      this.snackBar.open('Por favor ingresa tu número de celular de contacto.', 'Cerrar', { duration: 3500 });
+      return;
+    }
+
+    if (!/^[0-9]{10}$/.test(tel)) {
+      this.snackBar.open('El teléfono celular debe tener exactamente 10 dígitos numéricos (ej. 3123456789).', 'Cerrar', {
+        duration: 4500,
+      });
+      return;
+    }
+
+    if (!dir || dir.length < 5) {
+      this.snackBar.open('Por favor ingresa una dirección de entrega completa (mínimo 5 caracteres).', 'Cerrar', {
         duration: 4000,
       });
       return;
@@ -228,9 +254,12 @@ export class VistaCarritoComponent implements OnInit {
     }));
 
     const zona = this.zonaSeleccionada();
+    const zonaCorta = zona.nombre.includes('(')
+      ? zona.nombre.split('(')[0].trim()
+      : zona.nombre.split(':')[0].trim();
 
     // Combinar dirección, zona y referencia
-    let direccionCompleta = `${dir} [${zona.nombre.split(':')[0]}]`;
+    let direccionCompleta = `${dir} [${zonaCorta}]`;
     if (this.referenciaUbicacion().trim()) {
       direccionCompleta += ` (${this.referenciaUbicacion().trim()})`;
     }

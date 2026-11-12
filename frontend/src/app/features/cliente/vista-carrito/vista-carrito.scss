@@ -711,13 +711,16 @@ $brand-bg: #F8FAFC;
           }
         }
 
-        .zone-desc-hint {
+        .zone-desc-hint,
+        .field-help-hint {
           display: flex;
           align-items: center;
           gap: 4px;
           font-size: 0.72rem;
           color: #64748b;
           margin-top: 2px;
+          padding-left: 2px;
+          font-weight: 500;
 
           mat-icon {
             font-size: 14px;

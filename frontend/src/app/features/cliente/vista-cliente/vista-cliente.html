@@ -601,22 +601,27 @@
               id="clienteModalNombre"
               type="text"
               class="field-input"
-              placeholder="Ej. Juan Pérez"
+              maxlength="100"
+              placeholder="Ej. Juan Pérez (solo letras)"
               [value]="nombreCliente()"
-              (input)="nombreCliente.set($any($event.target).value)"
+              (input)="onNombreInput($event)"
             />
+            <small class="field-help">Solo letras y espacios</small>
           </div>
 
           <div class="field-item">
-            <label class="field-label" for="clienteModalTel">Teléfono o Celular de Contacto *</label>
+            <label class="field-label" for="clienteModalTel">Teléfono o Celular (10 dígitos) *</label>
             <input
               id="clienteModalTel"
               type="tel"
+              inputmode="numeric"
+              maxlength="10"
               class="field-input"
-              placeholder="Ej. 310 123 4567 (para coordinar con el repartidor)"
+              placeholder="Ej. 3101234567 (exactamente 10 números)"
               [value]="telefonoContacto()"
-              (input)="telefonoContacto.set($any($event.target).value)"
+              (input)="onTelefonoInput($event)"
             />
+            <small class="field-help">10 dígitos numéricos ({{ telefonoContacto().length }}/10)</small>
           </div>
 
           <div class="field-item">

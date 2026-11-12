@@ -92,27 +92,27 @@ export interface ZonaTarifaPopayan {
 
 export const ZONAS_DOMICILIO_POPAYAN: ZonaTarifaPopayan[] = [
   {
-    id: 'zona-comuna-1',
-    nombre: 'Zona 1: Comuna 1 y Cercanías',
-    descripcion: 'Catay, Campanario, Ciudad Jardín, Campamento, La Floresta',
+    id: 'zona-cercana-local',
+    nombre: 'Zona Cercana (Cerca al local: Catay, Campanario, Santa Clara o cercano)',
+    descripcion: 'Catay, Campanario, Santa Clara, Campamento, Ciudad Jardín o sectores aledaños al local',
     tarifa: 3000,
   },
   {
-    id: 'zona-centro-aledanas',
-    nombre: 'Zona 2: Aledañas a Comuna 1 y Centro',
-    descripcion: 'Los Hoyos, Yambitará, Pomona, Centro Histórico, Caldas, Modelo',
+    id: 'zona-centro-comuneros',
+    nombre: 'Zona Centro (Centro Histórico, Comuneros o aledaños)',
+    descripcion: 'Centro Histórico, Los Comuneros, Los Hoyos, Modelo, Bolívar, Pomona o sectores aledaños',
     tarifa: 4000,
   },
   {
-    id: 'zona-sur',
-    nombre: 'Zona 3: Sur de Popayán',
-    descripcion: 'Lomas de Granada, Chirimía, Alfonso López, Los Sauces, Variante Sur, Mi Bohío',
+    id: 'zona-sur-esmeralda',
+    nombre: 'Zona Sur (La Esmeralda, Lomas de Granada o cercano)',
+    descripcion: 'La Esmeralda, Lomas de Granada, Chirimía, Alfonso López, Los Sauces, Pandiguando o sectores cercanos',
     tarifa: 6000,
   },
   {
-    id: 'zona-norte',
-    nombre: 'Zona 4: Zona Norte',
-    descripcion: 'La Paz, Bello Horizonte, Entre Pinos, Morinda, Pisojé, Variante Norte',
+    id: 'zona-norte-bellohorizonte',
+    nombre: 'Zona Norte (Bello Horizonte, La Paz o cercano)',
+    descripcion: 'Bello Horizonte, La Paz, Entre Pinos, Morinda, Pisojé, Torremolinos o sectores cercanos',
     tarifa: 7000,
   },
 ];

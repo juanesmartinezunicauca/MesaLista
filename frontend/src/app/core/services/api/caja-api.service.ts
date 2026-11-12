@@ -6,6 +6,7 @@ import { environment } from '../../../../environments/environment';
 export interface ResumenCajaTurno {
   valor_base: number;
   total_ventas: number;
+  ventas_netas?: number;
   total_propinas: number;
   total_transacciones: number;
   total_facturas_anuladas?: number;
@@ -17,6 +18,10 @@ export interface ResumenCajaTurno {
   desglose_gastos: Record<string, number>;
   total_movimientos_gasto: number;
   efectivo_esperado: number;
+  costo_insumos?: number;
+  utilidad_del_dia: number;
+  utilidad_neta?: number;
+  margen_utilidad_porcentaje?: number;
 }
 
 export interface MovimientoCaja {
@@ -49,6 +54,8 @@ export interface CierreCajaResult {
   valor_inicial: number;
   total_ventas: number;
   total_gastos: number;
+  utilidad_del_dia?: number;
+  utilidad_neta?: number;
   valor_final_teorico: number;
   valor_final_fisico: number;
   diferencia: number;
