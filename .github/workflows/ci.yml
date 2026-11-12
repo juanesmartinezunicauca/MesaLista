@@ -17,7 +17,7 @@ jobs:
       NODE_OPTIONS: "--experimental-vm-modules"
     steps:
       - name: Checkout del Repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configurar Node.js 24.x
         uses: actions/setup-node@v4
@@ -51,7 +51,7 @@ jobs:
       NODE_OPTIONS: "--experimental-vm-modules"
     steps:
       - name: Checkout del Repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configurar Node.js 24.x
         uses: actions/setup-node@v4
@@ -80,7 +80,7 @@ jobs:
         working-directory: frontend
     steps:
       - name: Checkout del Repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configurar Node.js 24.x
         uses: actions/setup-node@v4

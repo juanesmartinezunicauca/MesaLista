@@ -25,7 +25,7 @@ jobs:
 
     steps:
       - name: Checkout del Repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Inicializar Motor CodeQL
         uses: github/codeql-action/init@v3
