@@ -11,6 +11,7 @@ jobs:
   api-fuzz:
     name: OpenAPI Fuzz Testing (Schemathesis & Mayhem)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       MAYHEM_TOKEN: ${{ secrets.MAYHEM_TOKEN || secrets.MAPI_TOKEN }}
 
@@ -67,7 +68,7 @@ jobs:
           JWT_SECRET: "test_secret_for_ci_fuzzing_super_long_32_bytes_random"
           CORS_ORIGIN: "http://localhost:4200"
         run: |
-          node dist/main &
+          nohup node dist/main > /tmp/backend.log 2>&1 &
           echo "Esperando a que la API y Swagger inicien en http://localhost:3000/api/docs..."
           for i in {1..30}; do
             if curl -s http://localhost:3000/api/docs-json > /dev/null; then
@@ -96,7 +97,7 @@ jobs:
           target: juanesmartinezunicauca/mesalista/api
           api-url: https://mesalista-p0pf.onrender.com/api/v1
           api-spec: https://mesalista-p0pf.onrender.com/api/docs-json
-          duration: auto
+          duration: 1m
           run-args: |
             --header
             Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsInVzdWFyaW8iOiJhZG1pbiIsInJvbCI6ImFkbWluaXN0cmFkb3IiLCJub21icmUiOiJKdWFuIEVzdGViYW4gTWFydGluZXoiLCJpYXQiOjE3OTQ0NjI4MTAsImV4cCI6MTc5NDUwNjAxMH0.cshletivY6oYGHBRr2OQUWoEWVuO_-qxpTVllpq3Nts
