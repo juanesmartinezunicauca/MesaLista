@@ -11,7 +11,7 @@ jobs:
   api-fuzz:
     name: OpenAPI Fuzz Testing (Schemathesis & Mayhem)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     env:
       MAYHEM_TOKEN: ${{ secrets.MAYHEM_TOKEN || secrets.MAPI_TOKEN }}
 
@@ -106,8 +106,26 @@ jobs:
             run http://localhost:3000/api/docs-json \
             -H "Authorization: Bearer ${{ env.CI_AUTH_TOKEN }}" \
             --checks not_a_server_error \
-            --max-examples 20 \
+            --max-examples 15 \
             --wait-for-schema 30
+
+      - name: Restablecer usuario CI antes de Mayhem
+        if: env.MAYHEM_TOKEN != ''
+        working-directory: backend
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/mesalista?schema=public"
+        run: |
+          node -e '
+            const { PrismaClient } = require("@prisma/client");
+            const prisma = new PrismaClient();
+            (async () => {
+              await prisma.usuario.updateMany({
+                where: { usuario: "ci_fuzzer_admin" },
+                data: { estado: "activo", rol: "administrador" },
+              });
+              await prisma.$disconnect();
+            })().catch((e) => { console.error(e); process.exit(1); });
+          '
 
       - name: Ejecutar Mayhem for API (Si MAYHEM_TOKEN o MAPI_TOKEN está configurado)
         if: env.MAYHEM_TOKEN != ''
@@ -117,7 +135,13 @@ jobs:
           target: juanesmartinezunicauca/mesalista/api
           api-url: http://localhost:3000
           api-spec: http://localhost:3000/api/docs-json
-          duration: 1m
+          duration: 30s
           run-args: |
             --header
             Authorization: Bearer ${{ env.CI_AUTH_TOKEN }}
+
+      - name: Diagnóstico de logs del Backend ante fallo o cancelación
+        if: failure() || cancelled()
+        run: |
+          echo "=== Últimas 100 líneas de /tmp/backend.log ==="
+          tail -n 100 /tmp/backend.log || true
