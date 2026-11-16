@@ -36,6 +36,13 @@
                 <span class="mini-label">RETIROS / GASTOS</span>
                 <span class="mini-value text-danger">- $ {{ retirosGastos() | number:'1.2-2' }}</span>
             </div>
+            <!-- Utilidades del Día -->
+            <div class="mini-card">
+                <span class="mini-label">UTILIDADES DEL DÍA</span>
+                <span class="mini-value" [class.text-success]="utilidadDelDia() >= 0" [class.text-danger]="utilidadDelDia() < 0">
+                  {{ utilidadDelDia() < 0 ? '- $ ' : '$ ' }}{{ abs(utilidadDelDia()) | number:'1.2-2' }}
+                </span>
+            </div>
         </div>
 
         <!-- Conciliación de Transferencias (Simple, directo y con registro manual) -->

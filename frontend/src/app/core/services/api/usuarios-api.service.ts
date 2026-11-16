@@ -15,7 +15,6 @@ export interface CreateUsuarioPayload {
   usuario?: string;
   email?: string;
   correoEnvioCodigo?: string;
-  password?: string;
   rol: RolUsuario;
   estado?: EstadoUsuario;
 }
@@ -24,7 +23,6 @@ export interface UpdateUsuarioPayload {
   nombre?: string;
   usuario?: string;
   email?: string;
-  password?: string;
   rol?: RolUsuario;
   estado?: EstadoUsuario;
 }

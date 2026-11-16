@@ -28,6 +28,14 @@
         <button
           type="button"
           mat-button
+          [class.active]="presetSeleccionado() === 'ayer'"
+          (click)="aplicarPresetFechas('ayer')"
+        >
+          Ayer
+        </button>
+        <button
+          type="button"
+          mat-button
           [class.active]="presetSeleccionado() === '7dias'"
           (click)="aplicarPresetFechas('7dias')"
         >
@@ -40,6 +48,14 @@
           (click)="aplicarPresetFechas('mes')"
         >
           Este mes
+        </button>
+        <button
+          type="button"
+          mat-button
+          [class.active]="presetSeleccionado() === 'mes_anterior'"
+          (click)="aplicarPresetFechas('mes_anterior')"
+        >
+          Mes anterior
         </button>
         <button
           type="button"
@@ -564,6 +580,36 @@
         </div>
       } @else if (cajaMediosData(); as c) {
         <div class="tab-content">
+          <!-- UTILIDADES DE CAJA ACTUAL Y DEL PERIODO -->
+          <div class="summary-cards-row">
+            @if (c.resumen.caja_actual; as ca) {
+              <div class="mini-card" [class.highlight-green]="ca.utilidad_del_dia >= 0" [class.alert-danger]="ca.utilidad_del_dia < 0">
+                <span class="mini-lbl">Utilidades Caja Actual (#{{ ca.id_caja }})</span>
+                <span class="mini-val" [class.text-green]="ca.utilidad_del_dia >= 0" [class.text-danger]="ca.utilidad_del_dia < 0">
+                  {{ ca.utilidad_del_dia | currency:'COP':'symbol-narrow':'1.0-0' }}
+                </span>
+              </div>
+              <div class="mini-card">
+                <span class="mini-lbl">Utilidad Neta Caja Actual</span>
+                <span class="mini-val" [class.text-green]="ca.utilidad_neta >= 0" [class.text-danger]="ca.utilidad_neta < 0">
+                  {{ ca.utilidad_neta | currency:'COP':'symbol-narrow':'1.0-0' }}
+                </span>
+              </div>
+            }
+            @if (c.resumen.total_utilidad_del_dia !== undefined) {
+              <div class="mini-card">
+                <span class="mini-lbl">Utilidades Turnos del Periodo</span>
+                <span class="mini-val" [class.text-green]="c.resumen.total_utilidad_del_dia >= 0" [class.text-danger]="c.resumen.total_utilidad_del_dia < 0">
+                  {{ c.resumen.total_utilidad_del_dia | currency:'COP':'symbol-narrow':'1.0-0' }}
+                </span>
+              </div>
+            }
+            <div class="mini-card">
+              <span class="mini-lbl">Efectivo Neto Esperado</span>
+              <span class="mini-val text-orange">{{ c.resumen.total_efectivo_esperado_neto | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+          </div>
+
           <!-- RESUMEN DE MEDIOS DE PAGO -->
           <div class="medios-summary-grid">
             @for (m of c.desglose_medios; track m.medio) {
@@ -604,6 +650,7 @@
                     <th>Base Inicial</th>
                     <th>Ventas Efectivo</th>
                     <th>Gastos Efectivo</th>
+                    <th>Utilidad del Día</th>
                     <th>Efectivo Teórico</th>
                     <th>Efectivo Físico</th>
                     <th>Diferencia</th>
@@ -625,6 +672,11 @@
                       <td>{{ t.valor_inicial | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
                       <td>{{ t.ventas_efectivo | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
                       <td>{{ t.gastos_efectivo | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
+                      <td>
+                        <strong [class.text-green]="(t.utilidad_del_dia ?? 0) >= 0" [class.text-danger]="(t.utilidad_del_dia ?? 0) < 0">
+                          {{ (t.utilidad_del_dia ?? (t.total_ventas - t.total_gastos)) | currency:'COP':'symbol-narrow':'1.0-0' }}
+                        </strong>
+                      </td>
                       <td><strong>{{ t.valor_final_teorico | currency:'COP':'symbol-narrow':'1.0-0' }}</strong></td>
                       <td>{{ t.valor_final_fisico !== null ? (t.valor_final_fisico | currency:'COP':'symbol-narrow':'1.0-0') : '-' }}</td>
                       <td>
@@ -650,7 +702,7 @@
                     </tr>
                   } @empty {
                     <tr>
-                      <td colspan="12" class="empty-cell">No se encontraron turnos de caja en el rango.</td>
+                      <td colspan="13" class="empty-cell">No se encontraron turnos de caja en el rango.</td>
                     </tr>
                   }
                 </tbody>

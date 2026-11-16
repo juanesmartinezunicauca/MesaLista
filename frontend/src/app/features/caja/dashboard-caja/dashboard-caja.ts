@@ -196,7 +196,7 @@ export class DashboardCajaComponent implements OnInit {
     if (inputStr === null) return;
 
     const nuevoValor = Number(inputStr.trim());
-    if (isNaN(nuevoValor) || nuevoValor < 0) {
+    if (Number.isNaN(nuevoValor) || nuevoValor < 0) {
       this.snackBar.open('Por favor ingresa un monto válido (0 o superior).', 'Cerrar', { duration: 3000 });
       return;
     }

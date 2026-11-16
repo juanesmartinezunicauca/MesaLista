@@ -161,29 +161,47 @@ describe('🔬 BATERÍA DE PRUEBAS FUZZY Y RESILIENCIA DE SISTEMA (FUZZ TESTING 
       }
     });
 
-    it('[FUZZ-DTO.3] CreateUsuarioDto: Debe rechazar contraseñas que no cumplan requisitos de longitud o complejidad', async () => {
-      const passwordsFuzzed = [
+    it('[FUZZ-DTO.3] CreateUsuarioDto: Debe rechazar propiedades obsoletas de contraseña y correos malformados', async () => {
+      const strictPipe = new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      });
+
+      const payloadsConPassword = [
         '',
-        '1234567', // 7 chars (menor a 8)
-        'sololetrasminusculas', // Sin dígitos
-        '123456789012', // Sin letras
-        'A'.repeat(150), // Excede max (100)
-        '   ',
-        12345678, // Tipo numérico inválido
-        ['password123'], // Array en vez de string
-        { pass: '123' }, // Objeto
+        '1234567',
+        'PasswordSegura2026',
+        12345678,
+        ['password123'],
+        { pass: '123' },
       ];
 
-      for (const pwdFuzzed of passwordsFuzzed) {
+      for (const pwdFuzzed of payloadsConPassword) {
+        await expect(
+          strictPipe.transform(
+            {
+              nombre: 'Mesero Test',
+              usuario: 'meserotest',
+              rol: RolUsuario.mesero,
+              password: pwdFuzzed,
+            },
+            { type: 'body', metatype: CreateUsuarioDto },
+          ),
+        ).rejects.toThrow(BadRequestException);
+      }
+
+      const emailsFuzzed = ['invalido', 'a@b', 'sin-arroba.com', 12345, '   '];
+      for (const emailFuzzed of emailsFuzzed) {
         const dtoInstance = plainToInstance(CreateUsuarioDto, {
           nombre: 'Mesero Test',
           usuario: 'meserotest',
           rol: RolUsuario.mesero,
-          password: pwdFuzzed,
+          email: emailFuzzed,
         });
 
         const errors = await validate(dtoInstance);
-        expect(errors.some((e) => e.property === 'password')).toBe(true);
+        expect(errors.some((e) => e.property === 'email')).toBe(true);
       }
     });
 

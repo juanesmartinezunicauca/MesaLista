@@ -119,10 +119,15 @@ export class UsuarioDialogComponent {
   copiarCodigo(): void {
     const cod = this.invitacionGenerada();
     if (cod && typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(cod).then(() => {
-        this.copiado.set(true);
-        setTimeout(() => this.copiado.set(false), 2500);
-      });
+      void navigator.clipboard
+        .writeText(cod)
+        .then(() => {
+          this.copiado.set(true);
+          setTimeout(() => this.copiado.set(false), 2500);
+        })
+        .catch(() => {
+          this.copiado.set(false);
+        });
     }
   }
 

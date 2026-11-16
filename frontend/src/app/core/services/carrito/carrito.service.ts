@@ -43,10 +43,10 @@ export class CarritoService {
     observacion?: string
   ): void {
     const items = [...this.carrito()];
-    const removidosKey = (removidos || []).slice().sort().join('|');
+    const removidosKey = (removidos || []).slice().sort((a, b) => a.localeCompare(b)).join('|');
 
     const index = items.findIndex((it) => {
-      const itRemovidosKey = (it.ingredientes_removidos || []).slice().sort().join('|');
+      const itRemovidosKey = (it.ingredientes_removidos || []).slice().sort((a, b) => a.localeCompare(b)).join('|');
       return (
         it.producto.id_producto === producto.id_producto &&
         itRemovidosKey === removidosKey &&

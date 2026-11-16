@@ -34,18 +34,6 @@ export class UpdateUsuarioDto {
   email?: string;
 
   @ApiPropertyOptional({
-    description: 'Nueva contraseña de contingencia hasheada en Argon2id',
-    example: 'NuevaClave2026',
-  })
-  @IsOptional()
-  @IsString({ message: 'La contraseña debe ser una cadena de texto' })
-  @Length(8, 100, { message: 'La contraseña debe tener al menos 8 caracteres' })
-  @Matches(/^(?=.*[a-zA-Z])(?=.*\d)/, {
-    message: 'La contraseña debe contener al menos una letra y un número',
-  })
-  password?: string;
-
-  @ApiPropertyOptional({
     description: 'Rol operativo',
     enum: RolUsuario,
   })

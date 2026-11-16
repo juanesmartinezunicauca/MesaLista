@@ -43,6 +43,32 @@
         </button>
       }
     </div>
+
+    <div class="date-filter-row">
+      <label class="date-field">
+        <span>Desde</span>
+        <input
+          type="date"
+          [ngModel]="fechaInicio()"
+          (ngModelChange)="fechaInicio.set($event); cargarFacturas()"
+          aria-label="Fecha inicial de facturas"
+        />
+      </label>
+      <label class="date-field">
+        <span>Hasta</span>
+        <input
+          type="date"
+          [ngModel]="fechaFin()"
+          (ngModelChange)="fechaFin.set($event); cargarFacturas()"
+          aria-label="Fecha final de facturas"
+        />
+      </label>
+      @if (fechaInicio() || fechaFin()) {
+        <button type="button" class="btn-clear-dates" (click)="limpiarFechas()" title="Limpiar fechas">
+          <mat-icon>filter_alt_off</mat-icon>
+        </button>
+      }
+    </div>
   </div>
 
   <!-- Formulario Modal de Edición de Factura (cuando se activa) -->

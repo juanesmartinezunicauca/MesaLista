@@ -35,8 +35,15 @@ import {
 import { exportarACSV } from '../../../core/utils/export-csv.util';
 import { exportarAExcel } from '../../../core/utils/export-excel.util';
 import { exportarAPDF } from '../../../core/utils/export-pdf.util';
+import {
+  PeriodoPreset as BasePeriodoPreset,
+  resolverPresetRango,
+} from '../../../core/utils/date-filter.util';
 
-export type PeriodoPreset = 'hoy' | '7dias' | 'mes' | 'personalizado';
+export type PeriodoPreset = Extract<
+  BasePeriodoPreset,
+  'hoy' | 'ayer' | '7dias' | 'mes' | 'mes_anterior' | 'personalizado'
+>;
 
 @Component({
   selector: 'app-dashboard-reportes',
@@ -138,27 +145,10 @@ export class DashboardReportesComponent implements OnInit {
 
   aplicarPresetFechas(preset: PeriodoPreset): void {
     this.presetSeleccionado.set(preset);
-    const ahora = new Date();
-    const formato = (d: Date) => {
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-
-    if (preset === 'hoy') {
-      const hoyStr = formato(ahora);
-      this.fechaInicio.set(hoyStr);
-      this.fechaFin.set(hoyStr);
-    } else if (preset === '7dias') {
-      const hace7Dias = new Date();
-      hace7Dias.setDate(ahora.getDate() - 6);
-      this.fechaInicio.set(formato(hace7Dias));
-      this.fechaFin.set(formato(ahora));
-    } else if (preset === 'mes') {
-      const primerDia = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
-      this.fechaInicio.set(formato(primerDia));
-      this.fechaFin.set(formato(ahora));
+    if (preset !== 'personalizado') {
+      const { fechaInicio, fechaFin } = resolverPresetRango(preset);
+      this.fechaInicio.set(fechaInicio);
+      this.fechaFin.set(fechaFin);
     }
 
     this.cargarDatosSegunTab();
@@ -228,9 +218,11 @@ export class DashboardReportesComponent implements OnInit {
         },
       });
     } else if (tab === 3) {
-      // Inventario
+      // Inventario (las existencias son actuales y los ajustes recientes se filtran por rango)
       this.reportesApi
         .obtenerInventario({
+          fecha_inicio: fInicio,
+          fecha_fin: fFin,
           categoria: this.filtroCategoria() || undefined,
         })
         .subscribe({
@@ -368,6 +360,8 @@ export class DashboardReportesComponent implements OnInit {
         'Ventas Tarjeta ($)',
         'Ventas Transf. ($)',
         'Total Gastos ($)',
+        'Utilidad del Día ($)',
+        'Utilidad Neta ($)',
         'Efectivo Teórico ($)',
         'Efectivo Físico ($)',
         'Diferencia ($)',
@@ -386,6 +380,8 @@ export class DashboardReportesComponent implements OnInit {
         t.ventas_tarjeta,
         t.ventas_transferencia,
         t.total_gastos,
+        t.utilidad_del_dia ?? (t.total_ventas - t.total_gastos),
+        t.utilidad_neta ?? (t.utilidad_del_dia ?? (t.total_ventas - t.total_gastos)),
         t.valor_final_teorico,
         t.valor_final_fisico !== null ? t.valor_final_fisico : 'N/A',
         t.diferencia !== null ? t.diferencia : 'N/A',
@@ -427,11 +423,11 @@ export class DashboardReportesComponent implements OnInit {
         p.disponible ? 'DISPONIBLE' : 'NO DISPONIBLE',
       ]);
       if (formato === 'excel') {
-        exportarAExcel('MesaLista_Reporte_Inventario', encabezados, filas, 'MesaLista - Reporte de Inventario y Existencias');
+        exportarAExcel('MesaLista_Reporte_Inventario', encabezados, filas, 'MesaLista - Reporte de Inventario y Existencias', periodo);
       } else if (formato === 'pdf') {
-        exportarAPDF('MesaLista_Reporte_Inventario', encabezados, filas, 'MesaLista - Reporte de Inventario y Existencias');
+        exportarAPDF('MesaLista_Reporte_Inventario', encabezados, filas, 'MesaLista - Reporte de Inventario y Existencias', periodo);
       } else {
-        exportarACSV('MesaLista_Reporte_Inventario', encabezados, filas, 'MesaLista - Reporte de Inventario y Existencias');
+        exportarACSV('MesaLista_Reporte_Inventario', encabezados, filas, 'MesaLista - Reporte de Inventario y Existencias', periodo);
       }
     } else if (tab === 4) {
       const g = this.gastosData();

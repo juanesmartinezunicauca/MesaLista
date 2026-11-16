@@ -48,7 +48,6 @@ describe('UsuariosController', () => {
       nombre: 'Juan Mesero',
       usuario: 'jmesero',
       email: 'jmesero@gmail.com',
-      password: 'password123',
       rol: RolUsuario.mesero,
     };
     const mockRes = { id_usuario: 1, ...dto, estado: EstadoUsuario.activo };

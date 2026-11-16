@@ -92,8 +92,8 @@
         // Tarjetas Superiores
         .summary-cards-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 14px;
+            grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+            gap: 12px;
             margin-bottom: 20px;
 
             .mini-card {

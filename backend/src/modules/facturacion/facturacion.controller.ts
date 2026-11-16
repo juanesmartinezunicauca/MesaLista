@@ -47,11 +47,15 @@ export class FacturacionController {
    */
   @ApiOperation({
     summary: 'Emitir factura y registrar pagos en caja',
-    description: 'Calcula total, propina voluntaria, registra pagos en la caja abierta y libera la mesa si corresponde.',
+    description:
+      'Procesa el cobro atómico de una cuenta de salón (por mesa) o de un pedido a domicilio, exige que exista un turno de caja abierto, calcula total + propina voluntaria, registra uno o varios medios de pago, cierra las comandas asociadas y libera la mesa si aplica.\n\n' +
+      '**Roles autorizados:** `administrador`, `cajero`, `mesero`.',
   })
   @ApiBody({ type: CreateFacturaDto })
   @ApiResponse({ status: 201, description: 'Factura emitida y registrada en caja exitosamente.' })
   @ApiResponse({ status: 400, description: 'No hay turno de caja abierto o montos de pago no cuadran con el total.' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado.' })
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @Roles(RolUsuario.administrador, RolUsuario.cajero, RolUsuario.mesero)
@@ -71,12 +75,22 @@ export class FacturacionController {
    * @param id_caja ID del turno de caja específico.
    * @returns Lista de facturas emitidas y anuladas.
    */
-  @ApiOperation({ summary: 'Listar historial de facturas con filtros' })
+  @ApiOperation({
+    summary: 'Listar historial de facturas con filtros',
+    description:
+      'Consulta las facturas emitidas y anuladas con filtros opcionales por canal (`salon`/`domicilio`), `fecha`, búsqueda por cliente/consecutivo (`buscar`) o turno de caja (`id_caja`), incluyendo desglose de medios de pago.\n\n' +
+      '**Roles autorizados:** `administrador`, `cajero`, `mesero`.',
+  })
   @ApiQuery({ name: 'tipo', required: false, description: 'Canal de venta (salon o domicilio)' })
-  @ApiQuery({ name: 'fecha', required: false, description: 'Fecha YYYY-MM-DD' })
+  @ApiQuery({ name: 'fecha', required: false, description: 'Fecha exacta YYYY-MM-DD' })
+  @ApiQuery({ name: 'fecha_inicio', required: false, description: 'Fecha inicial del rango (YYYY-MM-DD)' })
+  @ApiQuery({ name: 'fecha_fin', required: false, description: 'Fecha final del rango (YYYY-MM-DD)' })
   @ApiQuery({ name: 'buscar', required: false, description: 'Nombre de cliente o número' })
   @ApiQuery({ name: 'id_caja', required: false, description: 'ID de turno de caja' })
   @ApiResponse({ status: 200, description: 'Historial de facturas obtenido exitosamente.' })
+  @ApiResponse({ status: 400, description: 'Parámetros de fecha o id_caja inválidos.' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado.' })
   @Get()
   @Roles(RolUsuario.administrador, RolUsuario.cajero, RolUsuario.mesero)
   obtenerTodas(
@@ -84,8 +98,17 @@ export class FacturacionController {
     @Query('fecha') fecha?: string,
     @Query('buscar') buscar?: string,
     @Query('id_caja') id_caja?: number,
+    @Query('fecha_inicio') fecha_inicio?: string,
+    @Query('fecha_fin') fecha_fin?: string,
   ) {
-    return this.facturacionService.obtenerTodas({ tipo, fecha, buscar, id_caja });
+    return this.facturacionService.obtenerTodas({
+      tipo,
+      fecha,
+      buscar,
+      id_caja,
+      ...(fecha_inicio ? { fecha_inicio } : {}),
+      ...(fecha_fin ? { fecha_fin } : {}),
+    });
   }
 
   /**
@@ -94,9 +117,16 @@ export class FacturacionController {
    * @param id Identificador de la venta.
    * @returns Ficha completa de la factura con pagos e ítems.
    */
-  @ApiOperation({ summary: 'Obtener factura por ID' })
+  @ApiOperation({
+    summary: 'Obtener factura por ID',
+    description:
+      'Recupera el comprobante detallado de una venta por su identificador numérico, incluyendo pagos discriminados, propina, ítems facturados e información de anulación si existiera.\n\n' +
+      '**Roles autorizados:** `administrador`, `cajero`, `mesero`.',
+  })
   @ApiParam({ name: 'id', description: 'ID de la factura', example: 1 })
   @ApiResponse({ status: 200, description: 'Factura encontrada.' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado.' })
   @ApiResponse({ status: 404, description: 'Factura no encontrada.' })
   @Get(':id')
   @Roles(RolUsuario.administrador, RolUsuario.cajero, RolUsuario.mesero)
@@ -112,10 +142,19 @@ export class FacturacionController {
    * @param usuarioAuth Usuario en sesión.
    * @returns Factura actualizada.
    */
-  @ApiOperation({ summary: 'Actualizar datos de factura emitida' })
+  @ApiOperation({
+    summary: 'Actualizar datos de factura emitida',
+    description:
+      'Permite corregir o actualizar datos administrativos de una factura emitida (por ejemplo propina, distribución de medios de pago u observaciones) manteniendo consistencia contable en caja.\n\n' +
+      '**Roles autorizados:** `administrador`, `cajero`.',
+  })
   @ApiParam({ name: 'id', description: 'ID de la factura', example: 1 })
   @ApiBody({ type: UpdateFacturaDto })
   @ApiResponse({ status: 200, description: 'Factura actualizada exitosamente.' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos o factura anulada.' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado.' })
+  @ApiResponse({ status: 404, description: 'Factura no encontrada.' })
   @Patch(':id')
   @Roles(RolUsuario.administrador, RolUsuario.cajero)
   actualizar(
@@ -137,12 +176,17 @@ export class FacturacionController {
    */
   @ApiOperation({
     summary: 'Anular factura formalmente',
-    description: 'Anula el comprobante conservando la trazabilidad de auditoría y ajustando saldos de caja.',
+    description:
+      'Anula contablemente una factura exigiendo motivo de auditoría, conserva el consecutivo original, descuenta el ingreso en el arqueo de la caja correspondiente y registra fecha/usuario responsable.\n\n' +
+      '**Roles autorizados:** `administrador`, `cajero`.',
   })
   @ApiParam({ name: 'id', description: 'ID de la factura a anular', example: 1 })
   @ApiBody({ type: AnularFacturaDto })
   @ApiResponse({ status: 200, description: 'Factura anulada correctamente.' })
   @ApiResponse({ status: 400, description: 'La factura ya se encuentra anulada.' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado.' })
+  @ApiResponse({ status: 404, description: 'Factura no encontrada.' })
   @Patch(':id/anular')
   @Roles(RolUsuario.administrador, RolUsuario.cajero)
   anular(
@@ -160,9 +204,17 @@ export class FacturacionController {
    * @param id_usuario Colaborador administrador.
    * @returns Confirmación de anulación.
    */
-  @ApiOperation({ summary: 'Eliminar o anular factura desde terminal (Solo Administrador)' })
+  @ApiOperation({
+    summary: 'Eliminar o anular factura desde terminal (Solo Administrador)',
+    description:
+      'Anula directamente una factura desde administración manteniendo la trazabilidad contable (soft-void) con motivo automático de terminal y reversión del saldo en el turno de caja.\n\n' +
+      '**Roles autorizados:** `administrador`.',
+  })
   @ApiParam({ name: 'id', description: 'ID de la factura', example: 1 })
   @ApiResponse({ status: 200, description: 'Factura procesada correctamente.' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado: requiere rol administrador.' })
+  @ApiResponse({ status: 404, description: 'Factura no encontrada.' })
   @Delete(':id')
   @Roles(RolUsuario.administrador)
   eliminar(

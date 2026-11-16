@@ -57,12 +57,16 @@ export class FacturacionApiService {
   obtenerTodas(filtros?: {
     tipo?: string;
     fecha?: string;
+    fecha_inicio?: string;
+    fecha_fin?: string;
     buscar?: string;
     id_caja?: number;
   }): Observable<any[]> {
     let params = new HttpParams();
     if (filtros?.tipo) params = params.set('tipo', filtros.tipo);
     if (filtros?.fecha) params = params.set('fecha', filtros.fecha);
+    if (filtros?.fecha_inicio) params = params.set('fecha_inicio', filtros.fecha_inicio);
+    if (filtros?.fecha_fin) params = params.set('fecha_fin', filtros.fecha_fin);
     if (filtros?.buscar) params = params.set('buscar', filtros.buscar);
     if (filtros?.id_caja) params = params.set('id_caja', filtros.id_caja.toString());
     return this.http.get<any[]>(this.apiUrl, { params });

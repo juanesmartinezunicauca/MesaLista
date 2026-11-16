@@ -19,11 +19,11 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { CurrentUser } from '../../common/decorators';
 import { JwtAuthGuard } from '../../common/guards';
 import { AuthService } from './auth.service';
-import { GoogleLoginDto, LoginDto, UpdatePerfilDto } from './dto';
+import { GoogleLoginDto, UpdatePerfilDto } from './dto';
 
 /**
  * Controlador de Autenticación y Gestión de Sesión
- * Expone los endpoints de federación con Google OAuth 2.0, login de contingencia y perfil de usuario.
+ * Expone los endpoints de federación con Google OAuth 2.0 y perfil de usuario.
  */
 @ApiTags('Autenticación')
 @Controller('auth')
@@ -47,7 +47,10 @@ export class AuthController {
   @ApiOperation({
     summary: 'Autenticación con Google OAuth 2.0 (Google Identity Services)',
     description:
-      'Verifica criptográficamente el ID Token de Google (JWT). Soporta vinculación de colaboradores con código de invitación INV-XXXXXX o inicio regular.',
+      'Verifica criptográficamente el ID Token (JWT) emitido por Google usando las claves públicas oficiales (JWKS) y valida audiencia/correo verificado. ' +
+      'Si el usuario adjunta un código de invitación vigente (`INV-XXXXXX`), vincula su cuenta Google al perfil de colaborador pre-autorizado y su rol asignado; ' +
+      'si es un usuario nuevo sin código, crea automáticamente una cuenta con rol `cliente`. Emite el JWT `accessToken` de sesión.\n\n' +
+      '**Acceso:** Público (protegido con rate limiting mediante ThrottlerGuard).',
   })
   @ApiBody({ type: GoogleLoginDto })
   @ApiResponse({
@@ -88,7 +91,10 @@ export class AuthController {
    */
   @ApiOperation({
     summary: 'Consultar perfil del usuario autenticado',
-    description: 'Retorna los datos de identidad y rol del usuario correspondiente al Bearer Token.',
+    description:
+      'Extrae el identificador del usuario desde el Bearer Token JWT y retorna su ficha actualizada desde base de datos ' +
+      '(id, nombre, alias de usuario, email, rol operativo y estado).\n\n' +
+      '**Acceso:** Cualquier usuario autenticado (`JwtAuthGuard`).',
   })
   @ApiBearerAuth('JWT-auth')
   @ApiResponse({
@@ -117,17 +123,19 @@ export class AuthController {
    * Actualiza el perfil propio del usuario en sesión
    *
    * @param idUsuario Identificador del usuario autenticado.
-   * @param updatePerfilDto Datos a modificar (nombre y/o contraseña de contingencia).
+   * @param updatePerfilDto Datos a modificar (nombre visible).
    * @returns Perfil actualizado.
    */
   @ApiOperation({
     summary: 'Actualizar perfil del usuario autenticado',
-    description: 'Permite actualizar el nombre visible o cambiar la contraseña de contingencia hasheada con Argon2id.',
+    description:
+      'Permite al usuario en sesión modificar su propio nombre visible (`nombre`) sin alterar su rol, estado ni vinculación de cuenta Google.\n\n' +
+      '**Acceso:** Cualquier usuario autenticado (`JwtAuthGuard`).',
   })
   @ApiBearerAuth('JWT-auth')
   @ApiBody({ type: UpdatePerfilDto })
   @ApiResponse({ status: 200, description: 'Perfil actualizado exitosamente.' })
-  @ApiResponse({ status: 400, description: 'Formato de nombre o contraseña inválido.' })
+  @ApiResponse({ status: 400, description: 'Formato de nombre inválido.' })
   @ApiResponse({ status: 401, description: 'No autorizado.' })
   @Patch('perfil')
   @UseGuards(JwtAuthGuard)
@@ -136,35 +144,5 @@ export class AuthController {
     @Body() updatePerfilDto: UpdatePerfilDto,
   ) {
     return this.authService.actualizarPerfil(idUsuario, updatePerfilDto);
-  }
-
-  // =========================================================================
-  // 3. FLUJO DE CONTINGENCIA LOCAL Y ALTA DISPONIBILIDAD (FALLBACK / DISASTER RECOVERY)
-  // Utilizado ante caídas de WAN/Internet o inicialización seed.
-  // =========================================================================
-
-  /**
-   * Autenticación local con credenciales de contingencia (usuario y contraseña)
-   *
-   * @param loginDto Credenciales compuestas por usuario y password.
-   * @returns Tokens JWT y sesión de usuario.
-   */
-  @ApiOperation({
-    summary: 'Acceso de contingencia con usuario y contraseña (Disaster Recovery)',
-    description:
-      'Endpoint de contingencia para acceso offline o local sin conexión a Google. Valida contraseñas con Argon2id y Throttler anti fuerza bruta.',
-  })
-  @ApiBody({ type: LoginDto })
-  @ApiResponse({
-    status: 200,
-    description: 'Credenciales válidas. Retorna accessToken y datos del usuario.',
-  })
-  @ApiResponse({ status: 401, description: 'Usuario o contraseña incorrectos o cuenta inactiva.' })
-  @ApiResponse({ status: 429, description: 'Demasiadas solicitudes. Bloqueo temporal por rate limiting.' })
-  @Post('login')
-  @HttpCode(HttpStatus.OK)
-  @UseGuards(ThrottlerGuard)
-  login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
   }
 }

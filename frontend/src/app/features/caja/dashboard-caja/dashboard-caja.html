@@ -197,6 +197,12 @@
                 <span class="info-label">Costo Insumos:</span>
                 <span class="info-val">-$ {{ costoInsumos | number:'1.0-0' }}</span>
               </div>
+              <div class="info-row">
+                <span class="info-label">Utilidad Neta:</span>
+                <span class="info-val" [class.text-success]="utilidadNeta >= 0" [class.text-danger]="utilidadNeta < 0">
+                  {{ utilidadNeta < 0 ? '-$' : '$' }} {{ (utilidadNeta < 0 ? -utilidadNeta : utilidadNeta) | number:'1.0-0' }}
+                </span>
+              </div>
             }
           </div>
         </mat-card-content>

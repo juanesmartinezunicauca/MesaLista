@@ -6,11 +6,13 @@ import {
   TipoPedido,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { resolverRangoFechaOpcional } from '../../common/utils/date-range.util';
 import {
   FiltroFechasDto,
   FiltroGastosDto,
   FiltroInventarioDto,
   FiltroOperacionDto,
+  FiltroRentabilidadDto,
   FiltroVentasDto,
 } from './dto';
 
@@ -75,7 +77,7 @@ export function resolverRangoFechas(
     fin = new Date(`${y}-${m}-${d}T23:59:59.999-05:00`);
   }
 
-  if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
+  if (Number.isNaN(inicio.getTime()) || Number.isNaN(fin.getTime())) {
     throw new BadRequestException('Formato de fecha inválido. Utilice formato YYYY-MM-DD o ISO 8601.');
   }
 
@@ -107,7 +109,7 @@ function obtenerHoraCol(d: Date): number {
     hour: 'numeric',
     hour12: false,
   }).format(d);
-  return parseInt(horaStr, 10);
+  return Number.parseInt(horaStr, 10);
 }
 
 @Injectable()
@@ -599,7 +601,18 @@ export class ReportesService {
         usuarioCierre: { select: { nombre: true } },
         facturas: {
           where: { estado: EstadoFactura.emitida },
-          include: { pagos: { include: { medioPago: true } } },
+          include: {
+            pagos: { include: { medioPago: true } },
+            pedidos: {
+              include: {
+                items: {
+                  include: {
+                    producto: { select: { costo: true } },
+                  },
+                },
+              },
+            },
+          },
         },
         gastos: {
           include: { medioPago: true, tipoGasto: true },
@@ -620,6 +633,17 @@ export class ReportesService {
     let totalSobrantes = 0;
     let totalFaltantes = 0;
     let sumaDiferencias = 0;
+    let totalUtilidadDia = 0;
+    let totalUtilidadNeta = 0;
+    let cajaActualResumen: {
+      id_caja: number;
+      utilidad_del_dia: number;
+      utilidad_neta: number;
+      ventas_netas: number;
+      total_gastos: number;
+      costo_insumos: number;
+      margen_utilidad_porcentaje: number;
+    } | null = null;
 
     const turnosDetalle = cajas.map((c) => {
       const valorBase = redondearMoneda(Number(c.valor_inicial));
@@ -627,15 +651,27 @@ export class ReportesService {
       let vTarjeta = 0;
       let vTransferencia = 0;
       let totalVentasCaja = 0;
+      let totalPropinasCaja = 0;
+      let costoInsumosCaja = 0;
 
       for (const f of c.facturas) {
         totalVentasCaja += Number(f.valor_total);
+        totalPropinasCaja += Number(f.propina || 0);
         for (const p of f.pagos) {
           const met = normalizarMedioPago(p.medioPago?.nombre);
           const m = Number(p.monto);
           if (met === 'efectivo') vEfectivo += m;
           else if (met === 'tarjeta') vTarjeta += m;
           else vTransferencia += m;
+        }
+        if (Array.isArray((f as any).pedidos)) {
+          for (const ped of (f as any).pedidos) {
+            if (Array.isArray(ped.items)) {
+              for (const it of ped.items) {
+                costoInsumosCaja += (Number(it.cantidad) || 0) * (Number(it.producto?.costo) || 0);
+              }
+            }
+          }
         }
       }
 
@@ -646,6 +682,27 @@ export class ReportesService {
         gTotal += m;
         const met = normalizarMedioPago(g.medioPago?.nombre);
         if (met === 'efectivo' || !g.medioPago) gEfectivo += m;
+      }
+
+      const ventasNetasCaja = redondearMoneda(totalVentasCaja - totalPropinasCaja);
+      const utilidadDelDia = redondearMoneda(ventasNetasCaja - gTotal);
+      const utilidadNeta = redondearMoneda(ventasNetasCaja - costoInsumosCaja - gTotal);
+      const margenUtilidad =
+        ventasNetasCaja > 0 ? redondearMoneda((utilidadDelDia / ventasNetasCaja) * 100) : 0;
+
+      totalUtilidadDia += utilidadDelDia;
+      totalUtilidadNeta += utilidadNeta;
+
+      if (c.estado === EstadoCaja.abierta && !cajaActualResumen) {
+        cajaActualResumen = {
+          id_caja: c.id_caja,
+          utilidad_del_dia: utilidadDelDia,
+          utilidad_neta: utilidadNeta,
+          ventas_netas: ventasNetasCaja,
+          total_gastos: redondearMoneda(gTotal),
+          costo_insumos: redondearMoneda(costoInsumosCaja),
+          margen_utilidad_porcentaje: margenUtilidad,
+        };
       }
 
       totalRecaudoEfectivo += vEfectivo;
@@ -687,11 +744,17 @@ export class ReportesService {
         cajero_cierre: c.usuarioCierre?.nombre || null,
         valor_inicial: valorBase,
         total_ventas: redondearMoneda(totalVentasCaja),
+        ventas_netas: ventasNetasCaja,
+        total_propinas: redondearMoneda(totalPropinasCaja),
         ventas_efectivo: redondearMoneda(vEfectivo),
         ventas_tarjeta: redondearMoneda(vTarjeta),
         ventas_transferencia: redondearMoneda(vTransferencia),
         total_gastos: redondearMoneda(gTotal),
         gastos_efectivo: redondearMoneda(gEfectivo),
+        costo_insumos: redondearMoneda(costoInsumosCaja),
+        utilidad_del_dia: utilidadDelDia,
+        utilidad_neta: utilidadNeta,
+        margen_utilidad_porcentaje: margenUtilidad,
         valor_final_teorico: redondearMoneda(vTeorico),
         valor_final_fisico: vFisico !== null ? redondearMoneda(vFisico) : null,
         diferencia: dif !== null ? redondearMoneda(dif) : null,
@@ -735,6 +798,9 @@ export class ReportesService {
       resumen: {
         total_recaudo: totalVentasGlobal,
         total_efectivo_esperado_neto: redondearMoneda(totalRecaudoEfectivo - totalGastosEfectivo),
+        total_utilidad_del_dia: redondearMoneda(totalUtilidadDia),
+        total_utilidad_neta: redondearMoneda(totalUtilidadNeta),
+        caja_actual: cajaActualResumen,
         total_cajas_analizadas: cajas.length,
         total_cajas_cerradas: totalCajasCerradas,
         cajas_exactas: totalExactas,
@@ -828,9 +894,15 @@ export class ReportesService {
       };
     });
 
-    // Últimos 20 movimientos de ajuste de inventario registrados en la bitácora
+    const rangoAjustes = resolverRangoFechaOpcional({
+      fecha_inicio: filtro.fecha_inicio,
+      fecha_fin: filtro.fecha_fin,
+    });
+
+    // Movimientos de ajuste de inventario registrados en la bitácora (filtrados por fecha si se envía rango)
     const ajustesRecientes = await this.prisma.ajusteInventario.findMany({
-      take: 20,
+      ...(rangoAjustes ? { where: { fecha_hora: rangoAjustes } } : {}),
+      take: rangoAjustes ? 200 : 20,
       orderBy: { fecha_hora: 'desc' },
       include: {
         producto: { select: { nombre: true, categoria: true } },
@@ -850,6 +922,14 @@ export class ReportesService {
     }));
 
     return {
+      ...(rangoAjustes
+        ? {
+            periodo: {
+              inicio: (rangoAjustes.gte ?? new Date(0)).toISOString(),
+              fin: (rangoAjustes.lte ?? new Date()).toISOString(),
+            },
+          }
+        : {}),
       resumen: {
         total_productos: totalProductos,
         total_disponibles: totalDisponibles,
@@ -966,7 +1046,7 @@ export class ReportesService {
    * REPORTE 5: RENTABILIDAD POR PRODUCTO
    * Cruza facturas emitidas y costo vigente en el catálogo para calcular utilidad y margen bruto.
    */
-  async obtenerReporteRentabilidad(filtro: FiltroFechasDto & { categoria?: string }) {
+  async obtenerReporteRentabilidad(filtro: FiltroRentabilidadDto) {
     const { inicio, fin } = resolverRangoFechas(filtro.fecha_inicio, filtro.fecha_fin);
 
     const facturas = await this.prisma.factura.findMany({

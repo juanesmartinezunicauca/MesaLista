@@ -50,10 +50,17 @@ export class PedidosController {
    * @param id_usuario Identificador del colaborador que toma el pedido.
    * @returns Comanda creada con número de orden consecutivo.
    */
-  @ApiOperation({ summary: 'Crear comanda de salón o pedido' })
+  @ApiOperation({
+    summary: 'Crear comanda de salón o pedido',
+    description:
+      'Registra una nueva comanda asociada a una mesa de salón o pedido general, congelando el precio unitario vigente del catálogo (para evitar alteración desde el cliente), descontando existencias si el producto controla inventario y marcando la mesa como `ocupada`.\n\n' +
+      '**Roles autorizados:** `administrador`, `cajero`, `mesero`.',
+  })
   @ApiBody({ type: CreatePedidoDto })
   @ApiResponse({ status: 201, description: 'Comanda creada exitosamente.' })
   @ApiResponse({ status: 400, description: 'Mesa inexistente, ocupada o ítems sin existencias.' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado.' })
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @Roles(RolUsuario.administrador, RolUsuario.cajero, RolUsuario.mesero)
@@ -70,8 +77,15 @@ export class PedidosController {
    * @param query Filtros por estado, tipo, mesa o fecha.
    * @returns Lista de pedidos con sus ítems detallados.
    */
-  @ApiOperation({ summary: 'Listar pedidos con filtros de comandería' })
+  @ApiOperation({
+    summary: 'Listar pedidos con filtros de comandería',
+    description:
+      'Consulta la cola operativa de cocina (KDS) y el historial de comandas, filtrando opcionalmente por `estado`, `tipo` (`mesa`/`domicilio`), `id_mesa` o rango de fechas.\n\n' +
+      '**Roles autorizados:** `administrador`, `cajero`, `mesero`, `cocina`.',
+  })
   @ApiResponse({ status: 200, description: 'Listado de comandas obtenido exitosamente.' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado.' })
   @Get()
   @Roles(
     RolUsuario.administrador,
@@ -89,9 +103,16 @@ export class PedidosController {
    * @param id_mesa Identificador de la mesa.
    * @returns Lista de pedidos en estado 'enviada'.
    */
-  @ApiOperation({ summary: 'Obtener comandas activas de una mesa' })
+  @ApiOperation({
+    summary: 'Obtener comandas activas de una mesa',
+    description:
+      'Recupera todas las comandas activas en preparación (`enviada`) asociadas a una mesa del salón para mostrar el consumo acumulado o preparar su cobro.\n\n' +
+      '**Roles autorizados:** `administrador`, `cajero`, `mesero`.',
+  })
   @ApiParam({ name: 'id_mesa', description: 'ID de la mesa', example: 1 })
   @ApiResponse({ status: 200, description: 'Comandas activas de la mesa obtenidas.' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado.' })
   @Get('mesa/:id_mesa')
   @Roles(RolUsuario.administrador, RolUsuario.cajero, RolUsuario.mesero)
   obtenerPorMesa(@Param('id_mesa', ParseIntPipe) id_mesa: number) {
@@ -104,9 +125,16 @@ export class PedidosController {
    * @param id Identificador numérico de la comanda.
    * @returns Detalle del pedido con ítems, mesa y usuario creador.
    */
-  @ApiOperation({ summary: 'Obtener pedido por ID' })
+  @ApiOperation({
+    summary: 'Obtener pedido por ID',
+    description:
+      'Retorna el detalle completo de una comanda por su identificador, incluyendo ítems solicitados, precios unitarios congelados, mesa asignada y usuario que la registró.\n\n' +
+      '**Roles autorizados:** `administrador`, `cajero`, `mesero`, `cocina`.',
+  })
   @ApiParam({ name: 'id', description: 'ID de la comanda', example: 1 })
   @ApiResponse({ status: 200, description: 'Pedido encontrado.' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado.' })
   @ApiResponse({ status: 404, description: 'Pedido no encontrado.' })
   @Get(':id')
   @Roles(
@@ -126,10 +154,17 @@ export class PedidosController {
    * @param cambiarEstadoDto Nuevo estado operativo.
    * @returns Comanda con estado actualizado.
    */
-  @ApiOperation({ summary: 'Cambiar estado de comanda (KDS Cocina / Salón)' })
+  @ApiOperation({
+    summary: 'Cambiar estado de comanda (KDS Cocina / Salón)',
+    description:
+      'Permite avanzar o cambiar el estado de preparación de una comanda desde la pantalla de cocina (KDS) o caja (`enviada`, `cerrada`, `cancelada`).\n\n' +
+      '**Roles autorizados:** `administrador`, `cajero`, `cocina`.',
+  })
   @ApiParam({ name: 'id', description: 'ID de la comanda', example: 1 })
   @ApiBody({ type: CambiarEstadoPedidoDto })
   @ApiResponse({ status: 200, description: 'Estado actualizado correctamente.' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado.' })
   @ApiResponse({ status: 404, description: 'Pedido no encontrado.' })
   @Patch(':id/estado')
   @Roles(RolUsuario.administrador, RolUsuario.cajero, RolUsuario.cocina)
@@ -146,9 +181,18 @@ export class PedidosController {
    * @param id Identificador del pedido.
    * @returns Comanda cancelada.
    */
-  @ApiOperation({ summary: 'Cancelar comanda activa' })
+  @ApiOperation({
+    summary: 'Cancelar comanda activa',
+    description:
+      'Anula una comanda en curso pasándola a estado `cancelada`, restituye automáticamente al inventario las cantidades descontadas de sus ítems y libera la mesa si no quedan otras comandas activas.\n\n' +
+      '**Roles autorizados:** `administrador`, `cajero`.',
+  })
   @ApiParam({ name: 'id', description: 'ID de la comanda', example: 1 })
   @ApiResponse({ status: 200, description: 'Comanda cancelada y stock restaurado.' })
+  @ApiResponse({ status: 400, description: 'La comanda ya está cerrada o cancelada.' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado.' })
+  @ApiResponse({ status: 404, description: 'Pedido no encontrado.' })
   @Patch(':id/cancelar')
   @Roles(RolUsuario.administrador, RolUsuario.cajero)
   cancelar(@Param('id', ParseIntPipe) id: number) {
@@ -162,10 +206,18 @@ export class PedidosController {
    * @param dto Datos a actualizar.
    * @returns Pedido actualizado.
    */
-  @ApiOperation({ summary: 'Actualizar comanda' })
+  @ApiOperation({
+    summary: 'Actualizar comanda',
+    description:
+      'Actualiza notas, observaciones u otros atributos editables de una comanda existente en el historial operativo.\n\n' +
+      '**Roles autorizados:** `administrador`, `cajero`.',
+  })
   @ApiParam({ name: 'id', description: 'ID de la comanda', example: 1 })
   @ApiBody({ type: UpdatePedidoDto })
   @ApiResponse({ status: 200, description: 'Comanda actualizada exitosamente.' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado.' })
+  @ApiResponse({ status: 404, description: 'Pedido no encontrado.' })
   @Patch(':id')
   @Roles(RolUsuario.administrador, RolUsuario.cajero)
   actualizar(
@@ -181,9 +233,17 @@ export class PedidosController {
    * @param id Identificador del pedido.
    * @returns Confirmación de eliminación.
    */
-  @ApiOperation({ summary: 'Eliminar pedido histórico (Solo Administrador)' })
+  @ApiOperation({
+    summary: 'Eliminar pedido histórico (Solo Administrador)',
+    description:
+      'Elimina definitivamente un registro de pedido del historial del sistema. Operación administrativa restringida.\n\n' +
+      '**Roles autorizados:** `administrador`.',
+  })
   @ApiParam({ name: 'id', description: 'ID de la comanda', example: 1 })
   @ApiResponse({ status: 200, description: 'Pedido eliminado correctamente.' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado: requiere rol administrador.' })
+  @ApiResponse({ status: 404, description: 'Pedido no encontrado.' })
   @Delete(':id')
   @Roles(RolUsuario.administrador)
   eliminar(@Param('id', ParseIntPipe) id: number) {

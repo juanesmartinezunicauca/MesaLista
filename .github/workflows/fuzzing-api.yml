@@ -49,11 +49,32 @@ jobs:
         working-directory: backend
         run: npx prisma generate
 
-      - name: Preparar Esquema de Base de Datos en CI
+      - name: Preparar Esquema y Usuario Efímero de Fuzzing en CI
         working-directory: backend
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/mesalista?schema=public"
-        run: npx prisma db push --skip-generate
+        run: |
+          npx prisma db push --skip-generate
+          node -e '
+            const crypto = require("crypto");
+            const jwt = require("jsonwebtoken");
+            const { PrismaClient } = require("@prisma/client");
+            const prisma = new PrismaClient();
+            (async () => {
+              const user = await prisma.usuario.upsert({
+                where: { usuario: "ci_fuzzer_admin" },
+                update: { estado: "activo", rol: "administrador" },
+                create: { nombre: "CI Fuzzer Admin", usuario: "ci_fuzzer_admin", rol: "administrador", estado: "activo" },
+              });
+              const secret = crypto.randomBytes(32).toString("hex");
+              const token = jwt.sign({ sub: user.id_usuario, usuario: user.usuario, rol: user.rol }, secret, { expiresIn: "1h" });
+              const fs = require("fs");
+              console.log("::add-mask::" + secret);
+              console.log("::add-mask::" + token);
+              fs.appendFileSync(process.env.GITHUB_ENV, "CI_JWT_SECRET=" + secret + "\nCI_AUTH_TOKEN=" + token + "\n");
+              await prisma.$disconnect();
+            })().catch((e) => { console.error(e); process.exit(1); });
+          '
 
       - name: Compilar Backend (NestJS)
         working-directory: backend
@@ -65,7 +86,7 @@ jobs:
           PORT: 3000
           NODE_ENV: test
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/mesalista?schema=public"
-          JWT_SECRET: "test_secret_for_ci_fuzzing_super_long_32_bytes_random"
+          JWT_SECRET: ${{ env.CI_JWT_SECRET }}
           CORS_ORIGIN: "http://localhost:4200"
         run: |
           nohup node dist/main > /tmp/backend.log 2>&1 &
@@ -79,25 +100,24 @@ jobs:
           done
 
       - name: Ejecutar Fuzzing de API con Schemathesis (OpenAPI 3.0)
-        continue-on-error: true
         run: |
           docker run --network="host" --rm \
             schemathesis/schemathesis:latest \
             run http://localhost:3000/api/docs-json \
+            -H "Authorization: Bearer ${{ env.CI_AUTH_TOKEN }}" \
             --checks not_a_server_error \
             --max-examples 20 \
             --wait-for-schema 30
 
       - name: Ejecutar Mayhem for API (Si MAYHEM_TOKEN o MAPI_TOKEN está configurado)
         if: env.MAYHEM_TOKEN != ''
-        continue-on-error: true
         uses: ForAllSecure/mapi-action@v2
         with:
           mayhem-token: ${{ env.MAYHEM_TOKEN }}
           target: juanesmartinezunicauca/mesalista/api
-          api-url: https://mesalista-p0pf.onrender.com/api/v1
-          api-spec: https://mesalista-p0pf.onrender.com/api/docs-json
+          api-url: http://localhost:3000
+          api-spec: http://localhost:3000/api/docs-json
           duration: 1m
           run-args: |
             --header
-            Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsInVzdWFyaW8iOiJhZG1pbiIsInJvbCI6ImFkbWluaXN0cmFkb3IiLCJub21icmUiOiJKdWFuIEVzdGViYW4gTWFydGluZXoiLCJpYXQiOjE3OTQ0NjI4MTAsImV4cCI6MTc5NDUwNjAxMH0.cshletivY6oYGHBRr2OQUWoEWVuO_-qxpTVllpq3Nts
+            Authorization: Bearer ${{ env.CI_AUTH_TOKEN }}

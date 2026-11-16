@@ -5,11 +5,6 @@ import { Observable, tap } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { Usuario, UsuarioSesion } from '../../models/usuario.model';
 
-export interface LoginDto {
-  usuario: string;
-  password: string;
-}
-
 export interface AuthResponse {
   accessToken: string;
   usuario: Usuario;
@@ -33,27 +28,6 @@ export class AuthService {
   isAuthenticated = computed<boolean>(() => !!this.token());
 
   userRole = computed<string | undefined>(() => this.currentUser()?.rol);
-
-  /**
-   * Envía credenciales al backend para autenticar usuario
-   */
-  login(credentials: LoginDto): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/login`, credentials).pipe(
-      tap((res) => {
-        const sesionUsuario: UsuarioSesion = {
-          id_usuario: res.usuario.id_usuario,
-          nombre: res.usuario.nombre,
-          usuario: res.usuario.usuario,
-          email: res.usuario.email,
-          rol: res.usuario.rol,
-          token: res.accessToken,
-          iniciales: this.generarIniciales(res.usuario.nombre),
-        };
-
-        this.guardarSesion(res.accessToken, sesionUsuario);
-      })
-    );
-  }
 
   /**
    * Envía el ID Token de Google OAuth 2.0 al backend para autenticar al usuario
@@ -88,9 +62,9 @@ export class AuthService {
   }
 
   /**
-   * Actualiza los datos del perfil propio (nombre y/o contraseña) y sincroniza la sesión
+   * Actualiza los datos del perfil propio (nombre visible) y sincroniza la sesión
    */
-  actualizarPerfil(datos: { nombre?: string; password?: string }): Observable<Usuario> {
+  actualizarPerfil(datos: { nombre?: string }): Observable<Usuario> {
     return this.http.patch<Usuario>(`${this.apiUrl}/perfil`, datos).pipe(
       tap((userActualizado) => {
         const cur = this.currentUser();

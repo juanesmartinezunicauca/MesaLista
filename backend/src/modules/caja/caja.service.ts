@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { EstadoCaja, EstadoFactura, EstadoPedido, Prisma, RolUsuario } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { FiltroRangoFecha, resolverRangoFechaOpcional } from '../../common/utils/date-range.util';
 import { AbrirCajaDto, CerrarCajaDto, CreateGastoDto, UpdateGastoDto } from './dto';
 
 /**
@@ -499,9 +500,15 @@ export class CajaService {
    * Obtiene el histórico de turnos de caja cerrados con desglose contable (Efectivo vs Transferencias vs Tarjeta).
    * Excluye facturas anuladas de las ventas y normaliza medios de pago.
    */
-  async obtenerHistorial(limite = 30) {
+  async obtenerHistorial(limite = 30, filtros?: FiltroRangoFecha) {
+    const rangoFecha = resolverRangoFechaOpcional(filtros);
+    const where: any = { estado: EstadoCaja.cerrada };
+    if (rangoFecha) {
+      where.fecha_cierre = rangoFecha;
+    }
+
     const turnos = await this.prisma.caja.findMany({
-      where: { estado: EstadoCaja.cerrada },
+      where,
       orderBy: { fecha_cierre: 'desc' },
       take: limite,
       include: {
@@ -577,6 +584,7 @@ export class CajaService {
         diferencia: Number(t.diferencia || 0),
         total_ventas: redondearMoneda(totalVentas),
         ventas_netas: redondearMoneda(totalVentas - totalPropinas),
+        utilidad_del_dia: redondearMoneda(totalVentas - totalPropinas - totalGastos),
         ventas_efectivo: redondearMoneda(ventasEfectivo),
         ventas_transferencia: redondearMoneda(ventasTransferencia),
         ventas_tarjeta: redondearMoneda(ventasTarjeta),
@@ -604,10 +612,15 @@ export class CajaService {
       throw new NotFoundException(`El turno de caja #${id_caja} no fue encontrado.`);
     }
 
+    const textoObservacion =
+      typeof observacion === 'string' && observacion.trim().length > 0
+        ? observacion.trim().slice(0, 500)
+        : null;
+
     return this.prisma.caja.update({
       where: { id_caja },
       data: {
-        observacion: observacion ? observacion.trim().slice(0, 500) : null,
+        observacion: textoObservacion,
       },
     });
   }
@@ -640,8 +653,15 @@ export class CajaService {
   /**
    * Obtiene la lista histórica de gastos registrados en caja.
    */
-  async obtenerGastos(limite = 50) {
+  async obtenerGastos(limite = 50, filtros?: FiltroRangoFecha) {
+    const rangoFecha = resolverRangoFechaOpcional(filtros);
+    const where: any = {};
+    if (rangoFecha) {
+      where.fecha_hora = rangoFecha;
+    }
+
     return this.prisma.gasto.findMany({
+      where,
       take: limite,
       orderBy: { fecha_hora: 'desc' },
       include: {

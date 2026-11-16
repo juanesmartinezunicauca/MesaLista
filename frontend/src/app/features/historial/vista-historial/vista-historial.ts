@@ -18,6 +18,7 @@ import { DomiciliosApiService } from '../../../core/services/api/domicilios-api.
 import { CatalogoApiService } from '../../../core/services/api/catalogo-api.service';
 import { Producto } from '../../../core/models/producto.model';
 import { AuthService } from '../../../core/services/auth/auth.service';
+import { PeriodoPreset, resolverPresetRango } from '../../../core/utils/date-filter.util';
 
 export type HistorialTab = 'caja' | 'facturas' | 'pedidos' | 'domicilios' | 'gastos';
 
@@ -105,8 +106,11 @@ export class VistaHistorialComponent implements OnInit {
   domicilios = signal<any[]>([]);
   gastos = signal<any[]>([]);
 
-  // Filtros de fecha opcionales
-  fechaFiltro = signal<string>('');
+  // Filtros de fecha opcionales por rango o preset
+  presetFecha = signal<PeriodoPreset>('todos');
+  fechaInicio = signal<string>('');
+  fechaFin = signal<string>('');
+  hayFiltroFecha = computed(() => Boolean(this.fechaInicio() || this.fechaFin()));
 
   // Modales de Edición y Eliminación
   modalEdicion = signal<ModalEdicionData | null>(null);
@@ -135,7 +139,7 @@ export class VistaHistorialComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    // Si viene parametro query tab=domicilios o tab=gastos
+    // Si viene parametro query tab=domicilios o tab=gastos (o fechas iniciales en ruta)
     this.route.queryParams.subscribe((params) => {
       if (params['tab']) {
         const t = params['tab'] as HistorialTab;
@@ -143,9 +147,13 @@ export class VistaHistorialComponent implements OnInit {
           this.tabActiva.set(t);
         }
       }
+      if (params['fecha_inicio'] || params['fecha_fin']) {
+        this.presetFecha.set('personalizado');
+        this.fechaInicio.set(params['fecha_inicio'] || '');
+        this.fechaFin.set(params['fecha_fin'] || '');
+      }
+      this.cargarDatosTab(this.tabActiva());
     });
-
-    this.cargarDatosTab(this.tabActiva());
   }
 
   cambiarTab(tab: HistorialTab): void {
@@ -154,58 +162,125 @@ export class VistaHistorialComponent implements OnInit {
     this.cargarDatosTab(tab);
   }
 
+  aplicarPresetFecha(preset: PeriodoPreset): void {
+    this.presetFecha.set(preset);
+    if (preset === 'personalizado') {
+      return;
+    }
+    const { fechaInicio, fechaFin } = resolverPresetRango(preset);
+    this.fechaInicio.set(fechaInicio);
+    this.fechaFin.set(fechaFin);
+    this.cargarDatosTab(this.tabActiva());
+  }
+
+  actualizarFechaPersonalizada(campo: 'inicio' | 'fin', valor: string): void {
+    this.presetFecha.set('personalizado');
+    if (campo === 'inicio') {
+      this.fechaInicio.set(valor || '');
+    } else {
+      this.fechaFin.set(valor || '');
+    }
+
+    const fIni = this.fechaInicio();
+    const fFin = this.fechaFin();
+    if (fIni && fFin && fIni > fFin) {
+      this.snackBar.open(
+        'La fecha inicial no puede ser posterior a la fecha final.',
+        'Entendido',
+        { duration: 3500 },
+      );
+      return;
+    }
+
+    this.cargarDatosTab(this.tabActiva());
+  }
+
+  limpiarFiltroFecha(): void {
+    this.aplicarPresetFecha('todos');
+  }
+
   cargarDatosTab(tab: HistorialTab): void {
+    const fInicio = this.fechaInicio() || undefined;
+    const fFin = this.fechaFin() || undefined;
+
+    if (fInicio && fFin && fInicio > fFin) {
+      this.snackBar.open(
+        'La fecha inicial no puede ser posterior a la fecha final.',
+        'Entendido',
+        { duration: 3500 },
+      );
+      return;
+    }
+
     this.cargando.set(true);
 
     switch (tab) {
       case 'caja':
-        this.cajaApi.obtenerHistorial(30).subscribe({
-          next: (data) => {
-            this.turnosCaja.set(data || []);
-            this.cargando.set(false);
-          },
-          error: () => this.handleError('turnos de caja'),
-        });
+        this.cajaApi
+          .obtenerHistorial({
+            limite: fInicio || fFin ? 200 : 30,
+            fecha_inicio: fInicio,
+            fecha_fin: fFin,
+          })
+          .subscribe({
+            next: (data) => {
+              this.turnosCaja.set(data || []);
+              this.cargando.set(false);
+            },
+            error: () => this.handleError('turnos de caja'),
+          });
         break;
 
       case 'facturas':
-        this.facturacionApi.obtenerTodas({ fecha: this.fechaFiltro() || undefined }).subscribe({
-          next: (data) => {
-            this.facturas.set(data || []);
-            this.cargando.set(false);
-          },
-          error: () => this.handleError('facturas'),
-        });
+        this.facturacionApi
+          .obtenerTodas({ fecha_inicio: fInicio, fecha_fin: fFin })
+          .subscribe({
+            next: (data) => {
+              this.facturas.set(data || []);
+              this.cargando.set(false);
+            },
+            error: () => this.handleError('facturas'),
+          });
         break;
 
       case 'pedidos':
-        this.pedidosApi.obtenerTodos({ tipo: 'salon', fecha: this.fechaFiltro() || undefined }).subscribe({
-          next: (data) => {
-            this.pedidosSalon.set(data || []);
-            this.cargando.set(false);
-          },
-          error: () => this.handleError('pedidos de salón'),
-        });
+        this.pedidosApi
+          .obtenerTodos({ tipo: 'salon', fecha_inicio: fInicio, fecha_fin: fFin })
+          .subscribe({
+            next: (data) => {
+              this.pedidosSalon.set(data || []);
+              this.cargando.set(false);
+            },
+            error: () => this.handleError('pedidos de salón'),
+          });
         break;
 
       case 'domicilios':
-        this.domiciliosApi.obtenerTodos({ fecha: this.fechaFiltro() || undefined }).subscribe({
-          next: (data) => {
-            this.domicilios.set(data || []);
-            this.cargando.set(false);
-          },
-          error: () => this.handleError('domicilios'),
-        });
+        this.domiciliosApi
+          .obtenerTodos({ fecha_inicio: fInicio, fecha_fin: fFin })
+          .subscribe({
+            next: (data) => {
+              this.domicilios.set(data || []);
+              this.cargando.set(false);
+            },
+            error: () => this.handleError('domicilios'),
+          });
         break;
 
       case 'gastos':
-        this.cajaApi.obtenerGastos(50).subscribe({
-          next: (data) => {
-            this.gastos.set(data || []);
-            this.cargando.set(false);
-          },
-          error: () => this.handleError('gastos'),
-        });
+        this.cajaApi
+          .obtenerGastos({
+            limite: fInicio || fFin ? 200 : 50,
+            fecha_inicio: fInicio,
+            fecha_fin: fFin,
+          })
+          .subscribe({
+            next: (data) => {
+              this.gastos.set(data || []);
+              this.cargando.set(false);
+            },
+            error: () => this.handleError('gastos'),
+          });
         break;
     }
   }

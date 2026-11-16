@@ -305,9 +305,16 @@ describe('🗄️ BATERÍA DE PRUEBAS DE INTEGRIDAD DE BASE DE DATOS Y BLINDAJE 
         valor_inicial: 100000,
         fecha_apertura: new Date(),
         usuarioApertura: { nombre: 'Cajero Principal' },
-        gastos: [{ total: 20000 }],
+        gastos: [{ total: 20000, fecha_hora: new Date(), medioPago: { nombre: 'Efectivo' }, tipoGasto: { nombre: 'Operativo' } }],
         facturas: [
-          { valor_total: 250000, estado: EstadoFactura.emitida, pagos: [{ monto: 250000, medio_pago: { nombre: 'Efectivo' } }] },
+          {
+            valor_total: 250000,
+            propina: 0,
+            estado: EstadoFactura.emitida,
+            fecha_hora: new Date(),
+            pedidos: [],
+            pagos: [{ monto: 250000, medioPago: { nombre: 'Efectivo' } }],
+          },
         ],
       };
 
@@ -320,12 +327,17 @@ describe('🗄️ BATERÍA DE PRUEBAS DE INTEGRIDAD DE BASE DE DATOS Y BLINDAJE 
         };
       });
 
-      const cierre = await cajaService.cerrarCaja({
-        valor_final_fisico: 330000, // 100.000 base + 250.000 ventas - 20.000 gastos = 330.000 esperado
-        observacion: 'Arqueo exacto sin descuadre',
-      }, 1);
+      const cierre = await cajaService.cerrarCaja(
+        {
+          valor_final_fisico: 330000, // 100.000 base + 250.000 ventas - 20.000 gastos = 330.000 esperado
+          observacion: 'Arqueo exacto sin descuadre',
+        },
+        1,
+      );
 
       expect(cierre).toBeDefined();
+      expect(cierre.diferencia).toBe(0);
+      expect(cierre.tipo_cuadre).toBe('exacto');
       expect(mockPrisma.caja.update).toHaveBeenCalled();
     });
 

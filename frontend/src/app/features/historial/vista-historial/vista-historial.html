@@ -100,10 +100,95 @@
         (ngModelChange)="busqueda.set($event)"
       />
       @if (busqueda()) {
-        <button type="button" class="btn-clear" (click)="busqueda.set('')">
+        <button type="button" class="btn-clear" (click)="busqueda.set('')" aria-label="Limpiar búsqueda">
           <mat-icon>close</mat-icon>
         </button>
       }
+    </div>
+
+    <div class="date-filters-row">
+      <div class="date-presets" role="group" aria-label="Filtros rápidos por fecha">
+        <button
+          type="button"
+          class="preset-chip"
+          [class.active]="presetFecha() === 'todos'"
+          (click)="aplicarPresetFecha('todos')"
+        >
+          Todos
+        </button>
+        <button
+          type="button"
+          class="preset-chip"
+          [class.active]="presetFecha() === 'hoy'"
+          (click)="aplicarPresetFecha('hoy')"
+        >
+          Hoy
+        </button>
+        <button
+          type="button"
+          class="preset-chip"
+          [class.active]="presetFecha() === 'ayer'"
+          (click)="aplicarPresetFecha('ayer')"
+        >
+          Ayer
+        </button>
+        <button
+          type="button"
+          class="preset-chip"
+          [class.active]="presetFecha() === '7dias'"
+          (click)="aplicarPresetFecha('7dias')"
+        >
+          Últimos 7 días
+        </button>
+        <button
+          type="button"
+          class="preset-chip"
+          [class.active]="presetFecha() === 'mes'"
+          (click)="aplicarPresetFecha('mes')"
+        >
+          Este mes
+        </button>
+        <button
+          type="button"
+          class="preset-chip"
+          [class.active]="presetFecha() === 'personalizado'"
+          (click)="aplicarPresetFecha('personalizado')"
+        >
+          Rango
+        </button>
+      </div>
+
+      <div class="date-inputs-group">
+        <label class="date-field">
+          <span>Desde</span>
+          <input
+            type="date"
+            [ngModel]="fechaInicio()"
+            (ngModelChange)="actualizarFechaPersonalizada('inicio', $event)"
+            aria-label="Fecha inicial del historial"
+          />
+        </label>
+        <label class="date-field">
+          <span>Hasta</span>
+          <input
+            type="date"
+            [ngModel]="fechaFin()"
+            (ngModelChange)="actualizarFechaPersonalizada('fin', $event)"
+            aria-label="Fecha final del historial"
+          />
+        </label>
+        @if (hayFiltroFecha()) {
+          <button
+            type="button"
+            class="btn-clear-dates"
+            (click)="limpiarFiltroFecha()"
+            matTooltip="Limpiar filtro de fechas"
+          >
+            <mat-icon>filter_alt_off</mat-icon>
+            <span>Limpiar</span>
+          </button>
+        }
+      </div>
     </div>
   </section>
 
@@ -137,6 +222,7 @@
                 <th>Ventas Efectivo</th>
                 <th>Transferencias (Bancos)</th>
                 <th>Gastos Turno</th>
+                <th>Utilidad Turno</th>
                 <th>Físico Contado</th>
                 <th>Diferencia</th>
                 <th>Movimientos</th>
@@ -169,6 +255,13 @@
                     </span>
                   </td>
                   <td class="font-mono text-danger">-${{ (turno.total_gastos || 0) | number:'1.0-0' }}</td>
+                  <td
+                    class="font-mono font-bold"
+                    [class.text-success]="(turno.utilidad_del_dia ?? ((turno.ventas_netas ?? turno.total_ventas ?? 0) - (turno.total_gastos ?? 0))) >= 0"
+                    [class.text-danger]="(turno.utilidad_del_dia ?? ((turno.ventas_netas ?? turno.total_ventas ?? 0) - (turno.total_gastos ?? 0))) < 0"
+                  >
+                    ${{ (turno.utilidad_del_dia ?? ((turno.ventas_netas ?? turno.total_ventas ?? 0) - (turno.total_gastos ?? 0))) | number:'1.0-0' }}
+                  </td>
                   <td class="font-mono font-bold font-lg">${{ (turno.valor_final_fisico || 0) | number:'1.0-0' }}</td>
                   <td>
                     @if (turno.diferencia === 0) {

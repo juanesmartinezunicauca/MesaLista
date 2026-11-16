@@ -1,8 +1,9 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { FiltroFechasDto } from './filtro-fechas.dto';
 
-export class FiltroInventarioDto {
+export class FiltroInventarioDto extends FiltroFechasDto {
   @ApiPropertyOptional({
     description: 'Filtrar existencias por categoría',
     example: 'Pizzas',

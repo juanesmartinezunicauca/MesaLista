@@ -35,12 +35,21 @@ export class PedidosApiService {
   /**
    * Consulta pedidos con filtros opcionales
    */
-  obtenerTodos(filtros?: { estado?: string; tipo?: string; id_mesa?: number; fecha?: string }): Observable<any[]> {
+  obtenerTodos(filtros?: {
+    estado?: string;
+    tipo?: string;
+    id_mesa?: number;
+    fecha?: string;
+    fecha_inicio?: string;
+    fecha_fin?: string;
+  }): Observable<any[]> {
     let params = new HttpParams();
     if (filtros?.estado) params = params.set('estado', filtros.estado);
     if (filtros?.tipo) params = params.set('tipo', filtros.tipo);
     if (filtros?.id_mesa) params = params.set('id_mesa', filtros.id_mesa.toString());
     if (filtros?.fecha) params = params.set('fecha', filtros.fecha);
+    if (filtros?.fecha_inicio) params = params.set('fecha_inicio', filtros.fecha_inicio);
+    if (filtros?.fecha_fin) params = params.set('fecha_fin', filtros.fecha_fin);
 
     return this.http.get<any[]>(this.apiUrl, { params });
   }

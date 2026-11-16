@@ -2,7 +2,6 @@ import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
-  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -14,6 +13,7 @@ import {
   FiltroGastosDto,
   FiltroInventarioDto,
   FiltroOperacionDto,
+  FiltroRentabilidadDto,
   FiltroVentasDto,
 } from './dto';
 import { ReportesService } from './reportes.service';
@@ -38,9 +38,13 @@ export class ReportesController {
    */
   @ApiOperation({
     summary: 'Dashboard ejecutivo consolidado de métricas (KPIs)',
-    description: 'Calcula ingresos brutos, ticket promedio, comparativa porcentual y gráficos de tendencia temporal.',
+    description:
+      'Calcula ingresos brutos, volumen de órdenes, ticket promedio, gastos totales y variación porcentual respecto al periodo anterior dentro del rango `fecha_inicio`..`fecha_fin`, además de series temporales para gráficas.\n\n' +
+      '**Roles autorizados:** `administrador`.',
   })
   @ApiResponse({ status: 200, description: 'Dashboard analítico calculado exitosamente.' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado: requiere rol administrador.' })
   @Get('dashboard')
   obtenerDashboard(@Query() filtro: FiltroFechasDto) {
     return this.reportesService.obtenerDashboard(filtro);
@@ -52,8 +56,15 @@ export class ReportesController {
    * @param filtro Filtros por rango de fechas, categoría, tipo de servicio o mesa.
    * @returns Desglose analítico de ventas y recaudación.
    */
-  @ApiOperation({ summary: 'Reporte detallado de ventas y recaudación' })
+  @ApiOperation({
+    summary: 'Reporte detallado de ventas y recaudación',
+    description:
+      'Genera el desglose de ventas por producto, categoría gastronómica, canal (`mesa` o `domicilio`), mesa y listado de facturas emitidas en el periodo filtrado.\n\n' +
+      '**Roles autorizados:** `administrador`.',
+  })
   @ApiResponse({ status: 200, description: 'Reporte de ventas generado.' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado: requiere rol administrador.' })
   @Get('ventas')
   obtenerReporteVentas(@Query() filtro: FiltroVentasDto) {
     return this.reportesService.obtenerReporteVentas(filtro);
@@ -65,8 +76,15 @@ export class ReportesController {
    * @param filtro Rango de fechas del periodo a auditar.
    * @returns Cuadre consolidado de caja y arqueos ciegos.
    */
-  @ApiOperation({ summary: 'Reporte contable de caja y conciliación por medio de pago' })
+  @ApiOperation({
+    summary: 'Reporte contable de caja y conciliación por medio de pago',
+    description:
+      'Audita los turnos de caja del rango seleccionado, detallando recaudo por medio de pago (`efectivo`, `tarjeta`, `transferencia`, etc.), salidas registradas y diferencias (sobrantes/faltantes) en los arqueos ciegos.\n\n' +
+      '**Roles autorizados:** `administrador`.',
+  })
   @ApiResponse({ status: 200, description: 'Conciliación de turnos y medios de pago generada.' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado: requiere rol administrador.' })
   @Get('caja-medios')
   obtenerReporteCajaMedios(@Query() filtro: FiltroFechasDto) {
     return this.reportesService.obtenerReporteCajaMedios(filtro);
@@ -78,8 +96,15 @@ export class ReportesController {
    * @param filtro Filtros de categoría, bajo stock y agotados.
    * @returns Ficha valorizada de existencias físicas y alertas.
    */
-  @ApiOperation({ summary: 'Reporte de valorización y alertas de inventario' })
+  @ApiOperation({
+    summary: 'Reporte de valorización y alertas de inventario',
+    description:
+      'Lista existencias actuales de los productos con control de stock, valoriza el inventario a costo/precio y resalta artículos agotados o por debajo del stock mínimo según filtros.\n\n' +
+      '**Roles autorizados:** `administrador`.',
+  })
   @ApiResponse({ status: 200, description: 'Reporte de inventario generado.' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado: requiere rol administrador.' })
   @Get('inventario')
   obtenerReporteInventario(@Query() filtro: FiltroInventarioDto) {
     return this.reportesService.obtenerReporteInventario(filtro);
@@ -91,8 +116,15 @@ export class ReportesController {
    * @param filtro Rango de fechas, tipo de gasto y medio de pago.
    * @returns Historial y totalización de egresos operativos.
    */
-  @ApiOperation({ summary: 'Reporte de gastos operativos y salidas de caja' })
+  @ApiOperation({
+    summary: 'Reporte de gastos operativos y salidas de caja',
+    description:
+      'Consolida los egresos registrados en el periodo especificado, agrupando totales por categoría de gasto y medio de pago utilizado.\n\n' +
+      '**Roles autorizados:** `administrador`.',
+  })
   @ApiResponse({ status: 200, description: 'Reporte de gastos generado.' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado: requiere rol administrador.' })
   @Get('gastos')
   obtenerReporteGastos(@Query() filtro: FiltroGastosDto) {
     return this.reportesService.obtenerReporteGastos(filtro);
@@ -104,13 +136,17 @@ export class ReportesController {
    * @param filtro Rango de fechas y categoría opcional.
    * @returns Rentabilidad y márgenes de ganancia por plato.
    */
-  @ApiOperation({ summary: 'Reporte de rentabilidad y margen bruto de contribución' })
-  @ApiQuery({ name: 'categoria', required: false, description: 'Filtrar por categoría de plato' })
+  @ApiOperation({
+    summary: 'Reporte de rentabilidad y margen bruto de contribución',
+    description:
+      'Cruza las ventas facturadas contra el costo unitario configurado por producto (opcionalmente filtrado por `categoria`) para obtener margen de contribución absoluto y porcentual por plato.\n\n' +
+      '**Roles autorizados:** `administrador`.',
+  })
   @ApiResponse({ status: 200, description: 'Análisis de rentabilidad generado.' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado: requiere rol administrador.' })
   @Get('rentabilidad')
-  obtenerReporteRentabilidad(
-    @Query() filtro: FiltroFechasDto & { categoria?: string },
-  ) {
+  obtenerReporteRentabilidad(@Query() filtro: FiltroRentabilidadDto) {
     return this.reportesService.obtenerReporteRentabilidad(filtro);
   }
 
@@ -120,8 +156,15 @@ export class ReportesController {
    * @param filtro Rango de fechas, tipo de servicio y estado.
    * @returns Métricas operativas de volumen y tiempos.
    */
-  @ApiOperation({ summary: 'Reporte de rendimiento operativo y horas pico' })
+  @ApiOperation({
+    summary: 'Reporte de rendimiento operativo y horas pico',
+    description:
+      'Mide volumen de comandas por franja horaria (horas pico), tasa de cancelaciones y distribución por canal (`mesa`/`domicilio`) y estado operativo.\n\n' +
+      '**Roles autorizados:** `administrador`.',
+  })
   @ApiResponse({ status: 200, description: 'Estadísticas de operación generadas.' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado: requiere rol administrador.' })
   @Get('operacion')
   obtenerReporteOperacion(@Query() filtro: FiltroOperacionDto) {
     return this.reportesService.obtenerReporteOperacion(filtro);

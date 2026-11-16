@@ -45,7 +45,7 @@ export class BorradorPedidoComponent implements OnInit {
   categorias = computed(() => {
     const list = this.mesasService.catalogoProductos();
     const dynamicCats = Array.from(new Set(list.map((p) => p.categoria).filter(Boolean)));
-    return ['Todas', ...dynamicCats.sort()];
+    return ['Todas', ...dynamicCats.sort((a, b) => a.localeCompare(b))];
   });
 
   categoriaSeleccionada = signal<string>('Todas');

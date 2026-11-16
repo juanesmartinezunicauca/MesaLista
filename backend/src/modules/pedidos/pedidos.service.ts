@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { EstadoMesa, EstadoPedido, TipoPedido } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { resolverRangoFechaOpcional } from '../../common/utils/date-range.util';
 import {
   CambiarEstadoPedidoDto,
   CreatePedidoDto,
@@ -192,17 +193,9 @@ export class PedidosService {
 
 
 
-    if (filtros?.fecha) {
-      const fechaInicio = new Date(filtros.fecha);
-      fechaInicio.setHours(0, 0, 0, 0);
-
-      const fechaFin = new Date(filtros.fecha);
-      fechaFin.setHours(23, 59, 59, 999);
-
-      where.fecha_hora = {
-        gte: fechaInicio,
-        lte: fechaFin,
-      };
+    const rangoFecha = resolverRangoFechaOpcional(filtros);
+    if (rangoFecha) {
+      where.fecha_hora = rangoFecha;
     }
 
     // Excluir pedidos a domicilio pendientes de aprobación por el cajero (aún no van a cocina)

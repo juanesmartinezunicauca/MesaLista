@@ -77,7 +77,8 @@ describe('UsuarioDialogComponent', () => {
 
     component.usuarioForm.patchValue({
       nombre: 'Carlos Mesero',
-      email: 'carlos.mesero@gmail.com',
+      usuario: 'carlos.mesero',
+      correoEnvioCodigo: 'carlos.mesero@gmail.com',
       rol: 'mesero',
     });
 
@@ -86,7 +87,7 @@ describe('UsuarioDialogComponent', () => {
     expect(mockUsuariosApi.crear).toHaveBeenCalledWith(
       expect.objectContaining({
         nombre: 'Carlos Mesero',
-        email: 'carlos.mesero@gmail.com',
+        correoEnvioCodigo: 'carlos.mesero@gmail.com',
         usuario: 'carlos.mesero',
         rol: 'mesero',
         estado: 'activo',

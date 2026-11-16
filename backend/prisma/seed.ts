@@ -1,5 +1,4 @@
 import { PrismaClient, RolUsuario, EstadoUsuario, EstadoMesa } from '@prisma/client';
-import * as argon2 from 'argon2';
 import process from 'node:process';
 
 const prisma = new PrismaClient();
@@ -13,19 +12,11 @@ async function main() {
   });
 
   if (!adminExistente) {
-    const passwordHash = await argon2.hash('admin123', {
-      type: argon2.argon2id,
-      memoryCost: 65536,
-      timeCost: 3,
-      parallelism: 4,
-    });
-
     await prisma.usuario.create({
       data: {
         nombre: 'Juan Esteban Martinez',
         usuario: 'admin',
         email: 'jesmartinez@unicauca.edu.co',
-        passwordHash,
         rol: RolUsuario.administrador,
         estado: EstadoUsuario.activo,
       },

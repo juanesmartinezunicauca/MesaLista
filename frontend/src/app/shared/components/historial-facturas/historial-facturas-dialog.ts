@@ -38,6 +38,8 @@ export class HistorialFacturasDialogComponent implements OnInit {
   cargando = signal<boolean>(false);
   filtroTipo = signal<string>('todos');
   busqueda = signal<string>('');
+  fechaInicio = signal<string>('');
+  fechaFin = signal<string>('');
 
   // Estado de edición de una factura específica
   facturaEditando = signal<any | null>(null);
@@ -87,19 +89,41 @@ export class HistorialFacturasDialogComponent implements OnInit {
   }
 
   cargarFacturas(): void {
+    const fInicio = this.fechaInicio() || undefined;
+    const fFin = this.fechaFin() || undefined;
+    if (fInicio && fFin && fInicio > fFin) {
+      this.snackBar.open(
+        'La fecha inicial no puede ser posterior a la fecha final.',
+        'Entendido',
+        { duration: 3000 },
+      );
+      return;
+    }
+
     this.cargando.set(true);
-    this.facturacionApi.obtenerTodas().subscribe({
-      next: (data) => {
-        this.facturas.set(data || []);
-        this.cargando.set(false);
-      },
-      error: () => {
-        this.cargando.set(false);
-        this.snackBar.open('Error al cargar historial de facturas.', 'Cerrar', {
-          duration: 3000,
-        });
-      },
-    });
+    this.facturacionApi
+      .obtenerTodas({
+        fecha_inicio: fInicio,
+        fecha_fin: fFin,
+      })
+      .subscribe({
+        next: (data) => {
+          this.facturas.set(data || []);
+          this.cargando.set(false);
+        },
+        error: () => {
+          this.cargando.set(false);
+          this.snackBar.open('Error al cargar historial de facturas.', 'Cerrar', {
+            duration: 3000,
+          });
+        },
+      });
+  }
+
+  limpiarFechas(): void {
+    this.fechaInicio.set('');
+    this.fechaFin.set('');
+    this.cargarFacturas();
   }
 
   cambiarFiltro(tipo: string): void {

@@ -272,7 +272,9 @@ describe('ReportesService', () => {
       expect(res.resumen.cajas_sobrantes).toBe(1);
       expect(res.resumen.cajas_faltantes).toBe(0);
       expect(res.resumen.suma_diferencias).toBe(5000);
+      expect(res.resumen.total_utilidad_del_dia).toBe(250000);
       expect(res.turnos[0].tipo_cuadre).toBe('exacto');
+      expect(res.turnos[0].utilidad_del_dia).toBe(150000);
       expect(res.turnos[1].tipo_cuadre).toBe('sobrante');
     });
   });
