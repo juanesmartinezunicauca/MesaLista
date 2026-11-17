@@ -42,7 +42,7 @@ jobs:
 
       - name: Ejecutar Análisis SonarQube Cloud (Si SONAR_TOKEN está configurado)
         if: env.SONAR_TOKEN != ''
-        uses: sonarsource/sonarcloud-github-action@v3
+        uses: sonarsource/sonarcloud-github-action@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
