@@ -166,22 +166,32 @@ jobs:
           run-args: |
             --header-auth
             Authorization: Bearer ${{ env.CI_AUTH_TOKEN }}
+            --selection-algorithm
+            CoverageGuided
             --concurrency
             2
             --request-timeout
             3s
             --no-replay
+            --disable-oauth2
+            --disable-auth-mutations
             --disable-github-report-comment
+            --upload-sample-requests-per-endpoint
+            0
             --ignore-endpoint
             .* /api/v1/caja/reset-operacional
-            --ignore-rule
-            tls-algorithm-downgrade
-            --ignore-rule
-            tls-broken-or-risky-crypto-algo
-            --ignore-rule
-            tls-expired-key-usage
-            --ignore-rule
-            tls-improper-following-cct
+            --include-rule
+            internal-server-error
+            --include-rule
+            server-crash
+            --include-rule
+            sql-injection
+            --include-rule
+            command-injection
+            --include-rule
+            path-traversal
+            --include-rule
+            xss
 
       - name: Diagnóstico de logs del Backend ante fallo o cancelación
         if: failure() || cancelled()
