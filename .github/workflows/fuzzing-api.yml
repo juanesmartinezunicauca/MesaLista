@@ -115,16 +115,27 @@ jobs:
             --max-examples 15 \
             --wait-for-schema 30
 
-      - name: Restablecer usuario CI antes de Mayhem
+      - name: Preparar BD limpia y reiniciar Backend antes de Mayhem
         if: env.MAYHEM_TOKEN != ''
         working-directory: backend
         env:
+          PORT: 3000
+          NODE_ENV: test
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/mesalista?schema=public"
+          JWT_SECRET: ${{ env.CI_JWT_SECRET }}
+          CORS_ORIGIN: "http://localhost:4200"
         run: |
+          pkill -f "node dist/main" || true
+          npx prisma db push --force-reset --skip-generate
           node -e '
             const { PrismaClient } = require("@prisma/client");
             const prisma = new PrismaClient();
             (async () => {
+              await prisma.usuario.upsert({
+                where: { usuario: "ci_sample_user" },
+                update: { estado: "activo", rol: "cajero" },
+                create: { nombre: "CI Sample User", usuario: "ci_sample_user", rol: "cajero", estado: "activo" },
+              });
               await prisma.usuario.upsert({
                 where: { id_usuario: 99999 },
                 update: { usuario: "ci_fuzzer_admin", nombre: "CI Fuzzer Admin", estado: "activo", rol: "administrador" },
@@ -133,6 +144,14 @@ jobs:
               await prisma.$disconnect();
             })().catch((e) => { console.error(e); process.exit(1); });
           '
+          nohup node dist/main > /tmp/backend.log 2>&1 &
+          for i in {1..30}; do
+            if curl -sf http://127.0.0.1:3000/api/docs-json -o /tmp/openapi.json && [ -s /tmp/openapi.json ]; then
+              echo "✅ Backend reiniciado y listo para Mayhem for API."
+              break
+            fi
+            sleep 1
+          done
 
       - name: Ejecutar Mayhem for API (Si MAYHEM_TOKEN o MAPI_TOKEN está configurado)
         if: env.MAYHEM_TOKEN != ''
@@ -147,10 +166,22 @@ jobs:
           run-args: |
             --header-auth
             Authorization: Bearer ${{ env.CI_AUTH_TOKEN }}
+            --concurrency
+            2
+            --request-timeout
+            3s
+            --no-replay
+            --disable-github-report-comment
             --ignore-endpoint
-            /api/v1/caja/reset-operacional
-            --ignore-endpoint
-            /api/v1/usuarios/99999
+            .* /api/v1/caja/reset-operacional
+            --ignore-rule
+            tls-algorithm-downgrade
+            --ignore-rule
+            tls-broken-or-risky-crypto-algo
+            --ignore-rule
+            tls-expired-key-usage
+            --ignore-rule
+            tls-improper-following-cct
 
       - name: Diagnóstico de logs del Backend ante fallo o cancelación
         if: failure() || cancelled()

@@ -116,9 +116,7 @@ async function bootstrap() {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        name: 'Authorization',
         description: 'Ingresa el token JWT emitido por MesaLista POS (sin prefijo Bearer)',
-        in: 'header',
       },
       'JWT-auth',
     )
