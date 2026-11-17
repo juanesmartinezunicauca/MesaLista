@@ -81,6 +81,15 @@ export function resolverRangoFechas(
     throw new BadRequestException('Formato de fecha inválido. Utilice formato YYYY-MM-DD o ISO 8601.');
   }
 
+  if (
+    inicio.getUTCFullYear() < 1970 ||
+    inicio.getUTCFullYear() > 2100 ||
+    fin.getUTCFullYear() < 1970 ||
+    fin.getUTCFullYear() > 2100
+  ) {
+    throw new BadRequestException('El rango de fechas debe estar comprendido entre los años 1970 y 2100.');
+  }
+
   if (inicio > fin) {
     throw new BadRequestException('La fecha inicial no puede ser posterior a la fecha final.');
   }

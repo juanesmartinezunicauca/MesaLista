@@ -24,6 +24,10 @@ function parsearFechaColombia(valor: string, esFin: boolean): Date {
     const mes = Number.parseInt(matchSoloFecha[2], 10);
     const dia = Number.parseInt(matchSoloFecha[3], 10);
 
+    if (anio < 1970 || anio > 2100) {
+      throw new BadRequestException(`El año de la fecha '${trimmed}' debe estar entre 1970 y 2100.`);
+    }
+
     const checkUtc = new Date(Date.UTC(anio, mes - 1, dia));
     if (
       checkUtc.getUTCFullYear() !== anio ||
@@ -39,7 +43,8 @@ function parsearFechaColombia(valor: string, esFin: boolean): Date {
 
   if (/^\d{4}-\d{2}-\d{2}T/.test(trimmed)) {
     const fecha = new Date(trimmed);
-    if (!Number.isNaN(fecha.getTime())) {
+    const anio = fecha.getUTCFullYear();
+    if (!Number.isNaN(fecha.getTime()) && anio >= 1970 && anio <= 2100) {
       return fecha;
     }
   }
