@@ -277,6 +277,54 @@ describe('ReportesService', () => {
       expect(res.turnos[0].utilidad_del_dia).toBe(150000);
       expect(res.turnos[1].tipo_cuadre).toBe('sobrante');
     });
+
+    it('debe normalizar Nequi/Datáfono y descontar gastos por medio de pago en el neto disponible', async () => {
+      prisma.caja.findMany.mockResolvedValue([
+        {
+          id_caja: 3,
+          estado: EstadoCaja.abierta,
+          fecha_apertura: new Date('2026-10-03T10:00:00-05:00'),
+          fecha_cierre: null,
+          valor_inicial: '50000.00',
+          valor_final_teorico: null,
+          valor_final_fisico: null,
+          diferencia: null,
+          usuarioApertura: { nombre: 'Cajero' },
+          usuarioCierre: null,
+          facturas: [
+            {
+              valor_total: '100000.00',
+              propina: '0.00',
+              pagos: [
+                { monto: '60000.00', medioPago: { nombre: 'Nequi' } },
+                { monto: '40000.00', medioPago: { nombre: 'Datáfono' } },
+              ],
+              pedidos: [],
+            },
+          ],
+          gastos: [
+            { total: '15000.00', medioPago: { nombre: 'Nequi' }, tipoGasto: { nombre: 'Insumos' } },
+            { total: '5000.00', medioPago: { nombre: 'Datáfono' }, tipoGasto: { nombre: 'Aseo' } },
+          ],
+        },
+      ]);
+
+      const res = await service.obtenerReporteCajaMedios({
+        fecha_inicio: '2026-10-01',
+        fecha_fin: '2026-10-05',
+      });
+
+      const medioTransf = res.desglose_medios.find((m) => m.medio === 'Transferencia');
+      const medioTarj = res.desglose_medios.find((m) => m.medio === 'Tarjeta');
+
+      expect(medioTransf?.recaudo).toBe(60000);
+      expect(medioTransf?.gastos).toBe(15000);
+      expect(medioTransf?.neto).toBe(45000);
+
+      expect(medioTarj?.recaudo).toBe(40000);
+      expect(medioTarj?.gastos).toBe(5000);
+      expect(medioTarj?.neto).toBe(35000);
+    });
   });
 
   describe('obtenerReporteInventario', () => {

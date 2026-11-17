@@ -17,12 +17,35 @@ import {
 } from './dto';
 
 /**
- * Normaliza medios de pago para consolidación contable.
+ * Normaliza medios de pago para consolidación contable uniforme con CajaService.
  */
 function normalizarMedioPago(nombre?: string | null): 'efectivo' | 'tarjeta' | 'transferencia' {
-  const norm = (nombre || '').toLowerCase().trim();
-  if (norm.includes('tarjeta')) return 'tarjeta';
-  if (norm.includes('transferencia')) return 'transferencia';
+  const norm = (nombre || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+  if (norm.includes('efectivo')) return 'efectivo';
+  if (
+    norm.includes('tarjeta') ||
+    norm.includes('datafono') ||
+    norm.includes('debito') ||
+    norm.includes('credito') ||
+    norm.includes('pos')
+  ) {
+    return 'tarjeta';
+  }
+  if (
+    norm.includes('transferencia') ||
+    norm.includes('transf') ||
+    norm.includes('nequi') ||
+    norm.includes('daviplata') ||
+    norm.includes('bancolombia') ||
+    norm.includes('pse') ||
+    norm.includes('qr')
+  ) {
+    return 'transferencia';
+  }
   return 'efectivo';
 }
 
@@ -635,7 +658,8 @@ export class ReportesService {
     let totalRecaudoTransferencia = 0;
 
     let totalGastosEfectivo = 0;
-    let totalGastosOtros = 0;
+    let totalGastosTarjeta = 0;
+    let totalGastosTransferencia = 0;
 
     let totalCajasCerradas = 0;
     let totalExactas = 0;
@@ -685,12 +709,16 @@ export class ReportesService {
       }
 
       let gEfectivo = 0;
+      let gTarjeta = 0;
+      let gTransferencia = 0;
       let gTotal = 0;
       for (const g of c.gastos) {
         const m = Number(g.total);
         gTotal += m;
         const met = normalizarMedioPago(g.medioPago?.nombre);
-        if (met === 'efectivo' || !g.medioPago) gEfectivo += m;
+        if (met === 'tarjeta') gTarjeta += m;
+        else if (met === 'transferencia') gTransferencia += m;
+        else gEfectivo += m;
       }
 
       const ventasNetasCaja = redondearMoneda(totalVentasCaja - totalPropinasCaja);
@@ -718,7 +746,8 @@ export class ReportesService {
       totalRecaudoTarjeta += vTarjeta;
       totalRecaudoTransferencia += vTransferencia;
       totalGastosEfectivo += gEfectivo;
-      totalGastosOtros += gTotal - gEfectivo;
+      totalGastosTarjeta += gTarjeta;
+      totalGastosTransferencia += gTransferencia;
 
       const vTeorico = c.valor_final_teorico !== null
         ? Number(c.valor_final_teorico)
@@ -776,6 +805,8 @@ export class ReportesService {
     totalRecaudoTarjeta = redondearMoneda(totalRecaudoTarjeta);
     totalRecaudoTransferencia = redondearMoneda(totalRecaudoTransferencia);
     totalGastosEfectivo = redondearMoneda(totalGastosEfectivo);
+    totalGastosTarjeta = redondearMoneda(totalGastosTarjeta);
+    totalGastosTransferencia = redondearMoneda(totalGastosTransferencia);
     const totalVentasGlobal = totalRecaudoEfectivo + totalRecaudoTarjeta + totalRecaudoTransferencia;
 
     const desgloseMedios = [
@@ -789,15 +820,15 @@ export class ReportesService {
       {
         medio: 'Tarjeta',
         recaudo: totalRecaudoTarjeta,
-        gastos: redondearMoneda(totalGastosOtros),
-        neto: totalRecaudoTarjeta,
+        gastos: totalGastosTarjeta,
+        neto: redondearMoneda(totalRecaudoTarjeta - totalGastosTarjeta),
         porcentaje_ventas: totalVentasGlobal > 0 ? redondearMoneda((totalRecaudoTarjeta / totalVentasGlobal) * 100) : 0,
       },
       {
         medio: 'Transferencia',
         recaudo: totalRecaudoTransferencia,
-        gastos: 0,
-        neto: totalRecaudoTransferencia,
+        gastos: totalGastosTransferencia,
+        neto: redondearMoneda(totalRecaudoTransferencia - totalGastosTransferencia),
         porcentaje_ventas: totalVentasGlobal > 0 ? redondearMoneda((totalRecaudoTransferencia / totalVentasGlobal) * 100) : 0,
       },
     ];

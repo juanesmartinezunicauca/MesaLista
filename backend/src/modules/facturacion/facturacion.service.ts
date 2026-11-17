@@ -476,6 +476,10 @@ export class FacturacionService {
         const totalPagosDto = dto.pagos.reduce((acc, p) => acc + Number(p.monto), 0);
         if (dto.pagos.length === 1 && Math.abs(totalPagosDto - nuevoTotal) > 0.01) {
           dto.pagos[0].monto = nuevoTotal;
+        } else if (dto.pagos.length > 1 && Math.abs(totalPagosDto - nuevoTotal) > 0.01) {
+          throw new BadRequestException(
+            `La suma de los pagos suministrados ($${totalPagosDto.toLocaleString()}) debe coincidir exactamente con el nuevo total de la factura ($${nuevoTotal.toLocaleString()}).`,
+          );
         }
 
         for (const p of dto.pagos) {
@@ -559,6 +563,51 @@ export class FacturacionService {
           observacion: observacionFinal || null,
         },
       });
+
+      // Si la factura pertenecía a un turno cerrado, recalcular el arqueo teórico y diferencia de esa caja
+      if (facturaExistente.caja.estado === EstadoCaja.cerrada && tx.caja?.findUnique && tx.caja?.update) {
+        const cajaCerrada = await tx.caja.findUnique({
+          where: { id_caja: facturaExistente.id_caja },
+          include: {
+            facturas: {
+              where: { estado: EstadoFactura.emitida },
+              include: { pagos: { include: { medioPago: true } } },
+            },
+            gastos: {
+              include: { medioPago: true },
+            },
+          },
+        });
+        if (cajaCerrada) {
+          let vEfe = 0;
+          for (const fac of cajaCerrada.facturas) {
+            for (const pag of fac.pagos) {
+              const nom = (pag.medioPago?.nombre || '').toLowerCase();
+              if (nom.includes('efectivo') || (!nom.includes('tarj') && !nom.includes('dataf') && !nom.includes('datáf') && !nom.includes('transf') && !nom.includes('nequi') && !nom.includes('daviplata') && !nom.includes('bancolombia'))) {
+                vEfe += Number(pag.monto);
+              }
+            }
+          }
+          let gEfe = 0;
+          for (const gas of cajaCerrada.gastos) {
+            const nom = (gas.medioPago?.nombre || '').toLowerCase();
+            if (!gas.medioPago || nom.includes('efectivo')) {
+              gEfe += Number(gas.total);
+            }
+          }
+          const nuevoTeorico = Math.round(((Number(cajaCerrada.valor_inicial) + vEfe - gEfe) + Number.EPSILON) * 100) / 100;
+          const fisico = Number(cajaCerrada.valor_final_fisico ?? nuevoTeorico);
+          let nuevaDif = Math.round(((fisico - nuevoTeorico) + Number.EPSILON) * 100) / 100;
+          if (Math.abs(nuevaDif) < 0.01) nuevaDif = 0;
+          await tx.caja.update({
+            where: { id_caja: facturaExistente.id_caja },
+            data: {
+              valor_final_teorico: new Prisma.Decimal(nuevoTeorico),
+              diferencia: new Prisma.Decimal(nuevaDif),
+            },
+          });
+        }
+      }
 
       return tx.factura.findUnique({
         where: { id_venta: id },

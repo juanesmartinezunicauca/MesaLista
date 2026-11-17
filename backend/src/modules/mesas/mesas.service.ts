@@ -179,6 +179,7 @@ export class MesasService {
                     where: {
                         id_mesa: id,
                         estado: EstadoPedido.enviada,
+                        id_factura: { not: null },
                     },
                     data: {
                         estado: EstadoPedido.cerrada,

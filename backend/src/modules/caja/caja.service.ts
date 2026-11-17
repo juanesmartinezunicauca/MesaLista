@@ -13,10 +13,32 @@ import { AbrirCajaDto, CerrarCajaDto, CreateGastoDto, UpdateGastoDto } from './d
  * Normaliza y categoriza un medio de pago para evitar inconsistencias contables por diferencias de mayúsculas o nombres extendidos.
  */
 function normalizarMedioPago(nombre?: string | null): 'efectivo' | 'tarjeta' | 'transferencia' {
-  const norm = (nombre || '').toLowerCase().trim();
+  const norm = (nombre || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
   if (norm.includes('efectivo')) return 'efectivo';
-  if (norm.includes('tarjeta') || norm.includes('datafono') || norm.includes('pos')) return 'tarjeta';
-  if (norm.includes('transferencia') || norm.includes('nequi') || norm.includes('daviplata') || norm.includes('bancolombia')) return 'transferencia';
+  if (
+    norm.includes('tarjeta') ||
+    norm.includes('datafono') ||
+    norm.includes('debito') ||
+    norm.includes('credito') ||
+    norm.includes('pos')
+  ) {
+    return 'tarjeta';
+  }
+  if (
+    norm.includes('transferencia') ||
+    norm.includes('transf') ||
+    norm.includes('nequi') ||
+    norm.includes('daviplata') ||
+    norm.includes('bancolombia') ||
+    norm.includes('pse') ||
+    norm.includes('qr')
+  ) {
+    return 'transferencia';
+  }
   return 'efectivo'; // Si no se especifica o no coincide, se asume efectivo por estándar físico de cajón
 }
 
@@ -765,6 +787,11 @@ export class CajaService {
         caja: { select: { id_caja: true, estado: true, fecha_apertura: true } },
         usuario: { select: { id_usuario: true, nombre: true, rol: true } },
       },
+    }).then(async (gastoActualizado) => {
+      if (gasto.caja?.estado === EstadoCaja.cerrada) {
+        await this.recalcularArqueoCajaCerrada(gasto.id_caja);
+      }
+      return gastoActualizado;
     });
   }
 
@@ -774,6 +801,7 @@ export class CajaService {
   async eliminarGasto(id: number) {
     const gasto = await this.prisma.gasto.findUnique({
       where: { id_gasto: id },
+      include: { caja: true },
     });
 
     if (!gasto) {
@@ -784,9 +812,61 @@ export class CajaService {
       where: { id_gasto: id },
     });
 
+    if (gasto.caja?.estado === EstadoCaja.cerrada) {
+      await this.recalcularArqueoCajaCerrada(gasto.id_caja);
+    }
+
     return {
       success: true,
       mensaje: `Gasto #${id} eliminado exitosamente.`,
     };
+  }
+
+  /**
+   * Recalcula el valor teórico en efectivo y la diferencia de una caja cerrada tras ajustes retroactivos de un administrador.
+   */
+  private async recalcularArqueoCajaCerrada(id_caja: number): Promise<void> {
+    const caja = await this.prisma.caja.findUnique({
+      where: { id_caja },
+      include: {
+        facturas: {
+          where: { estado: EstadoFactura.emitida },
+          include: { pagos: { include: { medioPago: true } } },
+        },
+        gastos: {
+          include: { medioPago: true },
+        },
+      },
+    });
+    if (!caja || caja.estado !== EstadoCaja.cerrada) return;
+
+    let ventasEfectivo = 0;
+    for (const f of caja.facturas) {
+      for (const p of f.pagos) {
+        if (normalizarMedioPago(p.medioPago?.nombre) === 'efectivo') {
+          ventasEfectivo += Number(p.monto);
+        }
+      }
+    }
+
+    let gastosEfectivo = 0;
+    for (const g of caja.gastos) {
+      if (normalizarMedioPago(g.medioPago?.nombre) === 'efectivo' || !g.medioPago) {
+        gastosEfectivo += Number(g.total);
+      }
+    }
+
+    const nuevoTeorico = redondearMoneda(Number(caja.valor_inicial) + ventasEfectivo - gastosEfectivo);
+    const fisico = Number(caja.valor_final_fisico ?? nuevoTeorico);
+    let nuevaDif = redondearMoneda(fisico - nuevoTeorico);
+    if (Math.abs(nuevaDif) < 0.01) nuevaDif = 0;
+
+    await this.prisma.caja.update({
+      where: { id_caja },
+      data: {
+        valor_final_teorico: new Prisma.Decimal(nuevoTeorico),
+        diferencia: new Prisma.Decimal(nuevaDif),
+      },
+    });
   }
 }
