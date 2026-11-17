@@ -9,6 +9,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { FiltroRangoFecha, resolverRangoFechaOpcional } from '../../common/utils/date-range.util';
+import { resolverZonaPorBarrioODireccion } from './barrios-popayan.constant';
 import {
   CambiarEstadoDomicilioDto,
   CreateDomicilioDto,
@@ -339,10 +340,23 @@ export class DomiciliosService {
           : 'Efectivo';
       const etiquetaPago = `[PAGO: ${metodoNormalizado}]`;
 
-      // Tarificación por zona de Popayán
-      const costoEnvioNum = costo_envio !== undefined ? Number(costo_envio) : undefined;
+      // Tarificación automática por barrio/zona de Popayán
+      const deteccionBarrio = resolverZonaPorBarrioODireccion(zona_entrega, clienteDireccion);
+      const costoEnvioNum =
+        costo_envio !== undefined
+          ? Number(costo_envio)
+          : deteccionBarrio?.zona.tarifa;
+      const zonaResuelta = zona_entrega
+        ? (deteccionBarrio?.barrio && !zona_entrega.includes(deteccionBarrio.zona.nombre)
+            ? `${deteccionBarrio.barrio} (${deteccionBarrio.zona.nombre})`
+            : zona_entrega.trim())
+        : deteccionBarrio
+          ? (deteccionBarrio.barrio
+              ? `${deteccionBarrio.barrio} (${deteccionBarrio.zona.nombre})`
+              : deteccionBarrio.zona.nombre)
+          : '';
       const etiquetaEnvio = costoEnvioNum !== undefined ? `[ENVIO: ${costoEnvioNum}]` : '';
-      const etiquetaZona = zona_entrega ? `[ZONA: ${zona_entrega.trim()}]` : '';
+      const etiquetaZona = zonaResuelta ? `[ZONA: ${zonaResuelta}]` : '';
 
       const obsLimpia = observacion ? observacion.trim() : '';
       let observacionConPendiente = ['[PENDIENTE]', etiquetaPago, etiquetaEnvio, etiquetaZona, obsLimpia]

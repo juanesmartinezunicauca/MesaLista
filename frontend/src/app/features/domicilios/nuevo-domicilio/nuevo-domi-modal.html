@@ -88,11 +88,33 @@
                     </mat-form-field>
                 </div>
 
+                <!-- Barrio de Popayán (Determinación automática de zona y tarifa) -->
+                <div class="field-group">
+                    <label>Barrio en Popayán *</label>
+                    <mat-form-field appearance="outline" class="modern-field">
+                        <mat-select
+                            [ngModel]="barrioSeleccionado()"
+                            (ngModelChange)="cambiarBarrio($event)"
+                            [ngModelOptions]="{ standalone: true }"
+                            placeholder="Seleccione el barrio">
+                            @for (b of barriosPopayan; track b.nombre) {
+                                <mat-option [value]="b.nombre">{{ b.nombre }}</mat-option>
+                            }
+                        </mat-select>
+                        <mat-icon matSuffix>near_me</mat-icon>
+                        @if (barrioSeleccionado()) {
+                            <mat-hint>
+                                Zona automática: <strong>{{ zonaDetectada().nombre }}</strong> — Envío: <strong>$ {{ costoEnvio() | number:'1.0-0' }}</strong>
+                            </mat-hint>
+                        }
+                    </mat-form-field>
+                </div>
+
                 <!-- Dirección de Residencia -->
-                <div class="field-group full-width">
+                <div class="field-group">
                     <label>Dirección de Entrega *</label>
                     <mat-form-field appearance="outline" class="modern-field">
-                        <input matInput formControlName="direccion" placeholder="Ej. Calle 10 # 5-23, Barrio Centro">
+                        <input matInput formControlName="direccion" placeholder="Ej. Calle 10 # 5-23">
                         <mat-icon matSuffix>location_on</mat-icon>
                         @if (deliveryForm.get('direccion')?.hasError('required') && deliveryForm.get('direccion')?.touched) {
                         <mat-error>La dirección de entrega es obligatoria (mínimo 5 caracteres)</mat-error>
@@ -239,8 +261,10 @@
                 <!-- Footer del Carrito con Total -->
                 <div class="cart-total-bar">
                     <div class="total-info">
-                        <span class="total-label">Total a cobrar:</span>
-                        <span class="total-amount">$ {{ totalPedido() | number:'1.0-0' }}</span>
+                        <span class="total-label">
+                            Total a cobrar @if (barrioSeleccionado()) { (incl. envío {{ zonaDetectada().nombre }}: ${{ costoEnvio() | number:'1.0-0' }}) }:
+                        </span>
+                        <span class="total-amount">$ {{ totalConEnvio() | number:'1.0-0' }}</span>
                     </div>
                 </div>
             </div>

@@ -694,8 +694,8 @@ export class ReportesService {
       }
 
       const ventasNetasCaja = redondearMoneda(totalVentasCaja - totalPropinasCaja);
-      const utilidadDelDia = redondearMoneda(ventasNetasCaja - gTotal);
       const utilidadNeta = redondearMoneda(ventasNetasCaja - costoInsumosCaja - gTotal);
+      const utilidadDelDia = utilidadNeta;
       const margenUtilidad =
         ventasNetasCaja > 0 ? redondearMoneda((utilidadDelDia / ventasNetasCaja) * 100) : 0;
 

@@ -269,33 +269,35 @@
                   <input
                     id="direccionEntregaInput"
                     type="text"
-                    placeholder="Ej. Calle 15 # 8-42, Barrio Bolívar"
+                    placeholder="Ej. Calle 15 # 8-42"
                     [value]="direccionEntrega()"
-                    (input)="direccionEntrega.set($any($event.target).value)"
+                    (input)="onDireccionChange($any($event.target).value)"
                   />
                 </div>
               </div>
 
               <div class="input-field-group">
-                <label for="zonaEntregaSelect">Zona de Entrega en Popayán (Cálculo automático de tarifa) *</label>
+                <label for="zonaEntregaSelect">Barrio en Popayán *</label>
                 <div class="field-with-icon select-wrapper">
                   <mat-icon>near_me</mat-icon>
                   <select
                     id="zonaEntregaSelect"
                     class="native-zone-select"
-                    [value]="zonaSeleccionada().id"
-                    (change)="cambiarZona($any($event.target).value)"
+                    [value]="barrioSeleccionado()"
+                    (change)="cambiarBarrio($any($event.target).value)"
                   >
-                    @for (z of zonasPopayan; track z.id) {
-                      <option [value]="z.id">
-                        {{ z.nombre }} — ${{ z.tarifa | number:'1.0-0' }} COP
+                    @for (b of barriosPopayan; track b.nombre) {
+                      <option [value]="b.nombre">
+                        {{ b.nombre }}
                       </option>
                     }
                   </select>
                 </div>
                 <span class="zone-desc-hint">
                   <mat-icon>info</mat-icon>
-                  <span>Cobertura: {{ zonaSeleccionada().descripcion }}</span>
+                  <span>
+                    Zona asignada automáticamente: <strong>{{ zonaSeleccionada().nombre }}</strong> — Tarifa de envío: <strong>${{ costoEnvio() | number:'1.0-0' }} COP</strong>
+                  </span>
                 </span>
               </div>
 

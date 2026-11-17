@@ -189,21 +189,13 @@
               <span class="info-val text-success">+$ {{ ventasNetas | number:'1.0-0' }}</span>
             </div>
             <div class="info-row">
-              <span class="info-label">Egresos:</span>
+              <span class="info-label">Costo Productos:</span>
+              <span class="info-val text-danger">-$ {{ costoInsumos | number:'1.0-0' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Egresos Caja:</span>
               <span class="info-val text-danger">-$ {{ gastosRetiros | number:'1.0-0' }}</span>
             </div>
-            @if (costoInsumos > 0) {
-              <div class="info-row">
-                <span class="info-label">Costo Insumos:</span>
-                <span class="info-val">-$ {{ costoInsumos | number:'1.0-0' }}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">Utilidad Neta:</span>
-                <span class="info-val" [class.text-success]="utilidadNeta >= 0" [class.text-danger]="utilidadNeta < 0">
-                  {{ utilidadNeta < 0 ? '-$' : '$' }} {{ (utilidadNeta < 0 ? -utilidadNeta : utilidadNeta) | number:'1.0-0' }}
-                </span>
-              </div>
-            }
           </div>
         </mat-card-content>
       </mat-card>

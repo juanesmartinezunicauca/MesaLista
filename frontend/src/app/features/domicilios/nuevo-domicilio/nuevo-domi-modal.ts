@@ -13,7 +13,13 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSelectModule } from '@angular/material/select';
 import { CatalogoApiService } from '../../../core/services/api/catalogo-api.service';
 import { DomiciliosApiService } from '../../../core/services/api/domicilios-api.service';
-import { Producto } from '../../../core/models';
+import {
+  BARRIOS_POPAYAN,
+  Producto,
+  ZonaTarifaPopayan,
+  detectarBarrioEnTexto,
+  determinarZonaPorBarrio,
+} from '../../../core/models';
 
 export interface ItemSeleccionado {
   id_producto: number;
@@ -93,13 +99,30 @@ export class NewDeliveryDialogComponent implements OnInit {
     return lista;
   });
 
-  // Cálculo del total
+  // Barrios de Popayán y cálculo automático de zona y tarifa
+  readonly barriosPopayan = BARRIOS_POPAYAN;
+  barrioSeleccionado = signal<string>('');
+  zonaDetectada = computed<ZonaTarifaPopayan>(() =>
+    determinarZonaPorBarrio(this.barrioSeleccionado() || 'Catay'),
+  );
+  costoEnvio = computed<number>(() => (this.barrioSeleccionado() ? this.zonaDetectada().tarifa : 0));
+
+  // Cálculo del total de productos y total con envío
   totalPedido = computed(() => {
     return this.itemsSeleccionados().reduce(
       (acc, item) => acc + item.cantidad * item.precio_unitario,
       0,
     );
   });
+
+  totalConEnvio = computed(() => {
+    const sub = this.totalPedido();
+    return sub > 0 ? sub + this.costoEnvio() : 0;
+  });
+
+  cambiarBarrio(nombreBarrio: string): void {
+    this.barrioSeleccionado.set(nombreBarrio || '');
+  }
 
   constructor() {
     this.deliveryForm = this.fb.group({
@@ -109,6 +132,13 @@ export class NewDeliveryDialogComponent implements OnInit {
       email: ['', [Validators.email]],
       metodoPago: ['Efectivo', [Validators.required]],
       notas: ['', [Validators.maxLength(255)]],
+    });
+
+    this.deliveryForm.get('direccion')?.valueChanges.subscribe((dir: string) => {
+      const detectado = detectarBarrioEnTexto(dir);
+      if (detectado && detectado.nombre !== this.barrioSeleccionado()) {
+        this.barrioSeleccionado.set(detectado.nombre);
+      }
     });
   }
 
@@ -219,11 +249,19 @@ export class NewDeliveryDialogComponent implements OnInit {
     this.guardando.set(true);
 
     const fv = this.deliveryForm.value;
-    const payload = {
+    const barrio = this.barrioSeleccionado().trim();
+    const zona = this.zonaDetectada();
+    const dirRaw = fv.direccion.trim();
+    const yaIncluyeBarrio = barrio && dirRaw.toLowerCase().includes(barrio.toLowerCase());
+    const direccionFinal = barrio
+      ? `${yaIncluyeBarrio ? dirRaw : `${dirRaw}, Barrio ${barrio}`} [${zona.nombre}]`
+      : dirRaw;
+
+    const payload: any = {
       cliente: {
         nombre: fv.nombreCompleto.trim(),
         telefono: fv.telefono.trim(),
-        direccion: fv.direccion.trim(),
+        direccion: direccionFinal,
         email: fv.email?.trim() ? fv.email.trim() : undefined,
       },
       metodo_pago: fv.metodoPago || 'Efectivo',
@@ -235,6 +273,11 @@ export class NewDeliveryDialogComponent implements OnInit {
         observacion: it.observacion || undefined,
       })),
     };
+
+    if (barrio) {
+      payload.costo_envio = this.costoEnvio();
+      payload.zona_entrega = `${barrio} (${zona.nombre})`;
+    }
 
     this.domiciliosApi.crear(payload).subscribe({
       next: (domicilioCreado) => {

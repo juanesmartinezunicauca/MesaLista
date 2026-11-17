@@ -152,6 +152,47 @@ describe('CajaService', () => {
       expect(estado.movimientos.length).toBe(3);
     });
 
+    it('debe descontar el costo de preparación de los productos en utilidad_del_dia (ej. venta 20.000 - costo 10.000 = ganancia 10.000)', async () => {
+      prisma.caja.findFirst.mockResolvedValue({
+        id_caja: 12,
+        fecha_apertura: new Date(),
+        valor_inicial: 50000,
+        usuarioApertura: { nombre: 'Cajero' },
+        facturas: [
+          {
+            id_venta: 1,
+            estado: 'emitida',
+            valor_total: 20000,
+            propina: 0,
+            fecha_hora: new Date(),
+            id_mesa: 1,
+            mesa: { numero: 1 },
+            usuario: { nombre: 'Mesero' },
+            pagos: [{ monto: 20000, medioPago: { nombre: 'Efectivo' } }],
+            pedidos: [
+              {
+                items: [
+                  {
+                    cantidad: 1,
+                    producto: { id_producto: 1, nombre: 'Hamburguesa', precio_venta: 20000, costo: 10000 },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        gastos: [],
+      });
+
+      const estado = await service.obtenerEstadoActual();
+
+      expect(estado.resumen?.total_ventas).toBe(20000);
+      expect(estado.resumen?.costo_insumos).toBe(10000);
+      expect(estado.resumen?.utilidad_del_dia).toBe(10000);
+      expect(estado.resumen?.utilidad_neta).toBe(10000);
+      expect(estado.resumen?.margen_utilidad_porcentaje).toBe(50);
+    });
+
     it('debe excluir facturas anuladas del cálculo de ventas y efectivo esperado', async () => {
       prisma.caja.findFirst.mockResolvedValue({
         id_caja: 10,
