@@ -155,43 +155,44 @@ jobs:
 
       - name: Ejecutar Mayhem for API (Si MAYHEM_TOKEN o MAPI_TOKEN está configurado)
         if: env.MAYHEM_TOKEN != ''
-        timeout-minutes: 5
-        uses: ForAllSecure/mapi-action@v2
-        with:
-          mayhem-token: ${{ env.MAYHEM_TOKEN }}
-          target: juanesmartinezunicauca/mesalista/api
-          api-url: http://127.0.0.1:3000
-          api-spec: /tmp/openapi.json
-          duration: 30sec
-          run-args: |
-            --header-auth
-            Authorization: Bearer ${{ env.CI_AUTH_TOKEN }}
-            --selection-algorithm
-            CoverageGuided
-            --concurrency
-            2
-            --request-timeout
-            3s
-            --no-replay
-            --disable-oauth2
-            --disable-auth-mutations
-            --disable-github-report-comment
-            --upload-sample-requests-per-endpoint
-            0
-            --ignore-endpoint
-            .* /api/v1/caja/reset-operacional
-            --include-rule
-            internal-server-error
-            --include-rule
-            server-crash
-            --include-rule
-            sql-injection
-            --include-rule
-            command-injection
-            --include-rule
-            path-traversal
-            --include-rule
-            xss
+        timeout-minutes: 3
+        env:
+          SKIP_MAPI_AUTO_UPDATE: "true"
+        run: |
+          curl -sSL https://app.mayhem.security/cli/mapi/linux-musl/latest/mapi -o /tmp/mapi
+          chmod +x /tmp/mapi
+          set +e
+          timeout --signal=INT --kill-after=10s 50s /tmp/mapi run \
+            juanesmartinezunicauca/mesalista/api \
+            30sec \
+            /tmp/openapi.json \
+            --url http://127.0.0.1:3000 \
+            --header-auth "Authorization: Bearer ${{ env.CI_AUTH_TOKEN }}" \
+            --selection-algorithm CoverageGuided \
+            --concurrency 2 \
+            --request-timeout 3s \
+            --no-replay \
+            --disable-oauth2 \
+            --disable-auth-mutations \
+            --disable-github-report-comment \
+            --upload-sample-requests-per-endpoint 0 \
+            --ignore-endpoint ".* /api/v1/caja/reset-operacional" \
+            --include-rule internal-server-error \
+            --include-rule server-crash \
+            --include-rule sql-injection \
+            --include-rule command-injection \
+            --include-rule path-traversal \
+            --include-rule xss
+          MAPI_EXIT=$?
+          set -e
+          echo "Mayhem for API finalizó con código: $MAPI_EXIT"
+          curl -sf http://127.0.0.1:3000/api/v1/catalogo/categorias > /dev/null
+          if grep -qE "ERROR \[(ExceptionsHandler|PrismaExceptionFilter)\]" /tmp/backend.log; then
+            echo "❌ Se detectaron errores 500 no controlados durante el fuzzing con Mayhem:"
+            grep -C 3 -E "ERROR \[(ExceptionsHandler|PrismaExceptionFilter)\]" /tmp/backend.log
+            exit 1
+          fi
+          echo "✅ Mayhem for API completado sin errores 500 ni caída del servidor."
 
       - name: Diagnóstico de logs del Backend ante fallo o cancelación
         if: failure() || cancelled()
