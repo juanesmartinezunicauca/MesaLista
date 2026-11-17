@@ -149,6 +149,38 @@ describe('PedidosService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    it('debe rechazar cuando un mismo producto repetido en items supera el stock disponible acumulado', async () => {
+      prisma.mesa.findUnique.mockResolvedValue({
+        id_mesa: 1,
+        numero: 1,
+        estado: EstadoMesa.libre,
+      });
+      prisma.producto.findMany.mockResolvedValue([
+        {
+          id_producto: 1,
+          nombre: 'Hamburguesa Artesanal',
+          disponible: true,
+          controla_inventario: true,
+          cantidad_inventario: 5,
+          precio_venta: 20000,
+        },
+      ]);
+
+      await expect(
+        service.crear(
+          {
+            tipo: TipoPedido.salon,
+            id_mesa: 1,
+            items: [
+              { id_producto: 1, cantidad: 3, ingredientes_removidos: 'Sin cebolla' },
+              { id_producto: 1, cantidad: 3, ingredientes_removidos: 'Sin tomate' },
+            ],
+          },
+          1,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
     it('debe crear el pedido congelando el precio y actualizando la mesa a ocupada', async () => {
       prisma.mesa.findUnique.mockResolvedValue({
         id_mesa: 1,

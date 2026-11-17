@@ -156,5 +156,47 @@ describe('FacturacionService', () => {
         BadRequestException,
       );
     });
+
+    it('debe incluir el costo de envío [ENVIO: XXXX] en el subtotal y total al facturar un domicilio', async () => {
+      prisma.caja.findFirst.mockResolvedValue({ id_caja: 1, estado: EstadoCaja.abierta });
+      prisma.pedido.findUnique.mockResolvedValue({
+        id_pedido: 20,
+        id_factura: null,
+        estado: EstadoPedido.enviada,
+        cliente_nombre: 'Juan Pérez',
+        observacion: '[PAGO: Transferencia] [ENVIO: 4000] [ZONA: Bolívar (Zona Centro)]',
+        items: [{ id_producto: 1, cantidad: 1, precio_unitario: 20000 }],
+      });
+      prisma.factura.create.mockResolvedValue({ id_venta: 55 });
+      prisma.medioPago.findUnique.mockResolvedValue({ id_medio_pago: 2, nombre: 'Transferencia' });
+      prisma.pago.create.mockResolvedValue({});
+      prisma.pedido.updateMany.mockResolvedValue({ count: 1 });
+      prisma.factura.findUnique.mockResolvedValue({
+        id_venta: 55,
+        valor: 24000,
+        valor_total: 24000,
+      });
+
+      await service.crearFactura(
+        {
+          id_pedido: 20,
+          pagos: [{ medio_pago: 'Transferencia', monto: 24000 }],
+          cerrar_pedido: false,
+        },
+        1,
+      );
+
+      expect(prisma.factura.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            valor: expect.anything(),
+            valor_total: expect.anything(),
+          }),
+        }),
+      );
+      const createData = prisma.factura.create.mock.calls[0][0].data;
+      expect(Number(createData.valor)).toBe(24000);
+      expect(Number(createData.valor_total)).toBe(24000);
+    });
   });
 });

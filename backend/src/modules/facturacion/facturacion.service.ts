@@ -36,6 +36,17 @@ export class FacturacionService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
+   * Extrae el costo de envío embebido en la etiqueta [ENVIO: XXXX] de un pedido a domicilio.
+   */
+  private extraerCostoEnvioDePedido(observacion?: string | null): number {
+    if (!observacion) return 0;
+    const match = observacion.match(/\[ENVIO:([^\]]+)\]/i);
+    if (!match) return 0;
+    const digitos = match[1].replace(/\D/g, '');
+    return digitos ? Number.parseInt(digitos, 10) : 0;
+  }
+
+  /**
    * Genera la factura de cobro, registra los pagos, asocia a la caja activa
    * del turno, cierra los pedidos y libera la mesa.
    */
@@ -121,6 +132,7 @@ export class FacturacionService {
       for (const it of pedido.items) {
         subtotal += it.cantidad * Number(it.precio_unitario);
       }
+      subtotal += this.extraerCostoEnvioDePedido(pedido.observacion);
     } else {
       // Venta directa sin mesa ni pedido: el subtotal se toma del pago total
       subtotal = dto.pagos.reduce((acc, p) => acc + p.monto, 0);
@@ -130,17 +142,27 @@ export class FacturacionService {
     const valorTotal = subtotal + propina;
 
     // 3. Validar que la suma de los pagos cubra el total
-    let totalPagado = Math.round((dto.pagos.reduce((acc, p) => acc + p.monto, 0) + Number.EPSILON) * 100) / 100;
+    const totalPagado = Math.round((dto.pagos.reduce((acc, p) => acc + p.monto, 0) + Number.EPSILON) * 100) / 100;
     if (totalPagado < valorTotal) {
       throw new BadRequestException(
         `El monto pagado ($${totalPagado.toLocaleString()}) no cubre el valor total ($${valorTotal.toLocaleString()}).`,
       );
     }
 
-    // Regla contable: Si el pago fue en efectivo con billete de mayor denominación (se dio cambio/vueltos físico),
-    // el monto a asentar contablemente en el pago de caja es el valor total exacto de la factura.
-    if (totalPagado > valorTotal && dto.pagos.length === 1 && dto.pagos[0].medio_pago.toLowerCase().includes('efectivo')) {
-      dto.pagos[0].monto = valorTotal;
+    // Regla contable: Si el monto pagado supera el valor total (ej. cambio/vueltos en efectivo en pago único o mixto),
+    // ajustar el tramo en efectivo para que la suma de pagos asentada en caja coincida exactamente con valor_total.
+    if (totalPagado > valorTotal) {
+      const excedente = Math.round(((totalPagado - valorTotal) + Number.EPSILON) * 100) / 100;
+      const pagoEfectivo = dto.pagos.find((p) => p.medio_pago.toLowerCase().includes('efectivo') && p.monto >= excedente);
+      if (pagoEfectivo) {
+        pagoEfectivo.monto = Math.round(((pagoEfectivo.monto - excedente) + Number.EPSILON) * 100) / 100;
+      } else if (dto.pagos.length === 1) {
+        dto.pagos[0].monto = valorTotal;
+      } else {
+        throw new BadRequestException(
+          `La suma de los pagos electrónicos ($${totalPagado.toLocaleString()}) no puede exceder el valor total de la factura ($${valorTotal.toLocaleString()}).`,
+        );
+      }
     }
 
     // 4. Transacción atómica: Factura + Pagos + Actualización de pedidos y mesa
@@ -417,8 +439,12 @@ export class FacturacionService {
           });
         }
 
-        // Insertar los nuevos items calculando subtotales
-        nuevoSubtotal = 0;
+        // Insertar los nuevos items calculando subtotales (preservando costo de envío si es domicilio)
+        const costoEnvioExistente = facturaExistente.pedidos.reduce(
+          (acc, p) => acc + this.extraerCostoEnvioDePedido(p.observacion),
+          0,
+        );
+        nuevoSubtotal = costoEnvioExistente;
         for (const it of dto.items || []) {
           const prod = productoMap.get(it.id_producto);
           if (!prod) {
@@ -477,11 +503,25 @@ export class FacturacionService {
           });
         } else if (pagosExistentes.length > 1) {
           const totalOtros = pagosExistentes.slice(1).reduce((acc, p) => acc + Number(p.monto), 0);
-          const primerPagoMonto = Math.max(0, nuevoTotal - totalOtros);
-          await tx.pago.update({
-            where: { id_pago: pagosExistentes[0].id_pago },
-            data: { monto: new Prisma.Decimal(primerPagoMonto) },
-          });
+          if (nuevoTotal >= totalOtros) {
+            const primerPagoMonto = nuevoTotal - totalOtros;
+            await tx.pago.update({
+              where: { id_pago: pagosExistentes[0].id_pago },
+              data: { monto: new Prisma.Decimal(primerPagoMonto) },
+            });
+          } else {
+            // Si el nuevo total es menor a la suma de los pagos secundarios, concentrar en el primer medio y poner el resto en 0
+            await tx.pago.update({
+              where: { id_pago: pagosExistentes[0].id_pago },
+              data: { monto: new Prisma.Decimal(nuevoTotal) },
+            });
+            for (const pSec of pagosExistentes.slice(1)) {
+              await tx.pago.update({
+                where: { id_pago: pSec.id_pago },
+                data: { monto: new Prisma.Decimal(0) },
+              });
+            }
+          }
         }
       }
 
@@ -621,6 +661,9 @@ export class FacturacionService {
       });
 
       for (const ped of pedidosAsociados) {
+        if (ped.estado === EstadoPedido.cancelada) {
+          continue; // Evitar doble devolución de stock si el pedido ya había sido cancelado antes
+        }
         for (const item of ped.items) {
           if (item.producto?.controla_inventario) {
             await tx.producto.update({

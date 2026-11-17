@@ -251,6 +251,7 @@ export class DomiciliosService {
     });
 
     const productMap = new Map(productos.map((p) => [p.id_producto, p]));
+    const cantidadPorProducto = new Map<number, number>();
 
     for (const item of items) {
       const prod = productMap.get(item.id_producto);
@@ -264,9 +265,11 @@ export class DomiciliosService {
           `El producto '${prod.nombre}' no se encuentra disponible actualmente.`,
         );
       }
-      if (prod.controla_inventario && (prod.cantidad_inventario ?? 0) < item.cantidad) {
+      const acumulado = (cantidadPorProducto.get(item.id_producto) || 0) + item.cantidad;
+      cantidadPorProducto.set(item.id_producto, acumulado);
+      if (prod.controla_inventario && (prod.cantidad_inventario ?? 0) < acumulado) {
         throw new BadRequestException(
-          `Stock insuficiente para '${prod.nombre}'. Disponible: ${prod.cantidad_inventario}, solicitado: ${item.cantidad}.`,
+          `Stock insuficiente para '${prod.nombre}'. Disponible: ${prod.cantidad_inventario}, solicitado: ${acumulado}.`,
         );
       }
     }
@@ -806,6 +809,10 @@ export class DomiciliosService {
       where: {
         tipo: TipoPedido.domicilio,
         estado: { in: [EstadoPedido.cerrada, EstadoPedido.cancelada] },
+        OR: [
+          { id_factura: null },
+          { factura: { estado: EstadoFactura.anulada } },
+        ],
       },
       select: { id_pedido: true },
     });
@@ -841,6 +848,10 @@ export class DomiciliosService {
 
     if (!pedido || pedido.tipo !== TipoPedido.domicilio) {
       throw new NotFoundException(`El pedido a domicilio #${id} no existe.`);
+    }
+
+    if (dto.estado === EstadoPedido.cancelada && pedido.estado !== EstadoPedido.cancelada) {
+      return this.cancelar(id, dto.observacion || 'Cancelado desde edición de historial');
     }
 
     const data: any = {};
@@ -889,13 +900,40 @@ export class DomiciliosService {
   async eliminar(id: number) {
     const pedido = await this.prisma.pedido.findUnique({
       where: { id_pedido: id },
+      include: {
+        factura: true,
+        items: {
+          include: { producto: true },
+        },
+      },
     });
 
     if (!pedido || pedido.tipo !== TipoPedido.domicilio) {
       throw new NotFoundException(`El pedido a domicilio #${id} no existe.`);
     }
 
+    if (pedido.factura && pedido.factura.estado === EstadoFactura.emitida) {
+      throw new BadRequestException(
+        `No se puede eliminar el domicilio #${pedido.numero_pedido} porque está vinculado a la factura activa #FAC-${pedido.id_factura}. Anule primero la factura en caja para preservar la trazabilidad de costos y utilidades.`,
+      );
+    }
+
     return this.prisma.$transaction(async (tx) => {
+      if (pedido.estado === EstadoPedido.enviada) {
+        for (const item of pedido.items || []) {
+          if (item.producto?.controla_inventario) {
+            await tx.producto.update({
+              where: { id_producto: item.id_producto },
+              data: {
+                cantidad_inventario: {
+                  increment: item.cantidad,
+                },
+              },
+            });
+          }
+        }
+      }
+
       await tx.itemPedido.deleteMany({
         where: { id_pedido: id },
       });

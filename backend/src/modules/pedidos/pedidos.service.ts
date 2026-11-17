@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EstadoMesa, EstadoPedido, TipoPedido } from '@prisma/client';
+import { EstadoFactura, EstadoMesa, EstadoPedido, TipoPedido } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { resolverRangoFechaOpcional } from '../../common/utils/date-range.util';
 import {
@@ -62,6 +62,7 @@ export class PedidosService {
     });
 
     const productMap = new Map(productos.map((p) => [p.id_producto, p]));
+    const cantidadPorProducto = new Map<number, number>();
 
     for (const item of createPedidoDto.items) {
       const prod = productMap.get(item.id_producto);
@@ -75,9 +76,11 @@ export class PedidosService {
           `El producto '${prod.nombre}' no se encuentra disponible actualmente.`,
         );
       }
-      if (prod.controla_inventario && (prod.cantidad_inventario ?? 0) < item.cantidad) {
+      const acumulado = (cantidadPorProducto.get(item.id_producto) || 0) + item.cantidad;
+      cantidadPorProducto.set(item.id_producto, acumulado);
+      if (prod.controla_inventario && (prod.cantidad_inventario ?? 0) < acumulado) {
         throw new BadRequestException(
-          `Stock insuficiente para '${prod.nombre}'. Disponible: ${prod.cantidad_inventario}, solicitado: ${item.cantidad}.`,
+          `Stock insuficiente para '${prod.nombre}'. Disponible: ${prod.cantidad_inventario}, solicitado: ${acumulado}.`,
         );
       }
     }
@@ -378,6 +381,21 @@ export class PedidosService {
       throw new NotFoundException(`El pedido #${id} no fue encontrado.`);
     }
 
+    if (dto.estado === EstadoPedido.cancelada && pedido.estado !== EstadoPedido.cancelada) {
+      if (dto.observacion !== undefined || dto.id_mesa !== undefined) {
+        await this.prisma.pedido.update({
+          where: { id_pedido: id },
+          data: {
+            ...(dto.observacion !== undefined && {
+              observacion: dto.observacion ? dto.observacion.trim().slice(0, 255) : null,
+            }),
+            ...(dto.id_mesa !== undefined && { id_mesa: dto.id_mesa }),
+          },
+        });
+      }
+      return this.cambiarEstado(id, { estado: EstadoPedido.cancelada });
+    }
+
     const data: any = {};
     if (dto.observacion !== undefined) {
       data.observacion = dto.observacion ? dto.observacion.trim().slice(0, 255) : null;
@@ -412,14 +430,41 @@ export class PedidosService {
   async eliminar(id: number) {
     const pedido = await this.prisma.pedido.findUnique({
       where: { id_pedido: id },
-      include: { factura: true },
+      include: {
+        factura: true,
+        items: {
+          include: { producto: true },
+        },
+      },
     });
 
     if (!pedido) {
       throw new NotFoundException(`El pedido #${id} no fue encontrado.`);
     }
 
+    if (pedido.factura && pedido.factura.estado === EstadoFactura.emitida) {
+      throw new BadRequestException(
+        `No se puede eliminar el pedido #${pedido.numero_pedido} porque está vinculado a la factura activa #FAC-${pedido.id_factura}. Anule primero la factura en caja para preservar la integridad contable y de costos.`,
+      );
+    }
+
     return this.prisma.$transaction(async (tx) => {
+      // Si el pedido seguía activo (enviada), restituir el stock descontado antes de eliminar
+      if (pedido.estado === EstadoPedido.enviada) {
+        for (const item of pedido.items || []) {
+          if (item.producto?.controla_inventario) {
+            await tx.producto.update({
+              where: { id_producto: item.id_producto },
+              data: {
+                cantidad_inventario: {
+                  increment: item.cantidad,
+                },
+              },
+            });
+          }
+        }
+      }
+
       await tx.itemPedido.deleteMany({
         where: { id_pedido: id },
       });
