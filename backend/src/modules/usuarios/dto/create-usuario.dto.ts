@@ -51,19 +51,6 @@ export class CreateUsuarioDto {
   @Length(5, 100, { message: 'El correo de envío debe tener entre 5 y 100 caracteres' })
   correoEnvioCodigo?: string;
 
-  @ApiPropertyOptional({
-    description: 'Contraseña de contingencia para acceso local (opcional en enrolamiento Google SSO)',
-    example: 'ClaveSegura2026',
-    minLength: 8,
-  })
-  @IsOptional()
-  @IsString({ message: 'La contraseña debe ser una cadena de texto' })
-  @Length(8, 100, { message: 'La contraseña debe tener al menos 8 caracteres' })
-  @Matches(/^(?=.*[a-zA-Z])(?=.*\d)/, {
-    message: 'La contraseña debe contener al menos una letra y un número',
-  })
-  password?: string;
-
   @ApiProperty({
     description: 'Rol operativo del usuario en el restaurante',
     enum: RolUsuario,

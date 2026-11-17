@@ -8,6 +8,7 @@ import { EstadoCaja, EstadoFactura, EstadoPedido, RolUsuario, TipoPedido } from 
 import * as fs from 'fs';
 import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
+import { FiltroRangoFecha, resolverRangoFechaOpcional } from '../../common/utils/date-range.util';
 import {
   CambiarEstadoDomicilioDto,
   CreateDomicilioDto,
@@ -385,12 +386,13 @@ export class DomiciliosService {
   /**
    * Consulta pedidos a domicilio con filtros opcionales de estado, fecha, búsqueda o usuario.
    */
-  async obtenerTodos(filtros?: {
-    estado?: string;
-    fecha?: string;
-    buscar?: string;
-    id_usuario?: number;
-  }) {
+  async obtenerTodos(
+    filtros?: {
+      estado?: string;
+      buscar?: string;
+      id_usuario?: number;
+    } & FiltroRangoFecha,
+  ) {
     const where: any = {
       tipo: TipoPedido.domicilio,
     };
@@ -399,13 +401,9 @@ export class DomiciliosService {
       where.id_usuario = Number(filtros.id_usuario);
     }
 
-    if (filtros?.fecha) {
-      const fechaInicio = new Date(`${filtros.fecha}T00:00:00-05:00`);
-      const fechaFin = new Date(`${filtros.fecha}T23:59:59.999-05:00`);
-      where.fecha_hora = {
-        gte: fechaInicio,
-        lte: fechaFin,
-      };
+    const rangoFecha = resolverRangoFechaOpcional(filtros);
+    if (rangoFecha) {
+      where.fecha_hora = rangoFecha;
     }
 
     if (filtros?.buscar && filtros.buscar.trim()) {

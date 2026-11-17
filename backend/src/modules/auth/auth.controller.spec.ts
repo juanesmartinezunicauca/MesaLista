@@ -8,14 +8,14 @@ import { AuthService } from './auth.service';
 describe('AuthController', () => {
   let controller: AuthController;
   let service: {
-    login: jest.Mock;
+    loginConGoogle: jest.Mock;
     obtenerPerfil: jest.Mock;
     actualizarPerfil: jest.Mock;
   };
 
   beforeEach(async () => {
     service = {
-      login: jest.fn(),
+      loginConGoogle: jest.fn(),
       obtenerPerfil: jest.fn(),
       actualizarPerfil: jest.fn(),
     };
@@ -42,10 +42,9 @@ describe('AuthController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('POST /auth/login debe delegar a authService.login', async () => {
-    const loginDto = {
-      usuario: 'cmesero',
-      password: 'password123',
+  it('POST /auth/google debe delegar a authService.loginConGoogle', async () => {
+    const googleDto = {
+      idToken: 'header.payload.signature',
     };
     const mockRes = {
       accessToken: 'token-jwt-123',
@@ -58,11 +57,11 @@ describe('AuthController', () => {
       },
     };
 
-    service.login.mockResolvedValue(mockRes);
+    service.loginConGoogle.mockResolvedValue(mockRes);
 
-    const res = await controller.login(loginDto);
+    const res = await controller.googleLogin(googleDto);
 
-    expect(service.login).toHaveBeenCalledWith(loginDto);
+    expect(service.loginConGoogle).toHaveBeenCalledWith(googleDto);
     expect(res).toEqual(mockRes);
   });
 
@@ -86,7 +85,6 @@ describe('AuthController', () => {
   it('PATCH /auth/perfil debe delegar a authService.actualizarPerfil con el id del usuario', async () => {
     const updateDto = {
       nombre: 'Carlos Mesero Actualizado',
-      password: 'newpassword123',
     };
     const mockPerfilActualizado = {
       id_usuario: 1,

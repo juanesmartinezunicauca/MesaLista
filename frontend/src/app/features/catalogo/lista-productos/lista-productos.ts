@@ -56,7 +56,7 @@ export class ListaProductosComponent implements OnInit {
   categoriasDisponibles = computed<string[]>(() => {
     const list = this.productos();
     const cats = Array.from(new Set(list.map((p) => p.categoria).filter(Boolean)));
-    return ['Todas', ...cats.sort()];
+    return ['Todas', ...cats.sort((a, b) => a.localeCompare(b))];
   });
 
   // Métricas reactivas del catálogo

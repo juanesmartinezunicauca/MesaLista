@@ -1,6 +1,5 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import * as argon2 from 'argon2';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EstadoUsuario, RolUsuario } from './dto';
@@ -71,13 +70,15 @@ describe('UsuariosService', () => {
   });
 
   describe('crear', () => {
-    it('debe crear un usuario exitosamente con contraseña hasheada en Argon2id', async () => {
+    it('debe crear un usuario exitosamente con código de invitación y sin almacenar contraseña', async () => {
       prisma.usuario.findUnique.mockResolvedValue(null);
 
       const mockCreado = {
         id_usuario: 1,
         nombre: 'Carlos Mesero',
         usuario: 'cmesero',
+        email: null,
+        codigoInvitacion: 'INV-ABCD1234',
         rol: RolUsuario.mesero,
         estado: EstadoUsuario.activo,
       };
@@ -88,7 +89,6 @@ describe('UsuariosService', () => {
         nombre: 'Carlos Mesero',
         usuario: 'cmesero',
         email: 'cmesero@unicauca.edu.co',
-        password: 'passwordSegura123',
         rol: RolUsuario.mesero,
       });
 
@@ -98,20 +98,13 @@ describe('UsuariosService', () => {
       expect(prisma.usuario.create).toHaveBeenCalled();
       const createArgs = prisma.usuario.create.mock.calls[0][0];
       expect(createArgs.data.usuario).toBe('cmesero');
-      expect(createArgs.data.passwordHash).toBeDefined();
-      expect(createArgs.data.passwordHash).not.toBe('passwordSegura123');
-
-      // Verificar que el hash generado es efectivamente válido con argon2
-      const esValido = await argon2.verify(
-        createArgs.data.passwordHash,
-        'passwordSegura123',
-      );
-      expect(esValido).toBe(true);
+      expect(createArgs.data.passwordHash).toBeUndefined();
+      expect(createArgs.data.codigoInvitacion).toMatch(/^INV-/);
 
       expect(resultado).toMatchObject(mockCreado);
     });
 
-    it('debe crear un empleado pre-autorizado para Google OAuth sin contraseña (passwordHash en null)', async () => {
+    it('debe crear un empleado pre-autorizado para Google OAuth sin correo persistido', async () => {
       prisma.usuario.findUnique.mockResolvedValue(null);
 
       const mockCreado = {
@@ -134,7 +127,7 @@ describe('UsuariosService', () => {
       expect(prisma.usuario.create).toHaveBeenCalled();
       const createArgs = prisma.usuario.create.mock.calls[0][0];
       expect(createArgs.data.email).toBeNull();
-      expect(createArgs.data.passwordHash).toBeNull();
+      expect(createArgs.data.passwordHash).toBeUndefined();
       expect(resultado).toMatchObject(mockCreado);
     });
 
@@ -266,7 +259,7 @@ describe('UsuariosService', () => {
       ).rejects.toThrow(ConflictException);
     });
 
-    it('debe actualizar y re-hashear la contraseña si se provee una nueva', async () => {
+    it('debe actualizar los datos del usuario correctamente', async () => {
       prisma.usuario.findUnique.mockResolvedValue({
         id_usuario: 1,
         usuario: 'carlos',
@@ -281,16 +274,12 @@ describe('UsuariosService', () => {
 
       const res = await service.actualizar(1, {
         nombre: 'Carlos Modificado',
-        password: 'nuevaPassword456',
       });
 
       expect(prisma.usuario.update).toHaveBeenCalled();
       const updateArgs = prisma.usuario.update.mock.calls[0][0];
-      const esValido = await argon2.verify(
-        updateArgs.data.passwordHash,
-        'nuevaPassword456',
-      );
-      expect(esValido).toBe(true);
+      expect(updateArgs.data.nombre).toBe('Carlos Modificado');
+      expect(updateArgs.data.passwordHash).toBeUndefined();
       expect(res.nombre).toBe('Carlos Modificado');
     });
   });

@@ -34,24 +34,12 @@ export class MiPerfilDialogComponent {
   guardando = signal<boolean>(false);
   errorMensaje = signal<string | null>(null);
   exitoMensaje = signal<string | null>(null);
-  mostrarPassword = signal<boolean>(false);
-  mostrarConfirmPassword = signal<boolean>(false);
 
   constructor() {
     const user = this.usuarioActual();
     this.perfilForm = this.fb.group({
       nombre: [user?.nombre || '', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
-      password: ['', [Validators.minLength(8), Validators.maxLength(100), Validators.pattern(/^(?=.*[a-zA-Z])(?=.*\d)/)]],
-      confirmPassword: [''],
     });
-  }
-
-  toggleMostrarPassword(): void {
-    this.mostrarPassword.update((v) => !v);
-  }
-
-  toggleMostrarConfirmPassword(): void {
-    this.mostrarConfirmPassword.update((v) => !v);
   }
 
   tieneError(campo: string, error: string): boolean {
@@ -68,21 +56,11 @@ export class MiPerfilDialogComponent {
       return;
     }
 
-    const { nombre, password, confirmPassword } = this.perfilForm.value;
+    const { nombre } = this.perfilForm.value;
 
-    if (password) {
-      if (password !== confirmPassword) {
-        this.errorMensaje.set('Las contraseñas no coinciden.');
-        return;
-      }
-    }
-
-    const payload: { nombre?: string; password?: string } = {};
+    const payload: { nombre?: string } = {};
     if (nombre && nombre.trim() !== this.usuarioActual()?.nombre) {
       payload.nombre = nombre.trim();
-    }
-    if (password && password.trim()) {
-      payload.password = password.trim();
     }
 
     if (Object.keys(payload).length === 0) {

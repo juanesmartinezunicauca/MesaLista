@@ -233,4 +233,23 @@ describe('DashboardReportesComponent', () => {
     expect(coords[0].label).toBe('Efectivo');
     expect(coords[0].pct).toBe(60);
   });
+
+  it('debe soportar presets "ayer" y "mes_anterior" y enviar rango al reporte de inventario', () => {
+    const spyInv = vi.spyOn(fakeReportesApi, 'obtenerInventario');
+
+    component.aplicarPresetFechas('ayer');
+    expect(component.presetSeleccionado()).toBe('ayer');
+    expect(component.fechaInicio()).toBe(component.fechaFin());
+
+    component.aplicarPresetFechas('mes_anterior');
+    expect(component.presetSeleccionado()).toBe('mes_anterior');
+    expect(component.fechaInicio() <= component.fechaFin()).toBe(true);
+
+    component.cambiarTab(3);
+    expect(spyInv).toHaveBeenCalledWith({
+      fecha_inicio: component.fechaInicio(),
+      fecha_fin: component.fechaFin(),
+      categoria: undefined,
+    });
+  });
 });

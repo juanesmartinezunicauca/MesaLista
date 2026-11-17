@@ -14,6 +14,7 @@ import {
   TipoPedido,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { FiltroRangoFecha, resolverRangoFechaOpcional } from '../../common/utils/date-range.util';
 import { CreateFacturaDto, UpdateFacturaDto } from './dto';
 
 @Injectable()
@@ -230,17 +231,22 @@ export class FacturacionService {
   /**
    * Consulta el historial general de facturas con filtros opcionales (tipo, fecha, caja, búsqueda).
    */
-  async obtenerTodas(filtros?: {
-    tipo?: string;
-    fecha?: string;
-    buscar?: string;
-    id_caja?: number;
-    estado?: string;
-  }) {
+  async obtenerTodas(
+    filtros?: {
+      tipo?: string;
+      buscar?: string;
+      id_caja?: number;
+      estado?: string;
+    } & FiltroRangoFecha,
+  ) {
     const where: any = {};
 
-    if (filtros?.id_caja) {
-      where.id_caja = Number(filtros.id_caja);
+    if (filtros?.id_caja !== undefined && String(filtros.id_caja).trim() !== '') {
+      const idCajaNum = Number(filtros.id_caja);
+      if (!Number.isInteger(idCajaNum) || idCajaNum < 1 || idCajaNum > 2147483647) {
+        throw new BadRequestException('El parámetro id_caja debe ser un entero positivo válido.');
+      }
+      where.id_caja = idCajaNum;
     }
 
     if (filtros?.estado) {
@@ -253,13 +259,9 @@ export class FacturacionService {
       where.id_mesa = null;
     }
 
-    if (filtros?.fecha) {
-      const fechaInicio = new Date(`${filtros.fecha}T00:00:00-05:00`);
-      const fechaFin = new Date(`${filtros.fecha}T23:59:59.999-05:00`);
-      where.fecha_hora = {
-        gte: fechaInicio,
-        lte: fechaFin,
-      };
+    const rangoFecha = resolverRangoFechaOpcional(filtros);
+    if (rangoFecha) {
+      where.fecha_hora = rangoFecha;
     }
 
     if (filtros?.buscar && filtros.buscar.trim()) {

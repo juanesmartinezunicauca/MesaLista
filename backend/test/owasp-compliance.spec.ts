@@ -8,11 +8,12 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Prisma, RolUsuario, TipoPedido } from '@prisma/client';
-import * as argon2 from 'argon2';
+import * as crypto from 'node:crypto';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { PrismaExceptionFilter } from '../src/common/filters/prisma-exception.filter';
 import { RolesGuard } from '../src/common/guards/roles.guard';
+import { UpdatePerfilDto } from '../src/modules/auth/dto/update-perfil.dto';
 import { DomiciliosService } from '../src/modules/domicilios/domicilios.service';
 import { CreateUsuarioDto } from '../src/modules/usuarios/dto/create-usuario.dto';
 
@@ -148,7 +149,7 @@ describe('🛡️ BATERÍA DE PRUEBAS DE CUMPLIMIENTO OWASP TOP 10 (2025) - MESA
   // =========================================================================
   describe('A03:2025 – Software Supply Chain Failures (Cadena de Suministro de Software)', () => {
     it('[A03.1] El proyecto debe utilizar dependencias oficiales con versiones fijadas y sin librerías deprecadas', () => {
-      const dependenciasCriticas = ['@nestjs/core', '@prisma/client', 'argon2', 'helmet'];
+      const dependenciasCriticas = ['@nestjs/core', '@prisma/client', 'google-auth-library', 'helmet'];
       dependenciasCriticas.forEach((dep) => {
         expect(dep).toBeDefined();
       });
@@ -164,41 +165,29 @@ describe('🛡️ BATERÍA DE PRUEBAS DE CUMPLIMIENTO OWASP TOP 10 (2025) - MESA
   // A04:2025 – Cryptographic Failures (Fallas Criptográficas)
   // =========================================================================
   describe('A04:2025 – Cryptographic Failures (Fallas Criptográficas)', () => {
-    it('[A04.1] El almacenamiento de contraseñas debe utilizar Argon2id con parámetros robustos (64MB, 3 iteraciones)', async () => {
-      const passwordPlana = 'SuperSecreto2026!';
-      const hash = await argon2.hash(passwordPlana, {
-        type: argon2.argon2id,
-        memoryCost: 65536,
-        timeCost: 3,
-        parallelism: 4,
-      });
+    it('[A04.1] La generación de códigos de invitación debe usar CSPRNG (node:crypto) con alta entropía y sin almacenamiento de contraseñas locales', () => {
+      const alfabeto = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+      let codigo = '';
+      for (let i = 0; i < 8; i++) {
+        codigo += alfabeto[crypto.randomInt(0, alfabeto.length)];
+      }
+      const codigoInvitacion = `INV-${codigo}`;
 
-      expect(hash).toMatch(/^\$argon2id\$/);
-      expect(hash).toContain('m=65536');
-      expect(hash).toContain('t=3');
-      expect(hash).toContain('p=4');
-
-      const esValida = await argon2.verify(hash, passwordPlana);
-      expect(esValida).toBe(true);
-
-      const esInvalida = await argon2.verify(hash, 'ClaveIncorrecta');
-      expect(esInvalida).toBe(false);
+      expect(codigoInvitacion).toMatch(/^INV-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{8}$/);
     });
 
-    it('[A04.2] Las contraseñas en claro nunca deben exponerse en objetos de usuario saneados', () => {
+    it('[A04.2] Los objetos de usuario saneados nunca deben contener campos de credenciales locales ni secretos', () => {
       const usuarioEnBd = {
         id_usuario: 1,
         nombre: 'Administrador',
         email: 'admin@mesalista.com',
         usuario: 'admin',
         rol: RolUsuario.administrador,
-        password: '$argon2id$v=19$m=65536...',
+        googleId: 'google-sub-12345',
       };
 
-      const { password: _password, ...usuarioSaneado } = usuarioEnBd;
-
-      expect(usuarioSaneado).not.toHaveProperty('password');
-      expect(Object.keys(usuarioSaneado)).not.toContain('password');
+      expect(usuarioEnBd).not.toHaveProperty('password');
+      expect(usuarioEnBd).not.toHaveProperty('passwordHash');
     });
   });
 
@@ -221,7 +210,6 @@ describe('🛡️ BATERÍA DE PRUEBAS DE CUMPLIMIENTO OWASP TOP 10 (2025) - MESA
         nombre: 'Carlos Perez',
         usuario: 'carlos123',
         email: 'carlos@example.com',
-        password: 'Password123',
         rol: RolUsuario.cliente,
         adminPayload: "1; DROP TABLE usuarios; --",
       };
@@ -239,7 +227,6 @@ describe('🛡️ BATERÍA DE PRUEBAS DE CUMPLIMIENTO OWASP TOP 10 (2025) - MESA
         nombre: 'Atacante',
         usuario: "admin' OR '1'='1",
         email: 'hacker@example.com',
-        password: 'Password123',
         rol: RolUsuario.cliente,
       });
 
@@ -280,52 +267,53 @@ describe('🛡️ BATERÍA DE PRUEBAS DE CUMPLIMIENTO OWASP TOP 10 (2025) - MESA
   // A07:2025 – Authentication Failures (Fallas de Autenticación)
   // =========================================================================
   describe('A07:2025 – Authentication Failures (Fallas de Autenticación)', () => {
-    it('[A07.1] Debe rechazar contraseñas con longitud insuficiente (< 8 caracteres)', async () => {
-      const dto = plainToInstance(CreateUsuarioDto, {
-        nombre: 'Usuario Corto',
-        usuario: 'user_corto',
-        email: 'corto@example.com',
-        password: 'Pass1',
-        rol: RolUsuario.cliente,
-      });
+    let pipe: ValidationPipe;
 
-      const errores = await validate(dto);
-      const errorPassword = errores.find((e) => e.property === 'password');
-      expect(errorPassword).toBeDefined();
-      expect(errorPassword?.constraints?.isLength).toContain(
-        'La contraseña debe tener al menos 8 caracteres',
-      );
+    beforeEach(() => {
+      pipe = new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      });
     });
 
-    it('[A07.2] Debe rechazar contraseñas que no combinen letras y números', async () => {
-      const dtoSoloLetras = plainToInstance(CreateUsuarioDto, {
-        nombre: 'Usuario Letras',
-        usuario: 'user_letras',
-        email: 'letras@example.com',
-        password: 'sololetrasdeprueba',
-        rol: RolUsuario.cliente,
-      });
-
-      const errores = await validate(dtoSoloLetras);
-      const errorPassword = errores.find((e) => e.property === 'password');
-      expect(errorPassword).toBeDefined();
-      expect(errorPassword?.constraints?.matches).toContain(
-        'La contraseña debe contener al menos una letra y un número',
-      );
+    it('[A07.1] CreateUsuarioDto debe rechazar el envío del campo obsoleto password (Google OAuth 2.0 exclusivo)', async () => {
+      await expect(
+        pipe.transform(
+          {
+            nombre: 'Usuario Intruso',
+            usuario: 'user_intruso',
+            email: 'intruso@example.com',
+            password: 'PasswordSegura2026',
+            rol: RolUsuario.cliente,
+          },
+          { type: 'body', metatype: CreateUsuarioDto },
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
 
-    it('[A07.3] Debe aceptar contraseñas que cumplan cabalmente con la política de seguridad', async () => {
+    it('[A07.2] UpdatePerfilDto debe rechazar cualquier intento de inyectar campo password en perfil', async () => {
+      await expect(
+        pipe.transform(
+          {
+            nombre: 'Usuario Perfil',
+            password: 'PasswordSegura2026',
+          },
+          { type: 'body', metatype: UpdatePerfilDto },
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('[A07.3] CreateUsuarioDto debe aceptar enrolamiento passwordless válido para Google SSO', async () => {
       const dtoValido = plainToInstance(CreateUsuarioDto, {
         nombre: 'Usuario Valido',
         usuario: 'user_valido',
         email: 'valido@example.com',
-        password: 'PasswordSegura2026',
         rol: RolUsuario.cliente,
       });
 
       const errores = await validate(dtoValido);
-      const errorPassword = errores.find((e) => e.property === 'password');
-      expect(errorPassword).toBeUndefined();
+      expect(errores).toHaveLength(0);
     });
   });
 

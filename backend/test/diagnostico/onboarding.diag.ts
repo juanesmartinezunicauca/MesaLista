@@ -33,7 +33,6 @@ class FakeUsuarioTable {
       id_usuario: this.seq++,
       googleId: null,
       email: null,
-      passwordHash: null,
       codigoInvitacion: null,
       estado: 'activo',
       ...row,
@@ -102,7 +101,7 @@ class FakeUsuarioTable {
   };
   create = async ({ data }: any) => {
     await this.tick();
-    const cand = { id_usuario: this.seq, googleId: null, email: null, passwordHash: null, codigoInvitacion: null, estado: 'activo', ...data };
+    const cand = { id_usuario: this.seq, googleId: null, email: null, codigoInvitacion: null, estado: 'activo', ...data };
     this.assertUnique(cand);
     this.seq++;
     this.rows.push(cand);

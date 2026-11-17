@@ -54,6 +54,8 @@ export class CierreDeCaja {
   ventasTransferencia = signal<number>(0);
   ventasTarjeta = signal<number>(0);
   totalVentas = signal<number>(0);
+  utilidadDelDia = signal<number>(0);
+  utilidadNeta = signal<number>(0);
 
   // Valor Esperado en Efectivo = Fondo Inicial + Ventas Efectivo - Retiros/Gastos
   valorEsperado = computed(() => {
@@ -78,7 +80,7 @@ export class CierreDeCaja {
       real === null ||
       real === undefined ||
       (typeof real === 'string' && (real as string).trim() === '') ||
-      isNaN(Number(real))
+      Number.isNaN(Number(real))
     ) {
       return null;
     }
@@ -93,7 +95,7 @@ export class CierreDeCaja {
       realTransf === null ||
       realTransf === undefined ||
       (typeof realTransf === 'string' && (realTransf as string).trim() === '') ||
-      isNaN(Number(realTransf))
+      Number.isNaN(Number(realTransf))
     ) {
       return null;
     }
@@ -120,7 +122,7 @@ export class CierreDeCaja {
 
     // 1. Debe haber conteo físico válido
     const fisico = this.conteoFisico();
-    if (fisico === null || isNaN(Number(fisico)) || Number(fisico) < 0) {
+    if (fisico === null || Number.isNaN(Number(fisico)) || Number(fisico) < 0) {
       return false;
     }
 
@@ -128,7 +130,7 @@ export class CierreDeCaja {
     if (this.ventasTransferencia() > 0) {
       if (!this.transferenciasVerificadas()) return false;
       const t = this.conteoTransferencias();
-      if (t === null || isNaN(Number(t)) || Number(t) < 0) return false;
+      if (t === null || Number.isNaN(Number(t)) || Number(t) < 0) return false;
     }
 
     // 3. Si hay descuadre en efectivo o transferencias, es OBLIGATORIO ingresar observaciones
@@ -162,6 +164,13 @@ export class CierreDeCaja {
       this.conteoTransferencias.set(transf);
       this.ventasTarjeta.set(this.data.resumen.ventas_tarjeta ?? 0);
       this.totalVentas.set(this.data.resumen.total_ventas ?? 0);
+      const ventasNetas =
+        this.data.resumen.ventas_netas ??
+        ((this.data.resumen.total_ventas ?? 0) - (this.data.resumen.total_propinas ?? 0));
+      const utilDia =
+        this.data.resumen.utilidad_del_dia ?? (ventasNetas - (this.data.resumen.total_gastos ?? 0));
+      this.utilidadDelDia.set(utilDia);
+      this.utilidadNeta.set(this.data.resumen.utilidad_neta ?? utilDia);
     } else if (this.data?.caja) {
       this.fondoInicial.set(this.data.caja.valor_inicial ?? 0);
     }

@@ -52,64 +52,6 @@
             <mat-error>Debe tener al menos 2 caracteres.</mat-error>
           }
         </mat-form-field>
-
-        <div class="divider"></div>
-
-        <div class="section-title">
-          <mat-icon>lock_reset</mat-icon>
-          <span>Cambiar Contraseña</span>
-          <span class="caption-optional">(Dejar en blanco para mantener la actual)</span>
-        </div>
-
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Nueva Contraseña</mat-label>
-          <input
-            matInput
-            type="password"
-            [type]="mostrarPassword() ? 'text' : 'password'"
-            formControlName="password"
-            placeholder="Mínimo 6 caracteres"
-          >
-          <mat-icon matPrefix>lock</mat-icon>
-          <button
-            type="button"
-            mat-icon-button
-            matSuffix
-            (click)="toggleMostrarPassword()"
-            [attr.aria-label]="mostrarPassword() ? 'Ocultar contraseña' : 'Ver contraseña'"
-          >
-            <mat-icon>{{ mostrarPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
-          </button>
-          @if (tieneError('password', 'minlength')) {
-            <mat-error>La contraseña debe tener mínimo 8 caracteres.</mat-error>
-          }
-          @if (tieneError('password', 'pattern')) {
-            <mat-error>Debe contener al menos una letra y un número.</mat-error>
-          }
-        </mat-form-field>
-
-        @if (perfilForm.get('password')?.value) {
-          <mat-form-field appearance="outline" class="w-full animate-fade-in">
-            <mat-label>Confirmar Nueva Contraseña</mat-label>
-            <input
-              matInput
-              type="password"
-              [type]="mostrarConfirmPassword() ? 'text' : 'password'"
-              formControlName="confirmPassword"
-              placeholder="Repite la contraseña"
-            >
-            <mat-icon matPrefix>lock_clock</mat-icon>
-            <button
-              type="button"
-              mat-icon-button
-              matSuffix
-              (click)="toggleMostrarConfirmPassword()"
-              [attr.aria-label]="mostrarConfirmPassword() ? 'Ocultar confirmación' : 'Ver confirmación'"
-            >
-              <mat-icon>{{ mostrarConfirmPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
-            </button>
-          </mat-form-field>
-        }
       </div>
     </mat-dialog-content>
 

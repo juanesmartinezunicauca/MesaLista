@@ -96,11 +96,19 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('MesaLista POS API')
     .setDescription(
-      'Documentación técnica interactiva de la API REST de MesaLista POS (Restaurante Luigie\'s).\n\n' +
-      'Estándar OpenAPI 3.0 para comandería, mesas interactivas, KDS, domicilios, facturación y arqueo de caja.\n\n' +
-      '### Autenticación Bearer (JWT):\n' +
-      'Para probar rutas protegidas, inicia sesión en `/api/v1/auth/google` o `/api/v1/auth/login`, ' +
-      'copia el `accessToken` y presiona el botón **Authorize** arriba a la derecha ingresando el token Bearer.',
+      'Documentación técnica interactiva de la API REST de **MesaLista POS** (Restaurante Luigie\'s).\n\n' +
+      'Estándar OpenAPI 3.0 para comandería, plano interactivo de mesas, cocina (KDS), portal de domicilios, facturación y arqueo de caja.\n\n' +
+      '### Autenticación Bearer (JWT) + Google OAuth 2.0:\n' +
+      'El sistema opera exclusivamente mediante federación **Google Identity Services** (sin contraseñas locales). ' +
+      'Para probar rutas protegidas, autentícate en `POST /api/v1/auth/google` enviando un `idToken` válido de Google, ' +
+      'copia el `accessToken` retornado y presiona el botón **Authorize** arriba a la derecha.\n\n' +
+      '### Control de Acceso Basado en Roles (RBAC):\n' +
+      '- **administrador:** Control total del sistema (usuarios, catálogo, inventario, anulaciones, reportes BI y configuración).\n' +
+      '- **cajero:** Apertura/cierre de caja, gastos menores, facturación, cobros, pedidos, mesas y gestión de domicilios.\n' +
+      '- **mesero:** Atención de salón, toma de comandas, transferencia de mesas, consulta de carta y seguimiento de entregas.\n' +
+      '- **cocina:** Visualización de cola de preparación (KDS) y cambio de estado de comandas en cocina.\n' +
+      '- **cliente:** Portal público de domicilios (creación y consulta restringida de sus propios pedidos).\n' +
+      '- **Público (`@Public`):** Carta gastronómica (`GET /catalogo/productos`, `GET /catalogo/categorias`) y disponibilidad de domicilios (`GET /domicilios/estado-servicio`).',
     )
     .setVersion('1.0.0')
     .addBearerAuth(
@@ -108,21 +116,50 @@ async function bootstrap() {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        name: 'Authorization',
         description: 'Ingresa el token JWT emitido por MesaLista POS (sin prefijo Bearer)',
-        in: 'header',
       },
       'JWT-auth',
     )
-    .addTag('Autenticación', 'Endpoints de federación Google OAuth 2.0, login y gestión de sesión')
-    .addTag('Usuarios', 'Gestión de colaboradores, roles RBAC y tokens de enrolamiento efímeros')
-    .addTag('Mesas', 'Control operativo de salón, comandería interactiva y liberación de mesas')
-    .addTag('Catálogo', 'Gestión de productos, categorías, inventario y ajustes de merma')
-    .addTag('Pedidos', 'Gestión de comandas para salón y cola KDS de cocina')
-    .addTag('Domicilios', 'Gestión integral de pedidos con entrega a domicilio y recepción cliente')
-    .addTag('Facturación', 'Cobro, cálculo de propina, registro de pagos y anulación formal')
-    .addTag('Caja', 'Apertura de turno, control de gastos menores, arqueo físico y cierre contable')
-    .addTag('Reportes', 'Métricas analíticas operativas y financieras ejecutivas')
+    .addTag(
+      'Autenticación',
+      'Módulo de identidad y sesión. Valida criptográficamente el ID Token de Google OAuth 2.0 (JWKS), vincula colaboradores pre-autorizados mediante código de invitación (INV-XXXXXX) o registra clientes automáticamente, emite el JWT Bearer de MesaLista y permite consultar/editar el perfil propio.',
+    )
+    .addTag(
+      'Usuarios',
+      'Módulo administrativo de talento humano y control de acceso (exclusivo rol administrador). Permite registrar colaboradores, generar/reenviar códigos efímeros de invitación con vigencia de 48 h sin persistir correos personales en BD, actualizar roles o estados y aplicar borrado lógico o físico según historial.',
+    )
+    .addTag(
+      'Mesas',
+      'Módulo operativo del plano de salón (roles administrador, cajero y mesero; creación/edición/eliminación solo administrador). Gestiona el mapa en tiempo real de mesas (libre/ocupada), sus comandas activas asociadas y la transferencia atómica de cuentas entre mesas.',
+    )
+    .addTag(
+      'Catálogo',
+      'Módulo de carta gastronómica e inventario. Expone productos y categorías públicamente para comandería y portal cliente; restringe al administrador la creación/edición de platos, registro trazable de entradas/mermas/arqueos de stock y consulta de bitácoras de inventario.',
+    )
+    .addTag(
+      'Pedidos',
+      'Módulo de comandería de salón y pantalla de cocina KDS (administrador, cajero, mesero y cocina según operación). Gestiona creación de comandas con congelamiento histórico de precios y descuento de inventario, consulta de cola activa por mesa o estado, avance de preparación y cancelaciones.',
+    )
+    .addTag(
+      'Domicilios',
+      'Módulo de pedidos con entrega a domicilio y portal cliente. Incluye disponibilidad pública del servicio, directorio operativo de repartidores, creación de pedidos para clientes autenticados o terminal POS, control anti-IDOR en consultas de cliente y seguimiento de estados de despacho.',
+    )
+    .addTag(
+      'Facturación',
+      'Módulo de cobro, emisión de comprobantes y conciliación de pagos (administrador, cajero y mesero en cobro; anulaciones por administrador/cajero). Exige turno de caja abierto, soporta múltiples medios de pago y propina, libera automáticamente la mesa en salón y permite anulación auditada.',
+    )
+    .addTag(
+      'Caja',
+      'Módulo contable de turnos de caja, arqueo físico y egresos menores (administrador y cajero; auditoría/reset exclusivo administrador). Controla apertura con base inicial, balance teórico en vivo, registro/gestión de gastos de caja (/caja/gastos), cierre ciego con cálculo de sobrante/faltante e historial.',
+    )
+    .addTag(
+      'Gastos',
+      'Módulo de dominio para egresos operativos. Nota: la API REST operativa para registrar, listar, actualizar y eliminar gastos menores vinculados al turno de caja activo se expone bajo /api/v1/caja/gastos en la etiqueta Caja.',
+    )
+    .addTag(
+      'Reportes',
+      'Módulo de Business Intelligence (BI) exclusivo para el rol administrador. Consolida KPIs ejecutivos, desglose de ventas por canal/producto, conciliación de caja por medios de pago, valorización/alertas de inventario, egresos, rentabilidad bruta y rendimiento operativo por horas pico.',
+    )
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -138,4 +175,7 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap();
+void bootstrap().catch((err: unknown) => {
+  console.error('Error fatal al iniciar el servidor:', err);
+  process.exit(1);
+});

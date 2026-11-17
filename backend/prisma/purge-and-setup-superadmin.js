@@ -14,7 +14,6 @@
  * ============================================================================
  */
 const { PrismaClient } = require('@prisma/client');
-const argon2 = require('argon2');
 
 const prisma = new PrismaClient();
 
@@ -76,13 +75,6 @@ async function purgeAndSetupSuperAdmin() {
     console.log(`- Usuarios secundarios y cuentas previas eliminadas: ${prevUsersWithEmail.count}`);
 
     // 6. Configurar o crear el Super Administrador
-    const passwordHash = await argon2.hash('admin123', {
-      type: argon2.argon2id,
-      memoryCost: 65536,
-      timeCost: 3,
-      parallelism: 4,
-    });
-
     const adminExistente = await tx.usuario.findUnique({
       where: { usuario: SUPER_ADMIN_USER },
     });
@@ -93,7 +85,6 @@ async function purgeAndSetupSuperAdmin() {
         data: {
           nombre: SUPER_ADMIN_NOMBRE,
           email: SUPER_ADMIN_EMAIL,
-          passwordHash,
           rol: 'administrador',
           estado: 'activo',
           googleId: null,
@@ -108,7 +99,6 @@ async function purgeAndSetupSuperAdmin() {
           nombre: SUPER_ADMIN_NOMBRE,
           usuario: SUPER_ADMIN_USER,
           email: SUPER_ADMIN_EMAIL,
-          passwordHash,
           rol: 'administrador',
           estado: 'activo',
           googleId: null,

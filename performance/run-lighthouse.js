@@ -40,6 +40,47 @@ async function detectFrontendPort() {
   return null;
 }
 
+function findBrowserPath() {
+  if (process.env.CHROME_PATH && fs.existsSync(process.env.CHROME_PATH)) {
+    return process.env.CHROME_PATH;
+  }
+
+  if (process.platform === 'win32') {
+    const localAppData = process.env.LOCALAPPDATA || '';
+    const programFiles = process.env.ProgramFiles || 'C:\\Program Files';
+    const programFilesX86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)';
+
+    const candidates = [
+      path.join(programFiles, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      path.join(programFilesX86, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      path.join(localAppData, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      path.join(programFilesX86, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+      path.join(programFiles, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+    ];
+
+    for (const candidate of candidates) {
+      if (candidate && fs.existsSync(candidate)) {
+        return candidate;
+      }
+    }
+
+    const playwrightDir = path.join(localAppData, 'ms-playwright');
+    if (fs.existsSync(playwrightDir)) {
+      const entries = fs.readdirSync(playwrightDir);
+      for (const entry of entries) {
+        if (entry.startsWith('chromium-')) {
+          const pwChrome = path.join(playwrightDir, entry, 'chrome-win64', 'chrome.exe');
+          if (fs.existsSync(pwChrome)) {
+            return pwChrome;
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
 async function main() {
   fs.mkdirSync(REPORTS_DIR, { recursive: true });
 
@@ -57,22 +98,25 @@ async function main() {
   const targetUrl = `http://localhost:${port}`;
   console.log(`Frontend detectado en ${targetUrl}. Ejecutando Lighthouse...`);
 
-  const isWin = process.platform === 'win32';
-  const command = isWin ? 'npx.cmd' : 'npx';
-  const chromeFlagsArg = isWin
-    ? '--chrome-flags="--headless --no-sandbox"'
-    : '--chrome-flags=--headless --no-sandbox';
+  const env = { ...process.env };
+  const detectedBrowser = findBrowserPath();
+  if (detectedBrowser && !env.CHROME_PATH) {
+    env.CHROME_PATH = detectedBrowser;
+    console.log(`Navegador Chromium detectado: ${detectedBrowser}`);
+  }
+
+  const lighthouseCli = require.resolve('lighthouse/cli/index.js');
   const args = [
-    'lighthouse',
+    lighthouseCli,
     targetUrl,
     '--output=html',
     `--output-path=${OUTPUT_PATH}`,
-    chromeFlagsArg,
+    '--chrome-flags=--headless --no-sandbox',
   ];
 
-  const child = spawn(command, args, {
+  const child = spawn(process.execPath, args, {
     stdio: 'inherit',
-    shell: isWin,
+    env,
   });
 
   child.on('error', (err) => {

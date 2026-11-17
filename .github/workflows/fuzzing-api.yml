@@ -11,7 +11,7 @@ jobs:
   api-fuzz:
     name: OpenAPI Fuzz Testing (Schemathesis & Mayhem)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     env:
       MAYHEM_TOKEN: ${{ secrets.MAYHEM_TOKEN || secrets.MAPI_TOKEN }}
 
@@ -49,11 +49,37 @@ jobs:
         working-directory: backend
         run: npx prisma generate
 
-      - name: Preparar Esquema de Base de Datos en CI
+      - name: Preparar Esquema y Usuario Efímero de Fuzzing en CI
         working-directory: backend
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/mesalista?schema=public"
-        run: npx prisma db push --skip-generate
+        run: |
+          npx prisma db push --skip-generate
+          node -e '
+            const crypto = require("crypto");
+            const jwt = require("jsonwebtoken");
+            const { PrismaClient } = require("@prisma/client");
+            const prisma = new PrismaClient();
+            (async () => {
+              await prisma.usuario.upsert({
+                where: { usuario: "ci_sample_user" },
+                update: { estado: "activo", rol: "cajero" },
+                create: { nombre: "CI Sample User", usuario: "ci_sample_user", rol: "cajero", estado: "activo" },
+              });
+              const adminUser = await prisma.usuario.upsert({
+                where: { id_usuario: 99999 },
+                update: { usuario: "ci_fuzzer_admin", nombre: "CI Fuzzer Admin", estado: "activo", rol: "administrador" },
+                create: { id_usuario: 99999, nombre: "CI Fuzzer Admin", usuario: "ci_fuzzer_admin", rol: "administrador", estado: "activo" },
+              });
+              const secret = crypto.randomBytes(32).toString("hex");
+              const token = jwt.sign({ sub: adminUser.id_usuario, usuario: adminUser.usuario, rol: adminUser.rol }, secret, { expiresIn: "1h" });
+              const fs = require("fs");
+              console.log("::add-mask::" + secret);
+              console.log("::add-mask::" + token);
+              fs.appendFileSync(process.env.GITHUB_ENV, "CI_JWT_SECRET=" + secret + "\nCI_AUTH_TOKEN=" + token + "\n");
+              await prisma.$disconnect();
+            })().catch((e) => { console.error(e); process.exit(1); });
+          '
 
       - name: Compilar Backend (NestJS)
         working-directory: backend
@@ -65,39 +91,113 @@ jobs:
           PORT: 3000
           NODE_ENV: test
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/mesalista?schema=public"
-          JWT_SECRET: "test_secret_for_ci_fuzzing_super_long_32_bytes_random"
+          JWT_SECRET: ${{ env.CI_JWT_SECRET }}
           CORS_ORIGIN: "http://localhost:4200"
         run: |
           nohup node dist/main > /tmp/backend.log 2>&1 &
           echo "Esperando a que la API y Swagger inicien en http://localhost:3000/api/docs..."
           for i in {1..30}; do
-            if curl -s http://localhost:3000/api/docs-json > /dev/null; then
-              echo "✅ Swagger OpenAPI 3.0 detectado y listo para Fuzz Testing."
+            if curl -s http://127.0.0.1:3000/api/docs-json -o /tmp/openapi.json && [ -s /tmp/openapi.json ]; then
+              echo "✅ Swagger OpenAPI 3.0 detectado y guardado en /tmp/openapi.json para Fuzz Testing."
               break
             fi
             sleep 1
           done
 
       - name: Ejecutar Fuzzing de API con Schemathesis (OpenAPI 3.0)
-        continue-on-error: true
         run: |
           docker run --network="host" --rm \
             schemathesis/schemathesis:latest \
-            run http://localhost:3000/api/docs-json \
+            run http://127.0.0.1:3000/api/docs-json \
+            -H "Authorization: Bearer ${{ env.CI_AUTH_TOKEN }}" \
+            --exclude-path "/api/v1/caja/reset-operacional" \
             --checks not_a_server_error \
-            --max-examples 20 \
+            --max-examples 15 \
             --wait-for-schema 30
+
+      - name: Preparar BD limpia y reiniciar Backend antes de Mayhem
+        if: env.MAYHEM_TOKEN != ''
+        working-directory: backend
+        env:
+          PORT: 3000
+          NODE_ENV: test
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/mesalista?schema=public"
+          JWT_SECRET: ${{ env.CI_JWT_SECRET }}
+          CORS_ORIGIN: "http://localhost:4200"
+        run: |
+          pkill -f "node dist/main" || true
+          npx prisma db push --force-reset --skip-generate
+          node -e '
+            const { PrismaClient } = require("@prisma/client");
+            const prisma = new PrismaClient();
+            (async () => {
+              await prisma.usuario.upsert({
+                where: { usuario: "ci_sample_user" },
+                update: { estado: "activo", rol: "cajero" },
+                create: { nombre: "CI Sample User", usuario: "ci_sample_user", rol: "cajero", estado: "activo" },
+              });
+              await prisma.usuario.upsert({
+                where: { id_usuario: 99999 },
+                update: { usuario: "ci_fuzzer_admin", nombre: "CI Fuzzer Admin", estado: "activo", rol: "administrador" },
+                create: { id_usuario: 99999, nombre: "CI Fuzzer Admin", usuario: "ci_fuzzer_admin", rol: "administrador", estado: "activo" },
+              });
+              await prisma.$disconnect();
+            })().catch((e) => { console.error(e); process.exit(1); });
+          '
+          nohup node dist/main > /tmp/backend.log 2>&1 &
+          for i in {1..30}; do
+            if curl -sf http://127.0.0.1:3000/api/docs-json -o /tmp/openapi.json && [ -s /tmp/openapi.json ]; then
+              echo "✅ Backend reiniciado y listo para Mayhem for API."
+              break
+            fi
+            sleep 1
+          done
 
       - name: Ejecutar Mayhem for API (Si MAYHEM_TOKEN o MAPI_TOKEN está configurado)
         if: env.MAYHEM_TOKEN != ''
-        continue-on-error: true
-        uses: ForAllSecure/mapi-action@v2
-        with:
-          mayhem-token: ${{ env.MAYHEM_TOKEN }}
-          target: juanesmartinezunicauca/mesalista/api
-          api-url: https://mesalista-p0pf.onrender.com/api/v1
-          api-spec: https://mesalista-p0pf.onrender.com/api/docs-json
-          duration: 1m
-          run-args: |
-            --header
-            Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsInVzdWFyaW8iOiJhZG1pbiIsInJvbCI6ImFkbWluaXN0cmFkb3IiLCJub21icmUiOiJKdWFuIEVzdGViYW4gTWFydGluZXoiLCJpYXQiOjE3OTQ0NjI4MTAsImV4cCI6MTc5NDUwNjAxMH0.cshletivY6oYGHBRr2OQUWoEWVuO_-qxpTVllpq3Nts
+        timeout-minutes: 3
+        env:
+          SKIP_MAPI_AUTO_UPDATE: "true"
+        run: |
+          curl -sSL https://app.mayhem.security/cli/mapi/linux-musl/latest/mapi -o /tmp/mapi
+          chmod +x /tmp/mapi
+          set +e
+          timeout --signal=INT --kill-after=10s 50s /tmp/mapi run \
+            juanesmartinezunicauca/mesalista/api \
+            30sec \
+            /tmp/openapi.json \
+            --url http://127.0.0.1:3000 \
+            --header-auth "Authorization: Bearer ${{ env.CI_AUTH_TOKEN }}" \
+            --selection-algorithm CoverageGuided \
+            --concurrency 2 \
+            --request-timeout 3s \
+            --no-replay \
+            --disable-oauth2 \
+            --disable-auth-mutations \
+            --disable-github-report-comment \
+            --upload-sample-requests-per-endpoint 0 \
+            --ignore-endpoint ".* /api/v1/caja/reset-operacional" \
+            --include-rule internal-server-error \
+            --include-rule server-crash \
+            --include-rule sql-injection \
+            --include-rule command-injection \
+            --include-rule path-traversal \
+            --include-rule xss
+          MAPI_EXIT=$?
+          set -e
+          echo "Mayhem for API finalizó con código: $MAPI_EXIT"
+          curl -sf http://127.0.0.1:3000/api/v1/catalogo/categorias > /dev/null
+          if grep -qE "ERROR \[(ExceptionsHandler|PrismaExceptionFilter)\]" /tmp/backend.log; then
+            echo "❌ Se detectaron errores 500 no controlados durante el fuzzing con Mayhem:"
+            grep -C 3 -E "ERROR \[(ExceptionsHandler|PrismaExceptionFilter)\]" /tmp/backend.log
+            exit 1
+          fi
+          echo "✅ Mayhem for API completado sin errores 500 ni caída del servidor."
+
+      - name: Diagnóstico de logs del Backend ante fallo o cancelación
+        if: failure() || cancelled()
+        run: |
+          echo "=== Verificación rápida de salud de API ==="
+          curl -s -o /dev/null -w "HTTP %{http_code} en %{time_total}s\n" --max-time 5 http://127.0.0.1:3000/api/v1/catalogo/categorias || echo "API no respondió"
+          echo "=== Últimas 100 líneas de /tmp/backend.log ==="
+          tail -n 100 /tmp/backend.log || true

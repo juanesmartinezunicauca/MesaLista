@@ -64,10 +64,11 @@
 
     .periodo-selector {
       display: inline-flex;
+      flex-wrap: wrap;
       background: $bg-app;
       border: 1px solid $border-color;
-      border-radius: $radius-full;
-      padding: 3px;
+      border-radius: $radius-lg;
+      padding: 4px;
       gap: 4px;
 
       button {

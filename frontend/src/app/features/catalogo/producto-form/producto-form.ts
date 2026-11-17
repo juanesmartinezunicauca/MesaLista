@@ -124,7 +124,7 @@ export class ProductoFormComponent implements OnInit {
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
       const id = Number(idParam);
-      if (!isNaN(id) && id > 0) {
+      if (!Number.isNaN(id) && id > 0) {
         this.isEditMode.set(true);
         this.productId.set(id);
         this.cargarProductoParaEdicion(id);
@@ -154,7 +154,7 @@ export class ProductoFormComponent implements OnInit {
 
         // Asegurar que la categoría del producto figure en la lista si es personalizada
         if (prod.categoria && !this.categorias().includes(prod.categoria)) {
-          this.categorias.update((cats) => [...cats, prod.categoria].sort());
+          this.categorias.update((cats) => [...cats, prod.categoria].sort((a, b) => a.localeCompare(b)));
         }
 
         if (prod.ingredientes_removibles && prod.ingredientes_removibles.length > 0) {
@@ -184,7 +184,7 @@ export class ProductoFormComponent implements OnInit {
         if (cats && cats.length > 0) {
           // Combinar con existentes para asegurar opciones
           const combinadas = Array.from(new Set([...this.categorias(), ...cats]));
-          this.categorias.set(combinadas.sort());
+          this.categorias.set(combinadas.sort((a, b) => a.localeCompare(b)));
         }
       },
       error: () => {
@@ -217,7 +217,7 @@ export class ProductoFormComponent implements OnInit {
     const categoriaFinal = existente || formateada;
 
     if (!existente) {
-      this.categorias.update((cats) => [...cats, formateada].sort());
+      this.categorias.update((cats) => [...cats, formateada].sort((a, b) => a.localeCompare(b)));
     }
 
     this.productForm.get('categoria')?.setValue(categoriaFinal);

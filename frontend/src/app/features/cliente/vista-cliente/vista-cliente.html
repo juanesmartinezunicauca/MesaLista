@@ -52,6 +52,7 @@
           class="btn-cart-nav"
           (click)="abrirCarrito()"
           title="Ver Carrito de Compras"
+          aria-label="Ver Carrito de Compras"
         >
           <mat-icon>shopping_cart</mat-icon>
           <span class="cart-nav-label">Carrito</span>
@@ -61,7 +62,12 @@
         </button>
 
         @if (!isAuthenticated()) {
-          <button mat-flat-button class="btn-login" (click)="irALogin()">
+          <button
+            mat-flat-button
+            class="btn-login"
+            (click)="irALogin()"
+            aria-label="Iniciar Sesión o Registrarse"
+          >
             <mat-icon>account_circle</mat-icon>
             <span>Iniciar Sesión / Registrarse</span>
           </button>
@@ -72,7 +78,13 @@
               <span class="user-name">{{ currentUser()?.nombre }}</span>
               <span class="user-role-badge">Cliente</span>
             </div>
-            <button mat-icon-button class="btn-logout" (click)="cerrarSesion()" title="Cerrar sesión">
+            <button
+              mat-icon-button
+              class="btn-logout"
+              (click)="cerrarSesion()"
+              title="Cerrar sesión"
+              aria-label="Cerrar sesión"
+            >
               <mat-icon>logout</mat-icon>
             </button>
           </div>

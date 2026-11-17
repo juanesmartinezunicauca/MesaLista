@@ -73,7 +73,7 @@ export class NewDeliveryDialogComponent implements OnInit {
   categorias = computed(() => {
     const list = this.productosCatalogo();
     const dynamic = Array.from(new Set(list.map((p) => p.categoria).filter(Boolean)));
-    return ['Todas', ...dynamic.sort()];
+    return ['Todas', ...dynamic.sort((a, b) => a.localeCompare(b))];
   });
 
   // Productos filtrados según búsqueda y categoría

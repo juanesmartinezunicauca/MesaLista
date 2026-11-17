@@ -5,7 +5,6 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import * as argon2 from 'argon2';
 import * as crypto from 'node:crypto';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -46,8 +45,8 @@ export class UsuariosService {
     return generarCodigoInvitacionSeguro();
   }
 
-  // Proyección que excluye deliberadamente el hash de contraseña de las respuestas
-  private readonly usuarioSelectSinPassword = {
+  // Proyección estándar de usuario para respuestas de la API
+  private readonly usuarioSelect = {
     id_usuario: true,
     nombre: true,
     usuario: true,
@@ -142,29 +141,17 @@ export class UsuariosService {
       codigoInvitacionExpira = new Date(Date.now() + 48 * 60 * 60 * 1000);
     }
 
-    // Hashear contraseña solo si se especificó explícitamente (cuenta tradicional)
-    let passwordHash: string | null = null;
-    if (createUsuarioDto.password && createUsuarioDto.password.trim()) {
-      passwordHash = await argon2.hash(createUsuarioDto.password, {
-        type: argon2.argon2id,
-        memoryCost: 65536, // 64 MB
-        timeCost: 3,       // 3 iteraciones
-        parallelism: 4,
-      });
-    }
-
     const nuevoUsuario = await this.prisma.usuario.create({
       data: {
         nombre: createUsuarioDto.nombre.trim(),
         usuario: finalUsername,
         email: emailAGuardar, // NULL para colaboradores operativos: ¡NO SE GUARDA EN BD!
-        passwordHash,
         codigoInvitacion,
         codigoInvitacionExpira,
         rol: createUsuarioDto.rol,
         estado: createUsuarioDto.estado ?? EstadoUsuario.activo,
       },
-      select: this.usuarioSelectSinPassword,
+      select: this.usuarioSelect,
     });
 
     // Despacho del código por correo si se especificó destinatario
@@ -267,7 +254,7 @@ export class UsuariosService {
 
     return this.prisma.usuario.findMany({
       where,
-      select: this.usuarioSelectSinPassword,
+      select: this.usuarioSelect,
       orderBy: { id_usuario: 'asc' },
     });
   }
@@ -278,7 +265,7 @@ export class UsuariosService {
   async obtenerPorId(id: number) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id_usuario: id },
-      select: this.usuarioSelectSinPassword,
+      select: this.usuarioSelect,
     });
 
     if (!usuario) {
@@ -452,7 +439,7 @@ export class UsuariosService {
   }
 
   /**
-   * Actualiza datos de un usuario. Si se incluye contraseña, se re-hashea con Argon2id.
+   * Actualiza datos de un usuario.
    */
   async actualizar(id: number, updateDto: UpdateUsuarioDto) {
     await this.obtenerPorId(id);
@@ -481,16 +468,6 @@ export class UsuariosService {
       }
     }
 
-    let passwordHash: string | undefined;
-    if (updateDto.password) {
-      passwordHash = await argon2.hash(updateDto.password, {
-        type: argon2.argon2id,
-        memoryCost: 65536,
-        timeCost: 3,
-        parallelism: 4,
-      });
-    }
-
     return this.prisma.usuario.update({
       where: { id_usuario: id },
       data: {
@@ -499,9 +476,8 @@ export class UsuariosService {
         ...(updateDto.email !== undefined && { email: updateDto.email }),
         ...(updateDto.rol && { rol: updateDto.rol }),
         ...(updateDto.estado && { estado: updateDto.estado }),
-        ...(passwordHash && { passwordHash }),
       },
-      select: this.usuarioSelectSinPassword,
+      select: this.usuarioSelect,
     });
   }
 
@@ -514,7 +490,7 @@ export class UsuariosService {
     return this.prisma.usuario.update({
       where: { id_usuario: id },
       data: { estado },
-      select: this.usuarioSelectSinPassword,
+      select: this.usuarioSelect,
     });
   }
 
@@ -576,25 +552,5 @@ export class UsuariosService {
       tipo: 'hard-delete',
       id_usuario: id,
     };
-  }
-
-  // =========================================================================
-  // CONTINGENCIA LOCAL Y ALTA DISPONIBILIDAD (FALLBACK / DISASTER RECOVERY)
-  // Utilizado exclusivamente ante caídas de WAN/Internet o autenticación seed.
-  // =========================================================================
-
-  /**
-   * Método de contingencia para autenticación local por usuario o correo.
-   * Incluye passwordHash para verificación criptográfica mediante Argon2id.
-   */
-  async obtenerPorUsernameParaAuth(usuarioOEmail: string) {
-    return this.prisma.usuario.findFirst({
-      where: {
-        OR: [
-          { usuario: usuarioOEmail },
-          { email: usuarioOEmail },
-        ],
-      },
-    });
   }
 }

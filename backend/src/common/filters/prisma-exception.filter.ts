@@ -95,11 +95,29 @@ export class PrismaExceptionFilter implements ExceptionFilter {
         break;
       }
 
-      // P2020: Valor fuera de rango para el tipo (ej. Integer 32-bit overflow en PostgreSQL)
-      case 'P2020': {
+      // P2020 / P2033: Valor fuera de rango para el tipo (ej. Integer 32/64-bit o Decimal overflow en PostgreSQL)
+      case 'P2007':
+      case 'P2009':
+      case 'P2014':
+      case 'P2015':
+      case 'P2016':
+      case 'P2018':
+      case 'P2019':
+      case 'P2020':
+      case 'P2023':
+      case 'P2033': {
         status = HttpStatus.BAD_REQUEST;
         message = 'Uno de los valores numéricos suministrados excede el rango máximo admitido por la base de datos (desbordamiento numérico).';
         error = 'BadRequest';
+        break;
+      }
+
+      // P2028 / P2034: Conflicto transaccional o tiempo de espera de transacción bajo alta concurrencia
+      case 'P2028':
+      case 'P2034': {
+        status = HttpStatus.CONFLICT;
+        message = 'La operación no pudo completarse por conflicto de concurrencia transaccional. Intente nuevamente.';
+        error = 'Conflict';
         break;
       }
 

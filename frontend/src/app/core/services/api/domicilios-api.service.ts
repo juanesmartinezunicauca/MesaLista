@@ -21,13 +21,25 @@ export class DomiciliosApiService {
   /**
    * Obtiene todos los pedidos a domicilio con filtros opcionales.
    */
-  obtenerTodos(filtros?: { estado?: string; fecha?: string; buscar?: string }): Observable<Domicilio[]> {
+  obtenerTodos(filtros?: {
+    estado?: string;
+    fecha?: string;
+    fecha_inicio?: string;
+    fecha_fin?: string;
+    buscar?: string;
+  }): Observable<Domicilio[]> {
     let params = new HttpParams();
     if (filtros?.estado && filtros.estado !== 'Todos') {
       params = params.set('estado', filtros.estado);
     }
     if (filtros?.fecha) {
       params = params.set('fecha', filtros.fecha);
+    }
+    if (filtros?.fecha_inicio) {
+      params = params.set('fecha_inicio', filtros.fecha_inicio);
+    }
+    if (filtros?.fecha_fin) {
+      params = params.set('fecha_fin', filtros.fecha_fin);
     }
     if (filtros?.buscar && filtros.buscar.trim()) {
       params = params.set('buscar', filtros.buscar.trim());

@@ -41,4 +41,20 @@ export class QueryPedidoDto {
   @IsOptional()
   @IsDateString({}, { message: 'La fecha debe tener un formato ISO válido (YYYY-MM-DD).' })
   fecha?: string;
+
+  @ApiPropertyOptional({
+    description: 'Fecha inicial del rango (YYYY-MM-DD)',
+    example: '2026-11-01',
+  })
+  @IsOptional()
+  @IsDateString({}, { message: 'La fecha inicial debe tener un formato ISO válido (YYYY-MM-DD).' })
+  fecha_inicio?: string;
+
+  @ApiPropertyOptional({
+    description: 'Fecha final del rango (YYYY-MM-DD)',
+    example: '2026-11-30',
+  })
+  @IsOptional()
+  @IsDateString({}, { message: 'La fecha final debe tener un formato ISO válido (YYYY-MM-DD).' })
+  fecha_fin?: string;
 }

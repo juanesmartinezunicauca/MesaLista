@@ -126,11 +126,17 @@ export interface TurnoCajaReporte {
   cajero_cierre: string | null;
   valor_inicial: number;
   total_ventas: number;
+  ventas_netas?: number;
+  total_propinas?: number;
   ventas_efectivo: number;
   ventas_tarjeta: number;
   ventas_transferencia: number;
   total_gastos: number;
   gastos_efectivo: number;
+  costo_insumos?: number;
+  utilidad_del_dia?: number;
+  utilidad_neta?: number;
+  margen_utilidad_porcentaje?: number;
   valor_final_teorico: number;
   valor_final_fisico: number | null;
   diferencia: number | null;
@@ -143,6 +149,17 @@ export interface CajaMediosReporteResponse {
   resumen: {
     total_recaudo: number;
     total_efectivo_esperado_neto: number;
+    total_utilidad_del_dia?: number;
+    total_utilidad_neta?: number;
+    caja_actual?: {
+      id_caja: number;
+      utilidad_del_dia: number;
+      utilidad_neta: number;
+      ventas_netas: number;
+      total_gastos: number;
+      costo_insumos: number;
+      margen_utilidad_porcentaje: number;
+    } | null;
     total_cajas_analizadas: number;
     total_cajas_cerradas: number;
     cajas_exactas: number;
@@ -174,6 +191,7 @@ export interface ProductoInventarioReporte {
 }
 
 export interface InventarioReporteResponse {
+  periodo?: PeriodoFechas;
   resumen: {
     total_productos: number;
     total_disponibles: number;
@@ -334,6 +352,8 @@ export class ReportesApiService {
   }
 
   obtenerInventario(filtros?: {
+    fecha_inicio?: string;
+    fecha_fin?: string;
     categoria?: string;
     solo_bajo_stock?: boolean;
     solo_agotados?: boolean;

@@ -1,7 +1,14 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+
+export interface FiltroHistorialCaja {
+  limite?: number;
+  fecha?: string;
+  fecha_inicio?: string;
+  fecha_fin?: string;
+}
 
 export interface ResumenCajaTurno {
   valor_base: number;
@@ -115,11 +122,28 @@ export class CajaApiService {
     return this.http.post<CierreCajaResult>(`${this.apiUrl}/cerrar`, cierre);
   }
 
+  private buildHistorialParams(filtro: number | FiltroHistorialCaja, defaultLimit: number): HttpParams {
+    let params = new HttpParams();
+    if (typeof filtro === 'number') {
+      return params.set('limite', filtro.toString());
+    }
+    if (filtro.limite) {
+      params = params.set('limite', filtro.limite.toString());
+    } else if (!filtro.fecha && !filtro.fecha_inicio && !filtro.fecha_fin) {
+      params = params.set('limite', defaultLimit.toString());
+    }
+    if (filtro.fecha) params = params.set('fecha', filtro.fecha);
+    if (filtro.fecha_inicio) params = params.set('fecha_inicio', filtro.fecha_inicio);
+    if (filtro.fecha_fin) params = params.set('fecha_fin', filtro.fecha_fin);
+    return params;
+  }
+
   /**
    * Consulta el histórico de turnos anteriores
    */
-  obtenerHistorial(limite = 15): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/historial?limite=${limite}`);
+  obtenerHistorial(filtro: number | FiltroHistorialCaja = 15): Observable<any[]> {
+    const params = this.buildHistorialParams(filtro, 15);
+    return this.http.get<any[]>(`${this.apiUrl}/historial`, { params });
   }
 
   /**
@@ -140,8 +164,9 @@ export class CajaApiService {
   /**
    * Consulta el histórico de gastos
    */
-  obtenerGastos(limite = 50): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/gastos?limite=${limite}`);
+  obtenerGastos(filtro: number | FiltroHistorialCaja = 50): Observable<any[]> {
+    const params = this.buildHistorialParams(filtro, 50);
+    return this.http.get<any[]>(`${this.apiUrl}/gastos`, { params });
   }
 
   /**

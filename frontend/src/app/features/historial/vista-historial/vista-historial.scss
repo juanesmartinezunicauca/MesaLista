@@ -117,8 +117,10 @@
 
 .filters-card {
   display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
   background: #ffffff;
-  padding: 0.75rem 1.25rem;
+  padding: 0.85rem 1.25rem;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
 
@@ -155,6 +157,100 @@
 
       &:hover {
         color: #475569;
+      }
+    }
+  }
+
+  .date-filters-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  .date-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+
+    .preset-chip {
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+      color: #475569;
+      border-radius: 999px;
+      padding: 0.3rem 0.8rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s ease;
+
+      &:hover {
+        background: #f1f5f9;
+        color: #0f172a;
+      }
+
+      &.active {
+        background: #0284c7;
+        border-color: #0284c7;
+        color: #ffffff;
+      }
+    }
+  }
+
+  .date-inputs-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+
+    .date-field {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #475569;
+
+      input[type='date'] {
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 0.3rem 0.6rem;
+        font-size: 0.85rem;
+        color: #1e293b;
+        background: #f8fafc;
+        outline: none;
+
+        &:focus {
+          border-color: #0284c7;
+          background: #ffffff;
+        }
+      }
+    }
+
+    .btn-clear-dates {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      border: 1px solid #fecaca;
+      background: #fef2f2;
+      color: #b91c1c;
+      border-radius: 8px;
+      padding: 0.32rem 0.65rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
+
+      &:hover {
+        background: #fee2e2;
       }
     }
   }

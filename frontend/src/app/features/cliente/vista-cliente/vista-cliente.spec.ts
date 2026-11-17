@@ -134,20 +134,22 @@ describe('VistaClienteComponent', () => {
     mockIsAuthenticatedSignal.set(true);
     component.solicitarDomicilio(mockProductos[0]);
 
-    // Dirección vacía -> no debe confirmar
+    // Campos requeridos vacíos -> no debe confirmar
+    component.nombreCliente.set('');
     component.direccionEntrega.set('');
     component.telefonoContacto.set('');
     component.confirmarPedido();
     expect(component.pedidoConfirmado()).toBeNull();
 
-    // Dirección válida y teléfono válido -> debe confirmar
+    // Datos válidos -> debe confirmar
+    component.nombreCliente.set('Juan Pérez');
     component.direccionEntrega.set('Calle 10 # 5-23');
     component.telefonoContacto.set('3123456789');
     component.confirmarPedido();
 
     expect(component.pedidoConfirmado()).not.toBeNull();
     expect(component.pedidoConfirmado()?.codigo).toBe('DOM-101');
-    expect(component.pedidoConfirmado()?.direccion).toBe('Calle 10 # 5-23');
+    expect(component.pedidoConfirmado()?.direccion).toContain('Calle 10 # 5-23');
     expect(snackBar.open).toHaveBeenCalled();
   });
 
