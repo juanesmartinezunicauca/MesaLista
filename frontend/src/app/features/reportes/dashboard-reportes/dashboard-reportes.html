@@ -57,29 +57,19 @@
         >
           Mes anterior
         </button>
-        <button
-          type="button"
-          mat-button
-          [class.active]="presetSeleccionado() === 'personalizado'"
-          (click)="presetSeleccionado.set('personalizado')"
-        >
-          Personalizado
-        </button>
       </div>
 
-      <!-- SELECTOR DE FECHAS PERSONALIZADO -->
-      @if (presetSeleccionado() === 'personalizado') {
-        <div class="custom-dates-bar">
-          <mat-form-field appearance="outline" density="compact" class="date-input">
-            <mat-label>Desde</mat-label>
-            <input matInput type="date" [ngModel]="fechaInicio()" (ngModelChange)="fechaInicio.set($event); cargarDatosSegunTab()" />
-          </mat-form-field>
-          <mat-form-field appearance="outline" density="compact" class="date-input">
-            <mat-label>Hasta</mat-label>
-            <input matInput type="date" [ngModel]="fechaFin()" (ngModelChange)="fechaFin.set($event); cargarDatosSegunTab()" />
-          </mat-form-field>
-        </div>
-      }
+      <!-- SELECTOR DE FECHAS POR CALENDARIO -->
+      <div class="custom-dates-bar">
+        <mat-form-field appearance="outline" density="compact" class="date-input">
+          <mat-label>Desde</mat-label>
+          <input matInput type="date" [ngModel]="fechaInicio()" (ngModelChange)="presetSeleccionado.set('personalizado'); fechaInicio.set($event); cargarDatosSegunTab()" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" density="compact" class="date-input">
+          <mat-label>Hasta</mat-label>
+          <input matInput type="date" [ngModel]="fechaFin()" (ngModelChange)="presetSeleccionado.set('personalizado'); fechaFin.set($event); cargarDatosSegunTab()" />
+        </mat-form-field>
+      </div>
 
       <!-- ACCIONES: REFRESCAR Y EXPORTAR -->
       <div class="action-buttons">
