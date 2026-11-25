@@ -12,6 +12,10 @@ import {
   FacturaCobroResult,
   ItemConsolidado,
 } from '../models/factura.model';
+import {
+  AnchoPapelTermico,
+  ImpresionTermicaService,
+} from '../../../core/services/print/impresion-termica.service';
 
 // Re-exportar tipos para mantener total compatibilidad hacia atrás
 export * from '../models/factura.model';
@@ -33,9 +37,19 @@ export * from '../models/factura.model';
 export class FacturaDialogComponent {
   data = inject<{ mesa?: Mesa; pedido?: any }>(MAT_DIALOG_DATA);
   private dialogRef = inject(MatDialogRef<FacturaDialogComponent>);
+  impresionTermica = inject(ImpresionTermicaService);
 
   fechaActual = new Date();
   folioId = Math.floor(1000 + Math.random() * 9000);
+
+  // Preferencias de impresión térmica (80mm / 58mm)
+  imprimirClienteAlCobrar = signal<boolean>(
+    this.impresionTermica.config().imprimirClienteAlCobrar,
+  );
+  imprimirCocinaAlCobrar = signal<boolean>(
+    this.impresionTermica.config().imprimirCocinaAlCobrar,
+  );
+  mostrarConfigTicket = signal<boolean>(false);
 
   // Estados de Pago y Propinas
   esDomicilio = computed(() => Boolean(this.data?.pedido));
@@ -302,8 +316,118 @@ export class FacturaDialogComponent {
     this.efectivoRecibido.set(this.totalFinal());
   }
 
+  toggleImprimirCliente(event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    this.imprimirClienteAlCobrar.set(checked);
+    this.impresionTermica.actualizarConfiguracion({ imprimirClienteAlCobrar: checked });
+  }
+
+  toggleImprimirCocina(event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    this.imprimirCocinaAlCobrar.set(checked);
+    this.impresionTermica.actualizarConfiguracion({ imprimirCocinaAlCobrar: checked });
+  }
+
+  actualizarNombreComercio(valor: string): void {
+    this.impresionTermica.actualizarConfiguracion({
+      nombreComercio: valor.trim() || "LUIGIE'S",
+    });
+  }
+
+  actualizarDireccionYNit(valor: string): void {
+    this.impresionTermica.actualizarConfiguracion({
+      direccionYNit: valor.trim() || 'POPAYÁN, CAUCA — RESTAURANTE NOCTURNO',
+    });
+  }
+
+  seleccionarAnchoPapel(ancho: AnchoPapelTermico): void {
+    this.impresionTermica.actualizarConfiguracion({ anchoPapel: ancho });
+  }
+
+  private construirPagosDetalle(): Array<{ metodo: string; monto: number }> {
+    if (this.metodoPago() === 'mixto') {
+      const lista: Array<{ metodo: string; monto: number }> = [];
+      if (this.montoEfectivo() > 0) lista.push({ metodo: 'Efectivo', monto: this.montoEfectivo() });
+      if (this.montoTarjeta() > 0) lista.push({ metodo: 'Tarjeta', monto: this.montoTarjeta() });
+      if (this.montoTransferencia() > 0) {
+        lista.push({ metodo: 'Transferencia', monto: this.montoTransferencia() });
+      }
+      return lista;
+    }
+    return [{ metodo: this.metodoPagoNombre(), monto: this.totalFinal() }];
+  }
+
+  imprimirFacturaCliente(numeroFactura?: number | null): void {
+    const p = this.data?.pedido;
+    const mesa = this.data?.mesa;
+    this.impresionTermica.imprimirFacturaCliente({
+      tipo: this.esDomicilio() ? 'domicilio' : 'salon',
+      numeroFactura: numeroFactura ?? p?.id_factura ?? null,
+      numeroPedido: p?.numero_pedido ?? null,
+      numeroMesa: mesa?.numero ?? null,
+      mesero: mesa?.mesero_actual ?? null,
+      fecha: new Date(),
+      cliente: p
+        ? {
+            nombre: p.cliente?.nombre || p.cliente_nombre,
+            telefono: p.cliente?.telefono || p.cliente_telefono,
+            direccion: p.cliente?.direccion || p.cliente_direccion,
+            zona: this.zonaNombre() || undefined,
+          }
+        : null,
+      items: this.itemsConsolidados().map((it) => ({
+        nombre: it.nombre,
+        cantidad: it.cantidad,
+        precio_unitario: it.precio_unitario,
+        subtotal: it.subtotal,
+        notas: it.notas,
+      })),
+      subtotal: this.subtotal(),
+      costoEnvio: this.costoEnvio(),
+      propina: this.montoPropina(),
+      total: this.totalFinal(),
+      formaPago: this.metodoPagoNombre(),
+      pagosDetalle: this.construirPagosDetalle(),
+      efectivoRecibido:
+        this.metodoPago() === 'efectivo' || (this.metodoPago() === 'mixto' && this.montoEfectivo() > 0)
+          ? this.efectivoRecibido()
+          : undefined,
+      cambio:
+        this.metodoPago() === 'efectivo' || (this.metodoPago() === 'mixto' && this.montoEfectivo() > 0)
+          ? this.cambioVueltos()
+          : undefined,
+      observacion: p?.observacion || null,
+      esPrecuenta: !numeroFactura && !p?.id_factura,
+    });
+  }
+
+  imprimirComandaCocina(): void {
+    const p = this.data?.pedido;
+    const mesa = this.data?.mesa;
+    const obsMesa = mesa?.pedidos
+      ?.map((ped) => ped.observacion)
+      .filter(Boolean)
+      .join(' | ');
+
+    this.impresionTermica.imprimirComandaCocina({
+      tipo: this.esDomicilio() ? 'domicilio' : 'salon',
+      numeroPedido: p?.numero_pedido ?? mesa?.pedidos?.[0]?.numero_pedido ?? null,
+      numeroMesa: mesa?.numero ?? null,
+      mesero: mesa?.mesero_actual ?? null,
+      clienteNombre: p ? p.cliente?.nombre || p.cliente_nombre || null : null,
+      zona: this.zonaNombre() || null,
+      fecha: new Date(),
+      items: this.itemsConsolidados().map((it) => ({
+        nombre: it.nombre,
+        cantidad: it.cantidad,
+        notas: it.notas,
+      })),
+      observacionGeneral: p?.observacion || obsMesa || null,
+    });
+  }
+
   imprimirPrecuenta(): void {
-    window.print();
+    this.imprimirFacturaCliente();
   }
 
   cerrarSinCobrar(): void {
@@ -348,6 +472,8 @@ export class FacturaDialogComponent {
         this.metodoPago() === 'efectivo' || (this.metodoPago() === 'mixto' && this.montoEfectivo() > 0)
           ? this.cambioVueltos()
           : undefined,
+      imprimirCliente: this.imprimirClienteAlCobrar(),
+      imprimirCocina: this.imprimirCocinaAlCobrar(),
     };
 
     this.dialogRef.close(resultado);

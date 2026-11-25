@@ -19,6 +19,10 @@ import { CatalogoApiService } from '../../../core/services/api/catalogo-api.serv
 import { Producto } from '../../../core/models/producto.model';
 import { AuthService } from '../../../core/services/auth/auth.service';
 import { PeriodoPreset, resolverPresetRango } from '../../../core/utils/date-filter.util';
+import {
+  ImpresionTermicaService,
+  ItemTicketTermico,
+} from '../../../core/services/print/impresion-termica.service';
 
 export type HistorialTab = 'caja' | 'facturas' | 'pedidos' | 'domicilios' | 'gastos';
 
@@ -87,6 +91,7 @@ export class VistaHistorialComponent implements OnInit {
   private domiciliosApi = inject(DomiciliosApiService);
   private catalogoApi = inject(CatalogoApiService);
   private authService = inject(AuthService);
+  private impresionTermica = inject(ImpresionTermicaService);
   private snackBar = inject(MatSnackBar);
 
   // Permisos según rol
@@ -759,6 +764,74 @@ export class VistaHistorialComponent implements OnInit {
         },
       });
     }
+  }
+
+  imprimirFacturaHistorial(fac: any): void {
+    const esDomicilio = !fac.mesa && !fac.id_mesa;
+    const pedidos = Array.isArray(fac.pedidos) ? fac.pedidos : [];
+    const primerPedido = pedidos[0];
+    const items: ItemTicketTermico[] = [];
+
+    for (const ped of pedidos) {
+      for (const it of ped.items || []) {
+        const unit = Number(it.precio_unitario || it.producto?.precio_venta || 0);
+        items.push({
+          nombre: it.producto?.nombre || `Producto #${it.id_producto}`,
+          cantidad: Number(it.cantidad) || 1,
+          precio_unitario: unit,
+          subtotal: (Number(it.cantidad) || 1) * unit,
+          ingredientes_removidos: it.ingredientes_removidos,
+          observacion: it.observacion,
+        });
+      }
+    }
+
+    let costoEnvio = 0;
+    if (esDomicilio && primerPedido?.observacion) {
+      const m = String(primerPedido.observacion).match(/\[ENVIO:([^\]]+)\]/i);
+      if (m) {
+        const dig = m[1].replace(/\D/g, '');
+        costoEnvio = dig ? Number.parseInt(dig, 10) : 0;
+      }
+    }
+
+    const subtotalProductos =
+      items.length > 0
+        ? items.reduce((acc, it) => acc + (it.subtotal || 0), 0)
+        : Math.max(0, Number(fac.valor || fac.valor_total || 0) - costoEnvio);
+    const propina = Number(fac.propina || 0);
+    const total = Number(fac.valor_total || fac.total || subtotalProductos + costoEnvio + propina);
+
+    const pagosDetalle = (fac.pagos || []).map((p: any) => ({
+      metodo: p.medioPago?.nombre || 'Efectivo',
+      monto: Number(p.monto || 0),
+    }));
+
+    this.impresionTermica.imprimirFacturaCliente({
+      tipo: esDomicilio ? 'domicilio' : 'salon',
+      numeroFactura: fac.id_venta,
+      numeroPedido: primerPedido?.numero_pedido ?? null,
+      numeroMesa: fac.mesa?.numero ?? null,
+      mesero: fac.usuario?.nombre || null,
+      fecha: fac.fecha_hora,
+      cliente: esDomicilio
+        ? {
+            nombre: primerPedido?.cliente_nombre || fac.cliente_nombre || fac.cliente?.nombre,
+            telefono: primerPedido?.cliente_telefono,
+            direccion: primerPedido?.cliente_direccion,
+          }
+        : fac.cliente_nombre
+          ? { nombre: fac.cliente_nombre }
+          : null,
+      items,
+      subtotal: subtotalProductos,
+      costoEnvio,
+      propina,
+      total,
+      formaPago: pagosDetalle.map((p: { metodo: string }) => p.metodo).join(' + ') || 'Efectivo',
+      pagosDetalle,
+      observacion: fac.observacion || null,
+    });
   }
 
   cerrarModal(): void {

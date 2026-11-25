@@ -3,8 +3,8 @@
 > **Proyecto:** MesaLista POS — Sistema Integral de Gestión Restaurantera y Punto de Venta  
 > **Cliente Piloto:** Luigie's Restaurante Nocturno — Representante: Luis Miguel (Popayán, Cauca, Colombia)  
 > **Institución Académica:** Universidad del Cauca — Facultad de Ingeniería Electrónica y Telecomunicaciones (Programación II)  
-> **Docente Evaluador:** Siler Amador  
-> **Autores / Equipo Responsable:** Equipo Trinity — Juan Esteban Martínez y Daniel Piedrahita  
+> **Docente Director:** Ph.D. MSc. Siler Amador  
+> **Autores / Equipo Responsable:** Equipo Trinity — Juan Esteban Martínez y Daniel Muñoz Piedrahita  
 > **Versión Entregada:** `v1.1.0` (Release Final)  
 > **Fecha de Entrega:** 25 de Noviembre de 2026
 
@@ -132,5 +132,5 @@ En constancia de lo anterior, las partes declaran haber revisado el sistema en f
 | :--- | :--- | :--- |
 | **Representante Cliente (Luigie's Restaurante Nocturno)** | Luis Miguel | _______________________ |
 | **Autor — Equipo Trinity** | Juan Esteban Martínez | _______________________ |
-| **Autor — Equipo Trinity** | Daniel Piedrahita | _______________________ |
-| **Docente Evaluador — Programación II (Universidad del Cauca)** | Siler Amador | _______________________ |
+| **Autor — Equipo Trinity** | Daniel Muñoz Piedrahita | _______________________ |
+| **Docente Director — Proyecto II (Universidad del Cauca)** | Ph.D. MSc. Siler Amador | _______________________ |

@@ -160,6 +160,34 @@ describe('FacturaDialogComponent', () => {
     component.cerrarSinCobrar();
     expect(dialogRefSpy.close).toHaveBeenCalledWith(null);
   });
+
+  it('debe invocar ImpresionTermicaService al imprimir ticket cliente y comanda de cocina', () => {
+    const spyCliente = vi
+      .spyOn(component.impresionTermica, 'imprimirFacturaCliente')
+      .mockImplementation(() => {});
+    const spyCocina = vi
+      .spyOn(component.impresionTermica, 'imprimirComandaCocina')
+      .mockImplementation(() => {});
+
+    component.imprimirFacturaCliente(99);
+    expect(spyCliente).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tipo: 'salon',
+        numeroFactura: 99,
+        numeroMesa: 1,
+        subtotal: 45000,
+        total: 49500,
+      }),
+    );
+
+    component.imprimirComandaCocina();
+    expect(spyCocina).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tipo: 'salon',
+        numeroMesa: 1,
+      }),
+    );
+  });
 });
 
 describe('FacturaDialogComponent en Domicilio', () => {

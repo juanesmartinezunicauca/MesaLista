@@ -312,6 +312,105 @@
         </div>
       }
     </div>
+    <!-- 5. Impresión en Impresora Térmica de Comandas (Cliente y Cocina) -->
+    <div class="impresion-seccion">
+      <div class="impresion-header">
+        <span class="impresion-titulo">
+          <mat-icon>print</mat-icon>
+          <span>Impresora de Comandas ({{ impresionTermica.config().anchoPapel }})</span>
+        </span>
+        <button
+          type="button"
+          class="btn-config-ticket"
+          (click)="mostrarConfigTicket.set(!mostrarConfigTicket())"
+        >
+          <mat-icon>tune</mat-icon>
+          <span>{{ mostrarConfigTicket() ? 'Ocultar' : 'Configurar' }}</span>
+        </button>
+      </div>
+
+      @if (mostrarConfigTicket()) {
+        <div class="ticket-config-box">
+          <div class="config-field">
+            <label>Encabezado del local</label>
+            <input
+              type="text"
+              [ngModel]="impresionTermica.config().nombreComercio"
+              (ngModelChange)="actualizarNombreComercio($event)"
+              placeholder="LUIGIE'S"
+            />
+          </div>
+          <div class="config-field">
+            <label>Dirección y NIT (impresa bajo el título)</label>
+            <input
+              type="text"
+              [ngModel]="impresionTermica.config().direccionYNit"
+              (ngModelChange)="actualizarDireccionYNit($event)"
+              placeholder="CRA 11 NO. 17AN - 98 POPAYAN NIT 1002972796"
+            />
+          </div>
+          <div class="config-paper-row">
+            <span>Ancho de rollo térmico:</span>
+            <div class="paper-pills">
+              <button
+                type="button"
+                class="paper-btn"
+                [class.activo]="impresionTermica.config().anchoPapel === '80mm'"
+                (click)="seleccionarAnchoPapel('80mm')"
+              >
+                80 mm
+              </button>
+              <button
+                type="button"
+                class="paper-btn"
+                [class.activo]="impresionTermica.config().anchoPapel === '58mm'"
+                (click)="seleccionarAnchoPapel('58mm')"
+              >
+                58 mm
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <div class="impresion-checks">
+        <label class="print-check">
+          <input
+            type="checkbox"
+            [checked]="imprimirClienteAlCobrar()"
+            (change)="toggleImprimirCliente($event)"
+          />
+          <span>Imprimir factura cliente al cobrar</span>
+        </label>
+        <label class="print-check">
+          <input
+            type="checkbox"
+            [checked]="imprimirCocinaAlCobrar()"
+            (change)="toggleImprimirCocina($event)"
+          />
+          <span>Imprimir comanda cocina al cobrar</span>
+        </label>
+      </div>
+
+      <div class="impresion-botones">
+        <button
+          type="button"
+          class="btn-ticket-manual"
+          (click)="imprimirFacturaCliente()"
+        >
+          <mat-icon>receipt_long</mat-icon>
+          <span>Imprimir Ticket Cliente</span>
+        </button>
+        <button
+          type="button"
+          class="btn-ticket-manual cocina"
+          (click)="imprimirComandaCocina()"
+        >
+          <mat-icon>soup_kitchen</mat-icon>
+          <span>Imprimir Comanda Cocina</span>
+        </button>
+      </div>
+    </div>
   </div> <!-- fin modal-scroll-area -->
 
   <!-- 5. Acciones Finales (El botón Cobrar SIEMPRE visible al pie) -->

@@ -14,6 +14,8 @@ export interface FacturaCobroResult {
   total: number;
   efectivoRecibido?: number;
   cambio?: number;
+  imprimirCliente?: boolean;
+  imprimirCocina?: boolean;
 }
 
 export interface ItemConsolidado {
