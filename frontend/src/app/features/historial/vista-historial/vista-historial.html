@@ -380,6 +380,15 @@
                   </td>
                   <td>
                     <div class="actions-cell">
+                      <button
+                        mat-button
+                        class="btn-action-edit"
+                        (click)="imprimirFacturaHistorial(fac)"
+                        matTooltip="Reimprimir ticket térmico para impresora de comandas"
+                      >
+                        <mat-icon>print</mat-icon>
+                        <span>Imprimir</span>
+                      </button>
                       @if (puedeEditar()) {
                         <button
                           mat-button

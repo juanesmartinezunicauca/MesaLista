@@ -125,6 +125,19 @@
                 <span><strong>Nota General:</strong> {{ comanda.observacion_general }}</span>
               </div>
             }
+
+            <div class="ticket-print-footer">
+              <button
+                type="button"
+                mat-stroked-button
+                class="btn-print-comanda"
+                (click)="imprimirComanda(comanda)"
+                matTooltip="Imprimir comanda térmica para cocina"
+              >
+                <mat-icon>print</mat-icon>
+                <span>Imprimir Comanda</span>
+              </button>
+            </div>
           </article>
         }
       </div>

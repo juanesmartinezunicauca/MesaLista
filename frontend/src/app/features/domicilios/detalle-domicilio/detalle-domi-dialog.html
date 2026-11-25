@@ -199,6 +199,24 @@
       <button mat-stroked-button (click)="cerrar()" class="btn-cancel">
         Cerrar
       </button>
+      <button
+        type="button"
+        mat-stroked-button
+        (click)="imprimirTicketCliente()"
+        matTooltip="Imprimir factura térmica del cliente"
+      >
+        <mat-icon>receipt_long</mat-icon>
+        <span>Ticket Cliente</span>
+      </button>
+      <button
+        type="button"
+        mat-stroked-button
+        (click)="imprimirComandaCocina()"
+        matTooltip="Imprimir comanda térmica para cocina"
+      >
+        <mat-icon>soup_kitchen</mat-icon>
+        <span>Comanda Cocina</span>
+      </button>
     </div>
 
     <div class="footer-actions">

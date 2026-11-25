@@ -298,4 +298,28 @@
       margin-top: 1px;
     }
   }
+
+  .ticket-print-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 8px;
+    margin-top: auto;
+    border-top: 1px dashed #e2e8f0;
+
+    .btn-print-comanda {
+      height: 34px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      border-radius: $radius-md;
+      color: $brand-blue;
+      border-color: rgba($brand-blue, 0.35);
+
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        margin-right: 4px;
+      }
+    }
+  }
 }

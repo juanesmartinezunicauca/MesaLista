@@ -10,6 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 
 import { PedidosApiService } from '../../../core/services/api/pedidos-api.service';
+import { ImpresionTermicaService } from '../../../core/services/print/impresion-termica.service';
 
 export interface ItemComanda {
   id_item: number;
@@ -50,6 +51,7 @@ export interface TarjetaComanda {
 })
 export class VistaCocinaComponent implements OnInit, OnDestroy {
   private pedidosApi = inject(PedidosApiService);
+  private impresionTermica = inject(ImpresionTermicaService);
 
   isLoading = signal<boolean>(false);
   errorMensaje = signal<string | null>(null);
@@ -126,6 +128,23 @@ export class VistaCocinaComponent implements OnInit, OnDestroy {
       };
     });
   });
+
+  imprimirComanda(comanda: TarjetaComanda): void {
+    this.impresionTermica.imprimirComandaCocina({
+      tipo: comanda.tipo,
+      numeroPedido: comanda.numero_pedido,
+      numeroMesa: comanda.numero_mesa ?? null,
+      mesero: comanda.nombre_mesero || null,
+      fecha: comanda.fecha_hora,
+      items: (comanda.items || []).map((it) => ({
+        nombre: it.nombre_producto,
+        cantidad: it.cantidad,
+        ingredientes_removidos: it.ingredientes_removidos,
+        observacion: it.observacion,
+      })),
+      observacionGeneral: comanda.observacion_general || null,
+    });
+  }
 
   formatearHora(fecha: Date): string {
     return new Intl.DateTimeFormat('es-CO', {

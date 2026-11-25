@@ -167,6 +167,14 @@
                         <mat-icon>more_vert</mat-icon>
                     </button>
                     <mat-menu #menuAcciones="matMenu">
+                        <button mat-menu-item (click)="imprimirTicketClienteDomicilio(pedido)">
+                            <mat-icon>receipt_long</mat-icon>
+                            <span>Imprimir Ticket Cliente</span>
+                        </button>
+                        <button mat-menu-item (click)="imprimirComandaCocinaDomicilio(pedido)">
+                            <mat-icon>soup_kitchen</mat-icon>
+                            <span>Imprimir Comanda Cocina</span>
+                        </button>
                         @if (pedido.etapaOperativa === 'En Reparto') {
                         <button mat-menu-item (click)="regresarAPreparacion(pedido)">
                             <mat-icon>arrow_back</mat-icon>

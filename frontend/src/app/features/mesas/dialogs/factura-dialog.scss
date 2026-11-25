@@ -648,6 +648,193 @@
   }
 }
 
+/* 4.5. Impresión en Impresora Térmica de Comandas */
+.impresion-seccion {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: $radius-md;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .impresion-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+
+    .impresion-titulo {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: $text-primary;
+
+      mat-icon {
+        font-size: 17px;
+        width: 17px;
+        height: 17px;
+        color: $brand-blue;
+      }
+    }
+
+    .btn-config-ticket {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: $text-secondary;
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+
+      mat-icon {
+        font-size: 14px;
+        width: 14px;
+        height: 14px;
+      }
+
+      &:hover {
+        border-color: $brand-blue;
+        color: $brand-blue;
+      }
+    }
+  }
+
+  .ticket-config-box {
+    background: #ffffff;
+    border: 1px dashed #cbd5e1;
+    border-radius: 6px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+
+    .config-field {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      label {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: $text-secondary;
+      }
+
+      input {
+        height: 30px;
+        padding: 0 8px;
+        border: 1px solid #cbd5e1;
+        border-radius: 5px;
+        font-size: 0.78rem;
+        color: $text-primary;
+        outline: none;
+
+        &:focus {
+          border-color: $brand-blue;
+        }
+      }
+    }
+
+    .config-paper-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: $text-secondary;
+
+      .paper-pills {
+        display: flex;
+        gap: 6px;
+      }
+
+      .paper-btn {
+        border: 1px solid #cbd5e1;
+        background: #f8fafc;
+        color: $text-secondary;
+        border-radius: 5px;
+        padding: 3px 10px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        cursor: pointer;
+
+        &.activo {
+          background: $brand-blue;
+          border-color: $brand-blue;
+          color: #ffffff;
+        }
+      }
+    }
+  }
+
+  .impresion-checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+
+    .print-check {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.76rem;
+      color: $text-secondary;
+      cursor: pointer;
+      user-select: none;
+
+      input[type='checkbox'] {
+        accent-color: $brand-blue;
+        width: 15px;
+        height: 15px;
+        cursor: pointer;
+      }
+    }
+  }
+
+  .impresion-botones {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+
+    .btn-ticket-manual {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      height: 34px;
+      padding: 0 10px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: $text-primary;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        color: $brand-blue;
+      }
+
+      &.cocina mat-icon {
+        color: $brand-orange;
+      }
+
+      &:hover {
+        background: #eff6ff;
+        border-color: $brand-blue;
+      }
+    }
+  }
+}
+
 /* 5. Acciones Fijas al Pie */
 .modal-acciones {
   flex-shrink: 0;
