@@ -362,7 +362,7 @@ npm run perf:frontend
 ## 👥 11. Equipo de Desarrollo y Créditos
 
 Proyecto desarrollado en la asignatura **Programación II**, Universidad del Cauca (2026):
-- **Autores (Equipo Trinity):** Juan Esteban Martínez y Daniel Piedrahita — Ingeniería de Sistemas.
-- **Docente:** Siler Amador.
+- **Autores (Equipo Trinity):** Juan Esteban Martínez y Daniel Muñoz Piedrahita — Ingeniería de Sistemas.
+- **Docente Director:** Ph.D. MSc. Siler Amador.
 - **Cliente Piloto:** Luigie's Restaurante Nocturno — Luis Miguel (Popayán, Cauca).
 - **Licencia:** MIT License.
