@@ -39,27 +39,35 @@ export class PrismaExceptionFilter implements ExceptionFilter {
       error = 'BadRequest';
       code = 'VALIDATION_ERROR';
     } else if (exception instanceof Prisma.PrismaClientUnknownRequestError) {
-      this.logger.error(
-        `Error desconocido de Prisma: ${exception.message}`,
-        exception.stack,
-      );
       const msgLower = (exception.message || '').toLowerCase();
-      const esErrorCodificacion =
-        msgLower.includes('0x00') ||
-        msgLower.includes('invalid byte sequence') ||
-        msgLower.includes('utf8') ||
-        msgLower.includes('encoding');
+      const esFalloInfraestructura =
+        msgLower.includes('connection') ||
+        msgLower.includes('econnrefused') ||
+        msgLower.includes('etimedout') ||
+        msgLower.includes('timed out') ||
+        msgLower.includes('terminated') ||
+        msgLower.includes('socket') ||
+        msgLower.includes('pool') ||
+        msgLower.includes("can't reach") ||
+        msgLower.includes('server closed') ||
+        msgLower.includes('broken pipe') ||
+        msgLower.includes('too many clients') ||
+        msgLower.includes('shutting down');
 
-      if (esErrorCodificacion) {
+      if (esFalloInfraestructura) {
+        this.logger.error(
+          `Error desconocido de Prisma: ${exception.message}`,
+          exception.stack,
+        );
+        status = HttpStatus.INTERNAL_SERVER_ERROR;
+        message = 'Error interno en la base de datos.';
+        error = 'DatabaseError';
+        code = 'DB_REQUEST_ERROR';
+      } else {
         status = HttpStatus.BAD_REQUEST;
         message =
           'La petición contiene caracteres, secuencias de bytes o parámetros no admitidos por la base de datos.';
         error = 'BadRequest';
-        code = 'DB_REQUEST_ERROR';
-      } else {
-        status = HttpStatus.INTERNAL_SERVER_ERROR;
-        message = 'Error interno en la base de datos.';
-        error = 'DatabaseError';
         code = 'DB_REQUEST_ERROR';
       }
     } else if (exception instanceof Prisma.PrismaClientRustPanicError) {

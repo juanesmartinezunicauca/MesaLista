@@ -84,6 +84,7 @@ export class CreateFacturaDto {
   @Type(() => Number)
   @IsNumber()
   @Min(0)
+  @Max(99999999, { message: 'La propina excede el máximo permitido.' })
   propina?: number;
 
   @ApiPropertyOptional({

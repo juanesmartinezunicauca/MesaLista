@@ -60,8 +60,8 @@ export class FacturacionService {
 
     return this.prisma.$transaction(async (tx) => {
       // Bloqueo asesor de transacción en PostgreSQL para evitar doble facturación simultánea
-      if (typeof (tx as any).$executeRaw === 'function') {
-        await (tx as any).$executeRaw`SELECT pg_advisory_xact_lock(730201)`;
+      if (typeof (tx as any).$queryRaw === 'function') {
+        await (tx as any).$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(730201)`;
       }
 
       // 1. Validar que exista una caja abierta en el restaurante dentro de la transacción

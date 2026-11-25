@@ -120,8 +120,8 @@ export class PedidosService {
       }
 
       // 2.4 Bloqueo asesor de transacción en PostgreSQL para evitar consecutivos numero_pedido duplicados
-      if (typeof (tx as any).$executeRaw === 'function') {
-        await (tx as any).$executeRaw`SELECT pg_advisory_xact_lock(730101)`;
+      if (typeof (tx as any).$queryRaw === 'function') {
+        await (tx as any).$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(730101)`;
       }
 
       // Calcular consecutivo diario en zona horaria local de Colombia (America/Bogota - UTC-5)

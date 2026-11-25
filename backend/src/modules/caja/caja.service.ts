@@ -56,8 +56,8 @@ export class CajaService {
     await this.asegurarCatalogosBase();
 
     const ejecutarApertura = async (tx: any) => {
-      if (typeof tx.$executeRaw === 'function') {
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(730301)`;
+      if (typeof tx.$queryRaw === 'function') {
+        await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(730301)`;
       }
 
       const cajaAbierta = await tx.caja.findFirst({
@@ -362,8 +362,8 @@ export class CajaService {
     await this.asegurarCatalogosBase();
 
     const ejecutarCierre = async (tx: any) => {
-      if (typeof tx.$executeRaw === 'function') {
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(730301)`;
+      if (typeof tx.$queryRaw === 'function') {
+        await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(730301)`;
       }
 
       const caja = await tx.caja.findFirst({

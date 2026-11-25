@@ -55,6 +55,14 @@ export function resolverRangoFechas(
     fin = new Date(`${hoyStr}T23:59:59.999-05:00`);
   }
 
+  if (Number.isNaN(fin.getTime())) {
+    throw new BadRequestException('Formato de fecha inválido. Utilice formato YYYY-MM-DD o ISO 8601.');
+  }
+
+  if (fin.getUTCFullYear() < 1970 || fin.getUTCFullYear() > 2100) {
+    throw new BadRequestException('El rango de fechas debe estar comprendido entre los años 1970 y 2100.');
+  }
+
   if (inicioTrim) {
     if (inicioTrim.includes('T')) {
       inicio = new Date(inicioTrim);
@@ -64,8 +72,7 @@ export function resolverRangoFechas(
   } else {
     // Si no se especifica inicio, toma el 1er día del mes de `fin` en Colombia (evita error al filtrar meses pasados)
     esMesPorDefecto = true;
-    const refFecha = Number.isNaN(fin.getTime()) ? new Date() : fin;
-    const refCol = formatoFechaCol(refFecha);
+    const refCol = formatoFechaCol(fin);
     inicio = new Date(`${refCol.slice(0, 7)}-01T00:00:00.000-05:00`);
   }
 

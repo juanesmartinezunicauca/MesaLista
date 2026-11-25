@@ -114,7 +114,8 @@ npm start
 ```
 
 #### Paso 6: Verificación de OpenAPI / Swagger UI
-Abrir en el navegador: `http://localhost:3000/api/docs`
+- **Producción (Online):** [https://mesalista-p0pf.onrender.com/api/docs](https://mesalista-p0pf.onrender.com/api/docs)
+- **Desarrollo Local:** `http://localhost:3000/api/docs`
 
 ---
 

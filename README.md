@@ -1,14 +1,29 @@
 # MesaLista POS 🍽️ — Sistema Integral de Gestión Restaurantera y Punto de Venta
 
+[![App Producción](https://img.shields.io/badge/App%20Online-Vercel-000000?style=flat&logo=vercel)](https://mesa-lista-virid.vercel.app)
+[![Swagger Online](https://img.shields.io/badge/Docs-Swagger%20OpenAPI%203.0%20(Online)-85ea2d?style=flat&logo=swagger)](https://mesalista-p0pf.onrender.com/api/docs)
 [![NestJS](https://img.shields.io/badge/Backend-NestJS%2012-ea2845?style=flat&logo=nestjs)](https://nestjs.com/)
 [![Angular](https://img.shields.io/badge/Frontend-Angular%2022-dd0031?style=flat&logo=angular)](https://angular.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6?style=flat&logo=typescript)](https://www.typescriptlang.org/)
 [![Prisma](https://img.shields.io/badge/ORM-Prisma%206-2d3748?style=flat&logo=prisma)](https://www.prisma.io/)
 [![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL%2016-336791?style=flat&logo=postgresql)](https://www.postgresql.org/)
-[![OpenAPI](https://img.shields.io/badge/Docs-OpenAPI%203.0%20%2F%20Swagger-85ea2d?style=flat&logo=swagger)](http://localhost:3000/api/docs)
-[![Arc42](https://img.shields.io/badge/Architecture-Arc42%20v8.2-blue)](docs/arquitectura/arc42.md)
-[![IEEE](https://img.shields.io/badge/Standard-IEEE%201063%20%7C%20ISO%2026514-informational)](docs/manual-tecnico-usuario.md)
-[![Security](https://img.shields.io/badge/Security-OWASP%20Top%2010%20(2025)-brightgreen)](OWASP_COMPLIANCE.md)
+[![Arc42](https://img.shields.io/badge/Architecture-Arc42%20v8.2-blue)](https://github.com/juanesmartinezunicauca/MesaLista/blob/develop/docs/arquitectura/arc42.md)
+[![IEEE](https://img.shields.io/badge/Standard-IEEE%201063%20%7C%20ISO%2026514-informational)](https://github.com/juanesmartinezunicauca/MesaLista/blob/develop/docs/manual-tecnico-usuario.md)
+[![Security](https://img.shields.io/badge/Security-OWASP%20Top%2010%20(2025)-brightgreen)](https://github.com/juanesmartinezunicauca/MesaLista/blob/develop/OWASP_COMPLIANCE.md)
+
+---
+
+## 🌐 Accesos en Línea (Producción)
+
+| Servicio | URL en Línea | Descripción |
+|---|---|---|
+| **Portal Cliente (Carta y Domicilios)** | [https://mesa-lista-virid.vercel.app/cliente](https://mesa-lista-virid.vercel.app/cliente) | Carta digital pública, carrito y seguimiento de domicilios (para clientes y empleados). |
+| **Aplicación POS / Inicio de Sesión** | [https://mesa-lista-virid.vercel.app/login](https://mesa-lista-virid.vercel.app/login) | Acceso con Google OAuth 2.0 y activación de colaboradores con código `INV-XXXXXXXX`. |
+| **Swagger UI Interactivo (Online)** | [https://mesalista-p0pf.onrender.com/api/docs](https://mesalista-p0pf.onrender.com/api/docs) | Documentación OpenAPI 3.0 en vivo para explorar y probar todos los endpoints. |
+| **Especificación OpenAPI JSON** | [https://mesalista-p0pf.onrender.com/api/docs-json](https://mesalista-p0pf.onrender.com/api/docs-json) | Esquema OpenAPI 3.0 en formato JSON consumido por herramientas de testing/fuzzing. |
+| **API REST Base (Render)** | [https://mesalista-p0pf.onrender.com/api/v1](https://mesalista-p0pf.onrender.com/api/v1) | Endpoint base del backend NestJS 12 desplegado en Render. |
+
+> **Nota (Render Free Tier):** Si el backend estuvo inactivo, la primera petición a Render/Swagger puede tardar ~30–50 segundos mientras despierta el contenedor.
 
 ---
 
@@ -27,20 +42,22 @@ El sistema centraliza y sincroniza en tiempo real las operaciones clave del rest
 
 ---
 
-## 📚 2. Estándares y Documentación Técnica del Repositorio
+## 📚 2. Documentación Técnica e Informes en Línea
 
-El proyecto sigue estándares internacionales de arquitectura, documentación de usuario, especificación de APIs y aseguramiento de calidad/seguridad:
+Todos los documentos, especificaciones e informes de aseguramiento de calidad están publicados en línea:
 
-| Documento | Estándar / Marco | Descripción |
+| Documento | Estándar / Marco | Enlace Directo Online |
 |---|---|---|
-| [**Swagger UI Interactivo**](http://localhost:3000/api/docs) | **OpenAPI Specification 3.0** | Catálogo vivo de endpoints bajo `/api/v1`, esquemas DTO, ejemplos y autenticación Bearer interactiva en `/api/docs`. |
-| [**Arc42 Architectural Blueprint**](docs/arquitectura/arc42.md) | **Arc42 v8.2 / ISO 42010** | Especificación integral de arquitectura: contexto, bloques C4, vista de ejecución, despliegue, ADRs y escenarios de calidad. |
-| [**Manual Técnico y de Usuario**](docs/manual-tecnico-usuario.md) | **IEEE 1063 & ISO/IEC/IEEE 26514** | Guía de instalación, diccionario relacional de BD, manual operativo por rol y guía de solución de fallos. |
-| [**Documento de Entrega y Acuerdos Finales**](docs/entrega-final-y-acuerdos.md) | **Cierre de Proyecto** | Inventario de entregables, resumen de pruebas, limitaciones acordadas, transferencia operativa y acta de aceptación. |
-| [**Matriz de Cumplimiento OWASP**](OWASP_COMPLIANCE.md) | **OWASP Top 10 (2025)** | Auditoría de mitigaciones A01–A10, evidencia de pruebas automatizadas y reporte HTML interactivo. |
-| [**Informe Técnico de Pruebas Fuzzy**](INFORME_TECNICO_FUZZY.md) | **Fuzzing & Resiliencia** | Análisis de límites del motor PostgreSQL/Prisma, concurrencia, `fast-check` y reporte HTML de fuzzing. |
-| [**Informe DAST OWASP ZAP + CVSS v3.1**](reports/INFORME_CVSS_OWASP_ZAP.md) | **OWASP ZAP / CVSS v3.1** | Evaluación dinámica de seguridad contra despliegue en producción y catálogo de hallazgos. |
-| [**Guía de Despliegue Cloud**](GUIA_DESPLIEGUE.md) | **Neon + Render + Vercel** | Procedimiento paso a paso para despliegue gratuito permanente con Google OAuth 2.0 y Brevo. |
+| **Swagger UI Interactivo** | **OpenAPI Specification 3.0** | [Abrir Swagger en Producción](https://mesalista-p0pf.onrender.com/api/docs) |
+| **Arc42 Architectural Blueprint** | **Arc42 v8.2 / ISO 42010** | [Ver `docs/arquitectura/arc42.md`](https://github.com/juanesmartinezunicauca/MesaLista/blob/develop/docs/arquitectura/arc42.md) |
+| **Manual Técnico y de Usuario** | **IEEE 1063 & ISO/IEC/IEEE 26514** | [Ver `docs/manual-tecnico-usuario.md`](https://github.com/juanesmartinezunicauca/MesaLista/blob/develop/docs/manual-tecnico-usuario.md) |
+| **Documento de Entrega y Acuerdos Finales** | **Acta de Cierre v1.1.0** | [Ver `docs/entrega-final-y-acuerdos.md`](https://github.com/juanesmartinezunicauca/MesaLista/blob/develop/docs/entrega-final-y-acuerdos.md) |
+| **Matriz de Cumplimiento OWASP** | **OWASP Top 10 (2025)** | [Ver `OWASP_COMPLIANCE.md`](https://github.com/juanesmartinezunicauca/MesaLista/blob/develop/OWASP_COMPLIANCE.md) |
+| **Informe Técnico de Pruebas Fuzzy** | **Fuzzing & Resiliencia (`fast-check`)** | [Ver `INFORME_TECNICO_FUZZY.md`](https://github.com/juanesmartinezunicauca/MesaLista/blob/develop/INFORME_TECNICO_FUZZY.md) |
+| **Informe DAST OWASP ZAP + CVSS v3.1** | **OWASP ZAP / CVSS v3.1** | [Ver `reports/INFORME_CVSS_OWASP_ZAP.md`](https://github.com/juanesmartinezunicauca/MesaLista/blob/develop/reports/INFORME_CVSS_OWASP_ZAP.md) |
+| **Guía de Despliegue Cloud** | **Neon + Render + Vercel** | [Ver `GUIA_DESPLIEGUE.md`](https://github.com/juanesmartinezunicauca/MesaLista/blob/develop/GUIA_DESPLIEGUE.md) |
+| **Guía de Auditoría SonarQube** | **SAST / Deuda Técnica** | [Ver `GUIA_SONARQUBE.md`](https://github.com/juanesmartinezunicauca/MesaLista/blob/develop/GUIA_SONARQUBE.md) |
+| **Guía de Escaneo OWASP ZAP** | **DAST Seguridad Dinámica** | [Ver `GUIA_OWASP_ZAP.md`](https://github.com/juanesmartinezunicauca/MesaLista/blob/develop/GUIA_OWASP_ZAP.md) |
 
 ---
 
@@ -79,21 +96,21 @@ flowchart LR
 
 ---
 
-## 📋 4. Requisitos Previos
+## 📋 4. Requisitos Previos (Desarrollo Local)
 
 Antes de ejecutar el proyecto en local, asegúrate de contar con:
 - **Node.js:** v20.x o v24.x LTS ([Descargar](https://nodejs.org/))
 - **npm:** v10+
 - **PostgreSQL:** v15/v16 local **o** conexión a PostgreSQL en la nube ([Neon.tech](https://neon.tech)).
 - **Docker & Docker Compose** *(Opcional, para despliegue en contenedores)*.
-- **Google Cloud Console:** OAuth 2.0 Web Client ID con `http://localhost:4200` en orígenes JavaScript autorizados.
+- **Google Cloud Console:** OAuth 2.0 Web Client ID con `http://localhost:4200` y `https://mesa-lista-virid.vercel.app` en orígenes JavaScript autorizados.
 
 ---
 
 ## ⚙️ 5. Configuración de Variables de Entorno
 
 ### 5.1 Backend (`backend/.env`)
-Copia la plantilla [`backend/.env.example`](backend/.env.example) como `backend/.env` (este archivo está ignorado en `.gitignore` y **nunca** se versiona):
+Copia la plantilla [`backend/.env.example`](https://github.com/juanesmartinezunicauca/MesaLista/blob/develop/backend/.env.example) como `backend/.env` (este archivo está ignorado en `.gitignore` y **nunca** se versiona):
 
 ```bash
 # Windows PowerShell:
@@ -133,12 +150,12 @@ PRINTER_INTERFACE="tcp://192.168.1.200:9100"
 ```
 
 ### 5.2 Frontend (`frontend/src/environments/`)
-Configura el entorno local en [`frontend/src/environments/environment.development.ts`](frontend/src/environments/environment.development.ts) (y producción en [`frontend/src/environments/environment.ts`](frontend/src/environments/environment.ts)):
+Configura el entorno local en [`environment.development.ts`](https://github.com/juanesmartinezunicauca/MesaLista/blob/develop/frontend/src/environments/environment.development.ts) y producción en [`environment.ts`](https://github.com/juanesmartinezunicauca/MesaLista/blob/develop/frontend/src/environments/environment.ts):
 
 ```typescript
 export const environment = {
-  production: false,
-  apiUrl: 'http://localhost:3000/api/v1',
+  production: true,
+  apiUrl: 'https://mesalista-p0pf.onrender.com/api/v1',
   appName: 'MesaLista',
   googleClientId: '123456789012-ejemplo.apps.googleusercontent.com',
 };
@@ -165,8 +182,7 @@ npx prisma db seed
 # Iniciar servidor en desarrollo con recarga en vivo
 npm run start:dev
 ```
-> Backend activo en: `http://localhost:3000/api/v1`  
-> Documentación interactiva Swagger: `http://localhost:3000/api/docs`
+> En entorno local: API en `http://localhost:3000/api/v1` y Swagger local en `http://localhost:3000/api/docs` (en producción online: [Swagger Online](https://mesalista-p0pf.onrender.com/api/docs)).
 
 ### Paso 2: Frontend SPA (Angular 22)
 En una segunda terminal:
@@ -177,7 +193,7 @@ npm install
 # Iniciar la aplicación Angular
 npm start
 ```
-> Interfaz web disponible en: `http://localhost:4200` (el portal público de clientes está en `/cliente` y el acceso operativo en `/login`).
+> En entorno local: `http://localhost:4200` (en producción online: [https://mesa-lista-virid.vercel.app](https://mesa-lista-virid.vercel.app)).
 
 ---
 
@@ -194,7 +210,7 @@ docker compose logs -f
 docker compose down
 ```
 
-Puertos expuestos:
+Puertos locales expuestos por Docker:
 - **Frontend Web:** `http://localhost:80`
 - **Backend API & Swagger:** `http://localhost:3000/api/v1` y `http://localhost:3000/api/docs`
 - **PostgreSQL:** `localhost:5432`
@@ -234,11 +250,11 @@ flowchart TD
 
 ## 📡 9. Ejemplos de Uso de la API (`cURL`)
 
-Todos los endpoints protegidos requieren la cabecera `Authorization: Bearer <TOKEN_JWT>`.
+Todos los endpoints protegidos requieren la cabecera `Authorization: Bearer <TOKEN_JWT>`. También puedes probarlos interactivamente en [Swagger Online](https://mesalista-p0pf.onrender.com/api/docs).
 
 ### 9.1 Autenticación con Google OAuth 2.0 (con o sin código de invitación)
 ```bash
-curl -X POST http://localhost:3000/api/v1/auth/google \
+curl -X POST https://mesalista-p0pf.onrender.com/api/v1/auth/google \
   -H "Content-Type: application/json" \
   -d '{
     "idToken": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEy...",
@@ -262,19 +278,19 @@ curl -X POST http://localhost:3000/api/v1/auth/google \
 
 ### 9.2 Consultar Estado Operativo de Caja
 ```bash
-curl -X GET http://localhost:3000/api/v1/caja/estado \
+curl -X GET https://mesalista-p0pf.onrender.com/api/v1/caja/estado \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 ### 9.3 Listar Mesas del Salón
 ```bash
-curl -X GET http://localhost:3000/api/v1/mesas \
+curl -X GET https://mesalista-p0pf.onrender.com/api/v1/mesas \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 ### 9.4 Crear una Comanda de Salón
 ```bash
-curl -X POST http://localhost:3000/api/v1/pedidos \
+curl -X POST https://mesalista-p0pf.onrender.com/api/v1/pedidos \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -293,7 +309,7 @@ curl -X POST http://localhost:3000/api/v1/pedidos \
 
 ### 9.5 Emitir Factura y Registrar Pagos en Caja
 ```bash
-curl -X POST http://localhost:3000/api/v1/facturas \
+curl -X POST https://mesalista-p0pf.onrender.com/api/v1/facturas \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -311,6 +327,10 @@ curl -X POST http://localhost:3000/api/v1/facturas \
 ---
 
 ## 🧪 10. Pruebas y Aseguramiento de Calidad
+
+- **Backend (Jest 30):** 28/28 suites · **318/318 pruebas aprobadas** (70.40% sentencias · 71.24% líneas · OWASP 25/25 · Fuzzy 34/34).
+- **Frontend (Vitest 4):** 18/18 archivos · **114/114 pruebas aprobadas**.
+- **CI/CD en GitHub Actions:** [Ver ejecuciones en vivo](https://github.com/juanesmartinezunicauca/MesaLista/actions).
 
 ```bash
 # Backend — Linting ultrarrápido con oxlint
