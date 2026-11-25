@@ -648,61 +648,115 @@
   }
 }
 
-/* 4.5. Impresión en Impresora Térmica de Comandas */
-.impresion-seccion {
+/* 4.5. Barra compacta de impresión automática */
+.impresion-barra {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: $radius-md;
-  padding: 10px 12px;
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 
-  .impresion-header {
+  .impresion-fila-principal {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
+    flex-wrap: wrap;
+  }
 
-    .impresion-titulo {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.8rem;
-      font-weight: 700;
-      color: $text-primary;
+  .impresion-lbl {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: $text-secondary;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      color: $brand-blue;
+    }
+  }
+
+  .impresion-chips {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  .print-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: $text-secondary;
+    font-size: 0.74rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    mat-icon {
+      font-size: 15px;
+      width: 15px;
+      height: 15px;
+      color: #94a3b8;
+    }
+
+    &.activo {
+      background: #eff6ff;
+      border-color: $brand-blue;
+      color: $brand-blue;
 
       mat-icon {
-        font-size: 17px;
-        width: 17px;
-        height: 17px;
         color: $brand-blue;
       }
     }
 
-    .btn-config-ticket {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      border: 1px solid #cbd5e1;
-      background: #ffffff;
-      color: $text-secondary;
-      border-radius: 6px;
-      padding: 3px 8px;
-      font-size: 0.72rem;
-      font-weight: 600;
-      cursor: pointer;
+    &.cocina.activo {
+      background: #fff7ed;
+      border-color: $brand-orange;
+      color: $brand-orange;
 
       mat-icon {
-        font-size: 14px;
-        width: 14px;
-        height: 14px;
+        color: $brand-orange;
       }
+    }
+  }
 
-      &:hover {
-        border-color: $brand-blue;
-        color: $brand-blue;
-      }
+  .btn-ajustes-impresora {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #ffffff;
+    color: $text-muted;
+    cursor: pointer;
+    padding: 0;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+
+    &:hover,
+    &.abierto {
+      border-color: $brand-blue;
+      color: $brand-blue;
+      background: #eff6ff;
     }
   }
 
@@ -772,88 +826,57 @@
       }
     }
   }
-
-  .impresion-checks {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-
-    .print-check {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.76rem;
-      color: $text-secondary;
-      cursor: pointer;
-      user-select: none;
-
-      input[type='checkbox'] {
-        accent-color: $brand-blue;
-        width: 15px;
-        height: 15px;
-        cursor: pointer;
-      }
-    }
-  }
-
-  .impresion-botones {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-
-    .btn-ticket-manual {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 5px;
-      height: 34px;
-      padding: 0 10px;
-      border-radius: 6px;
-      border: 1px solid #cbd5e1;
-      background: #ffffff;
-      color: $text-primary;
-      font-size: 0.75rem;
-      font-weight: 700;
-      cursor: pointer;
-
-      mat-icon {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-        color: $brand-blue;
-      }
-
-      &.cocina mat-icon {
-        color: $brand-orange;
-      }
-
-      &:hover {
-        background: #eff6ff;
-        border-color: $brand-blue;
-      }
-    }
-  }
 }
 
 /* 5. Acciones Fijas al Pie */
 .modal-acciones {
   flex-shrink: 0;
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
   gap: 8px;
-  padding: 12px 20px;
+  padding: 12px 16px;
   background: #ffffff;
   border-top: 1px solid $border-color;
   box-shadow: 0 -3px 10px rgba(0, 0, 0, 0.05);
+
+  .btn-imprimir-menu {
+    height: 38px;
+    padding: 0 10px 0 12px;
+    border-radius: $radius-md;
+    border-color: #cbd5e1;
+    color: $text-primary;
+    font-size: 0.8rem;
+    font-weight: 600;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: $brand-blue;
+      margin-right: 4px;
+    }
+
+    .arrow-icon {
+      margin-right: -4px;
+      margin-left: 2px;
+      color: $text-muted;
+    }
+  }
+
+  .acciones-derecha {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
 
   .btn-cancelar {
     color: $text-muted;
   }
 
   .btn-confirmar-cobro {
-    height: 42px;
-    padding: 0 20px;
+    height: 40px;
+    padding: 0 18px;
     background-color: $color-success !important;
     color: #ffffff !important;
     font-weight: 700;

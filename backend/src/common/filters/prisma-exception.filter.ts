@@ -146,6 +146,7 @@ export class PrismaExceptionFilter implements ExceptionFilter {
       // P2028 / P2034: Conflicto transaccional o tiempo de espera de transacción bajo alta concurrencia
       case 'P2028':
       case 'P2034': {
+        this.logger.warn(`Prisma ${exception.code}: ${exception.message}`);
         status = HttpStatus.CONFLICT;
         message = 'La operación no pudo completarse por conflicto de concurrencia transaccional. Intente nuevamente.';
         error = 'Conflict';

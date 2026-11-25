@@ -312,27 +312,52 @@
         </div>
       }
     </div>
-    <!-- 5. Impresión en Impresora Térmica de Comandas (Cliente y Cocina) -->
-    <div class="impresion-seccion">
-      <div class="impresion-header">
-        <span class="impresion-titulo">
+    <!-- 5. Opciones compactas de impresión automática en comandas -->
+    <div class="impresion-barra">
+      <div class="impresion-fila-principal">
+        <span class="impresion-lbl">
           <mat-icon>print</mat-icon>
-          <span>Impresora de Comandas ({{ impresionTermica.config().anchoPapel }})</span>
+          <span>Imprimir al cobrar:</span>
         </span>
+
+        <div class="impresion-chips">
+          <button
+            type="button"
+            class="print-chip"
+            [class.activo]="imprimirClienteAlCobrar()"
+            (click)="toggleImprimirCliente()"
+          >
+            <mat-icon>{{ imprimirClienteAlCobrar() ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+            <span>Cliente</span>
+          </button>
+
+          <button
+            type="button"
+            class="print-chip cocina"
+            [class.activo]="imprimirCocinaAlCobrar()"
+            (click)="toggleImprimirCocina()"
+          >
+            <mat-icon>{{ imprimirCocinaAlCobrar() ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+            <span>Cocina</span>
+          </button>
+        </div>
+
         <button
           type="button"
-          class="btn-config-ticket"
+          class="btn-ajustes-impresora"
+          [class.abierto]="mostrarConfigTicket()"
           (click)="mostrarConfigTicket.set(!mostrarConfigTicket())"
+          matTooltip="Configurar encabezado, NIT y rollo (80mm / 58mm)"
+          aria-label="Configurar ticket térmico"
         >
-          <mat-icon>tune</mat-icon>
-          <span>{{ mostrarConfigTicket() ? 'Ocultar' : 'Configurar' }}</span>
+          <mat-icon>settings</mat-icon>
         </button>
       </div>
 
       @if (mostrarConfigTicket()) {
         <div class="ticket-config-box">
           <div class="config-field">
-            <label>Encabezado del local</label>
+            <label>Nombre del restaurante</label>
             <input
               type="text"
               [ngModel]="impresionTermica.config().nombreComercio"
@@ -341,7 +366,7 @@
             />
           </div>
           <div class="config-field">
-            <label>Dirección y NIT (impresa bajo el título)</label>
+            <label>Dirección y NIT</label>
             <input
               type="text"
               [ngModel]="impresionTermica.config().direccionYNit"
@@ -350,7 +375,7 @@
             />
           </div>
           <div class="config-paper-row">
-            <span>Ancho de rollo térmico:</span>
+            <span>Rollo térmico:</span>
             <div class="paper-pills">
               <button
                 type="button"
@@ -372,61 +397,48 @@
           </div>
         </div>
       }
-
-      <div class="impresion-checks">
-        <label class="print-check">
-          <input
-            type="checkbox"
-            [checked]="imprimirClienteAlCobrar()"
-            (change)="toggleImprimirCliente($event)"
-          />
-          <span>Imprimir factura cliente al cobrar</span>
-        </label>
-        <label class="print-check">
-          <input
-            type="checkbox"
-            [checked]="imprimirCocinaAlCobrar()"
-            (change)="toggleImprimirCocina($event)"
-          />
-          <span>Imprimir comanda cocina al cobrar</span>
-        </label>
-      </div>
-
-      <div class="impresion-botones">
-        <button
-          type="button"
-          class="btn-ticket-manual"
-          (click)="imprimirFacturaCliente()"
-        >
-          <mat-icon>receipt_long</mat-icon>
-          <span>Imprimir Ticket Cliente</span>
-        </button>
-        <button
-          type="button"
-          class="btn-ticket-manual cocina"
-          (click)="imprimirComandaCocina()"
-        >
-          <mat-icon>soup_kitchen</mat-icon>
-          <span>Imprimir Comanda Cocina</span>
-        </button>
-      </div>
     </div>
   </div> <!-- fin modal-scroll-area -->
 
-  <!-- 5. Acciones Finales (El botón Cobrar SIEMPRE visible al pie) -->
+  <!-- 6. Acciones Finales (Claras y sin saturación) -->
   <div class="modal-acciones">
-    <button mat-button class="btn-cancelar" (click)="cerrarSinCobrar()">
-      Cancelar
+    <button
+      type="button"
+      mat-stroked-button
+      class="btn-imprimir-menu"
+      [matMenuTriggerFor]="menuImprimirAhora"
+      matTooltip="Imprimir ticket sin cerrar el cobro"
+    >
+      <mat-icon>print</mat-icon>
+      <span>Imprimir</span>
+      <mat-icon class="arrow-icon">arrow_drop_down</mat-icon>
     </button>
 
-    <button
-      mat-flat-button
-      class="btn-confirmar-cobro"
-      [disabled]="!puedeCobrar()"
-      (click)="confirmarCobro()"
-    >
-      <mat-icon>check</mat-icon>
-      <span>Cobrar $ {{ totalFinal() | number }}</span>
-    </button>
+    <mat-menu #menuImprimirAhora="matMenu">
+      <button type="button" mat-menu-item (click)="imprimirFacturaCliente()">
+        <mat-icon>receipt_long</mat-icon>
+        <span>Ticket Cliente / Pre-cuenta</span>
+      </button>
+      <button type="button" mat-menu-item (click)="imprimirComandaCocina()">
+        <mat-icon>soup_kitchen</mat-icon>
+        <span>Comanda de Cocina</span>
+      </button>
+    </mat-menu>
+
+    <div class="acciones-derecha">
+      <button mat-button class="btn-cancelar" (click)="cerrarSinCobrar()">
+        Cancelar
+      </button>
+
+      <button
+        mat-flat-button
+        class="btn-confirmar-cobro"
+        [disabled]="!puedeCobrar()"
+        (click)="confirmarCobro()"
+      >
+        <mat-icon>check</mat-icon>
+        <span>Cobrar $ {{ totalFinal() | number }}</span>
+      </button>
+    </div>
   </div>
 </div>

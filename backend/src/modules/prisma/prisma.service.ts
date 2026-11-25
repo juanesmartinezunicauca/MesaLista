@@ -5,6 +5,16 @@ import { PrismaClient } from '@prisma/client';
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
 
+  constructor() {
+    super({
+      // Timeouts adaptados a latencia cloud / cold start de Neon Serverless + Render
+      transactionOptions: {
+        maxWait: 15_000,
+        timeout: 25_000,
+      },
+    });
+  }
+
   // M-03: Error handling explícito en la conexión a BD
   async onModuleInit() {
     try {
