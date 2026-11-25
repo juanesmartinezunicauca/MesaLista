@@ -5,6 +5,8 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Mesa } from '../models/mesa.model';
 import {
   MetodoPagoTipo,
@@ -30,6 +32,8 @@ export * from '../models/factura.model';
     MatButtonModule,
     MatIconModule,
     MatDividerModule,
+    MatMenuModule,
+    MatTooltipModule,
   ],
   templateUrl: './factura-dialog.html',
   styleUrl: './factura-dialog.scss',
@@ -88,7 +92,7 @@ export class FacturaDialogComponent {
     }
   });
 
-  tipoPropina = signal<'cero' | 'diez' | 'personalizada'>(this.data?.pedido ? 'cero' : 'diez');
+  tipoPropina = signal<'cero' | 'diez' | 'personalizada'>('cero');
   propinaPersonalizada = signal<number>(0);
   efectivoRecibido = signal<number>(0);
 
@@ -316,14 +320,18 @@ export class FacturaDialogComponent {
     this.efectivoRecibido.set(this.totalFinal());
   }
 
-  toggleImprimirCliente(event: Event): void {
-    const checked = (event.target as HTMLInputElement).checked;
+  toggleImprimirCliente(event?: Event): void {
+    const checked = event
+      ? (event.target as HTMLInputElement).checked
+      : !this.imprimirClienteAlCobrar();
     this.imprimirClienteAlCobrar.set(checked);
     this.impresionTermica.actualizarConfiguracion({ imprimirClienteAlCobrar: checked });
   }
 
-  toggleImprimirCocina(event: Event): void {
-    const checked = (event.target as HTMLInputElement).checked;
+  toggleImprimirCocina(event?: Event): void {
+    const checked = event
+      ? (event.target as HTMLInputElement).checked
+      : !this.imprimirCocinaAlCobrar();
     this.imprimirCocinaAlCobrar.set(checked);
     this.impresionTermica.actualizarConfiguracion({ imprimirCocinaAlCobrar: checked });
   }

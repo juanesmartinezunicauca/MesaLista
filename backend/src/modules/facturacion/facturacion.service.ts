@@ -58,12 +58,7 @@ export class FacturacionService {
       throw new BadRequestException('Debe especificar al menos un medio de pago.');
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      // Bloqueo asesor de transacción en PostgreSQL para evitar doble facturación simultánea
-      if (typeof (tx as any).$queryRaw === 'function') {
-        await (tx as any).$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(730201)`;
-      }
-
+    const idVentaCreada = await this.prisma.$transaction(async (tx) => {
       // 1. Validar que exista una caja abierta en el restaurante dentro de la transacción
       const cajaActiva = await tx.caja.findFirst({
         where: { estado: EstadoCaja.abierta },
@@ -256,15 +251,17 @@ export class FacturacionService {
         });
       }
 
-      return tx.factura.findUnique({
-        where: { id_venta: factura.id_venta },
-        include: {
-          mesa: true,
-          usuario: { select: { nombre: true, rol: true } },
-          pagos: { include: { medioPago: true } },
-          caja: { select: { id_caja: true, fecha_apertura: true } },
-        },
-      });
+      return factura.id_venta;
+    });
+
+    return this.prisma.factura.findUnique({
+      where: { id_venta: idVentaCreada },
+      include: {
+        mesa: true,
+        usuario: { select: { nombre: true, rol: true } },
+        pagos: { include: { medioPago: true } },
+        caja: { select: { id_caja: true, fecha_apertura: true } },
+      },
     });
   }
 

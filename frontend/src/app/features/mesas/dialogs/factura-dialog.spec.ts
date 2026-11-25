@@ -87,13 +87,20 @@ describe('FacturaDialogComponent', () => {
     expect(component.subtotal()).toBe(45000);
   });
 
-  it('debe calcular la propina sugerida del 10% por defecto', () => {
-    expect(component.tipoPropina()).toBe('diez');
+  it('debe iniciar sin propina marcada por defecto y calcular el 10% al activarla', () => {
+    expect(component.tipoPropina()).toBe('cero');
+    expect(component.montoPropina()).toBe(0);
+    expect(component.totalFinal()).toBe(45000);
+
+    component.setTipoPropina('diez');
     expect(component.montoPropina()).toBe(4500);
     expect(component.totalFinal()).toBe(49500);
   });
 
   it('debe permitir cambiar la propina a 0% o personalizada', () => {
+    component.setTipoPropina('diez');
+    expect(component.montoPropina()).toBe(4500);
+
     component.setTipoPropina('cero');
     expect(component.montoPropina()).toBe(0);
     expect(component.totalFinal()).toBe(45000);
@@ -111,7 +118,7 @@ describe('FacturaDialogComponent', () => {
 
     component.efectivoRecibido.set(50000);
     expect(component.puedeCobrar()).toBe(true);
-    expect(component.cambioVueltos()).toBe(500);
+    expect(component.cambioVueltos()).toBe(5000);
   });
 
   it('debe emitir resultado de cobro exitoso al confirmar', () => {
@@ -123,7 +130,8 @@ describe('FacturaDialogComponent', () => {
         cobrado: true,
         metodoPago: 'tarjeta',
         subtotal: 45000,
-        total: 49500,
+        propina: 0,
+        total: 45000,
       })
     );
   });
@@ -136,7 +144,7 @@ describe('FacturaDialogComponent', () => {
     expect(component.puedeCobrar()).toBe(false);
 
     component.completarMonto('tarjeta');
-    expect(component.montoTarjeta()).toBe(9500);
+    expect(component.montoTarjeta()).toBe(5000);
     expect(component.asignacionCompleta()).toBe(true);
 
     component.efectivoRecibido.set(20000);
@@ -149,7 +157,7 @@ describe('FacturaDialogComponent', () => {
         metodoPago: 'mixto',
         pagos: [
           { metodo: 'efectivo', monto: 20000 },
-          { metodo: 'tarjeta', monto: 9500 },
+          { metodo: 'tarjeta', monto: 5000 },
           { metodo: 'transferencia', monto: 20000 },
         ],
       })
@@ -176,7 +184,7 @@ describe('FacturaDialogComponent', () => {
         numeroFactura: 99,
         numeroMesa: 1,
         subtotal: 45000,
-        total: 49500,
+        total: 45000,
       }),
     );
 
