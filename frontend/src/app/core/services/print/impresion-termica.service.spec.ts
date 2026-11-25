@@ -182,4 +182,33 @@ describe('ImpresionTermicaService', () => {
     expect(guardado.direccionYNit).toBe('CRA 9 # 10-20 POPAYAN NIT 900123456');
     expect(guardado.imprimirCocinaAlCobrar).toBe(true);
   });
+
+  it('imprimirLote debe combinar factura cliente y comanda de cocina con salto de página en un solo trabajo', () => {
+    const spyEnviar = vi
+      .spyOn(service as unknown as { enviarAImpresora: (html: string) => void }, 'enviarAImpresora')
+      .mockImplementation(() => {});
+
+    service.imprimirLote({
+      cliente: {
+        tipo: 'salon',
+        numeroFactura: 50,
+        numeroMesa: 2,
+        items: [{ nombre: 'Salchipapa', cantidad: 1, subtotal: 18000 }],
+        subtotal: 18000,
+        total: 18000,
+      },
+      cocina: {
+        tipo: 'salon',
+        numeroMesa: 2,
+        numeroPedido: 7,
+        items: [{ nombre: 'Salchipapa', cantidad: 1 }],
+      },
+    });
+
+    expect(spyEnviar).toHaveBeenCalledTimes(1);
+    const html = spyEnviar.mock.calls[0][0];
+    expect(html).toContain('ticket-page-break');
+    expect(html).toContain('FAC-#50');
+    expect(html).toContain('*** COMANDA COCINA ***');
+  });
 });

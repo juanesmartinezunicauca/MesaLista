@@ -57,8 +57,16 @@ export class DetalleMesaComponent {
   }
 
   generarFactura(): void {
+    const mesaSnapshot: Mesa = {
+      ...this.mesa,
+      pedidos: (this.mesa.pedidos || []).map((p) => ({
+        ...p,
+        items: (p.items || []).map((it) => ({ ...it })),
+      })),
+    };
+
     const dialogRef = this.dialog.open(FacturaDialogComponent, {
-      data: { mesa: this.mesa },
+      data: { mesa: mesaSnapshot },
       width: '460px',
       maxWidth: '95vw',
       maxHeight: '90vh',
@@ -78,14 +86,14 @@ export class DetalleMesaComponent {
 
         this.facturacionApi
           .crearFactura({
-            id_mesa: this.mesa.id_mesa,
+            id_mesa: mesaSnapshot.id_mesa,
             propina: resultado.propina,
             pagos: pagosPayload,
           })
           .subscribe({
             next: (factura) => {
-              this.imprimirTicketsMesa(factura?.id_venta, resultado, pagosPayload);
-              this.mesasService.liberarMesa(this.mesa.id_mesa);
+              this.imprimirTicketsMesa(mesaSnapshot, factura?.id_venta, resultado, pagosPayload);
+              this.mesasService.liberarMesa(mesaSnapshot.id_mesa);
               this.snackBar.open(
                 `Factura #${factura.id_venta} registrada e ingresada a Caja.`,
                 'Entendido',
@@ -99,7 +107,7 @@ export class DetalleMesaComponent {
               this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
               // Si la falla no es por caja cerrada, permitir liberar en memoria
               if (!err.error?.message?.toLowerCase().includes('caja')) {
-                this.mesasService.liberarMesa(this.mesa.id_mesa);
+                this.mesasService.liberarMesa(mesaSnapshot.id_mesa);
                 this.cerrar.emit();
               }
             },
@@ -109,6 +117,7 @@ export class DetalleMesaComponent {
   }
 
   private imprimirTicketsMesa(
+    mesa: Mesa,
     numeroFactura: number | undefined,
     resultado: FacturaCobroResult,
     pagosPayload: Array<{ medio_pago: string; monto: number }>,
@@ -118,7 +127,7 @@ export class DetalleMesaComponent {
     const itemsTicket: ItemTicketTermico[] = [];
     const notasGenerales: string[] = [];
 
-    for (const pedido of this.mesa.pedidos || []) {
+    for (const pedido of mesa.pedidos || []) {
       if (pedido.observacion) notasGenerales.push(pedido.observacion);
       for (const item of pedido.items || []) {
         itemsTicket.push({
@@ -132,46 +141,36 @@ export class DetalleMesaComponent {
       }
     }
 
-    const imprimirCliente = () => {
-      this.impresionTermica.imprimirFacturaCliente({
-        tipo: 'salon',
-        numeroFactura: numeroFactura ?? null,
-        numeroMesa: this.mesa.numero,
-        mesero: this.mesa.mesero_actual || null,
-        fecha: new Date(),
-        items: itemsTicket,
-        subtotal: resultado.subtotal,
-        propina: resultado.propina,
-        total: resultado.total,
-        formaPago: pagosPayload.map((p) => p.medio_pago).join(' + '),
-        pagosDetalle: pagosPayload.map((p) => ({ metodo: p.medio_pago, monto: p.monto })),
-        efectivoRecibido: resultado.efectivoRecibido,
-        cambio: resultado.cambio,
-      });
-    };
-
-    const imprimirCocina = () => {
-      this.impresionTermica.imprimirComandaCocina({
-        tipo: 'salon',
-        numeroPedido: this.mesa.pedidos?.[0]?.numero_pedido ?? null,
-        numeroMesa: this.mesa.numero,
-        mesero: this.mesa.mesero_actual || null,
-        fecha: new Date(),
-        items: itemsTicket,
-        observacionGeneral: notasGenerales.join(' | ') || null,
-      });
-    };
-
-    if (resultado.imprimirCliente) {
-      imprimirCliente();
-    }
-    if (resultado.imprimirCocina) {
-      if (resultado.imprimirCliente) {
-        setTimeout(imprimirCocina, 650);
-      } else {
-        imprimirCocina();
-      }
-    }
+    this.impresionTermica.imprimirLote({
+      cliente: resultado.imprimirCliente
+        ? {
+            tipo: 'salon',
+            numeroFactura: numeroFactura ?? null,
+            numeroMesa: mesa.numero,
+            mesero: mesa.mesero_actual || null,
+            fecha: new Date(),
+            items: itemsTicket,
+            subtotal: resultado.subtotal,
+            propina: resultado.propina,
+            total: resultado.total,
+            formaPago: pagosPayload.map((p) => p.medio_pago).join(' + '),
+            pagosDetalle: pagosPayload.map((p) => ({ metodo: p.medio_pago, monto: p.monto })),
+            efectivoRecibido: resultado.efectivoRecibido,
+            cambio: resultado.cambio,
+          }
+        : null,
+      cocina: resultado.imprimirCocina
+        ? {
+            tipo: 'salon',
+            numeroPedido: mesa.pedidos?.[0]?.numero_pedido ?? null,
+            numeroMesa: mesa.numero,
+            mesero: mesa.mesero_actual || null,
+            fecha: new Date(),
+            items: itemsTicket,
+            observacionGeneral: notasGenerales.join(' | ') || null,
+          }
+        : null,
+    });
   }
 
   liberarMesaManual(): void {
