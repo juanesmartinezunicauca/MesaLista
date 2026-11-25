@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber, Min } from 'class-validator';
+import { IsNotEmpty, IsNumber, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class AbrirCajaDto {
@@ -12,5 +12,6 @@ export class AbrirCajaDto {
   @Type(() => Number)
   @IsNumber({}, { message: 'El valor base debe ser un número válido.' })
   @Min(0, { message: 'El valor base no puede ser negativo.' })
+  @Max(99999999, { message: 'El valor base excede el límite permitido.' })
   valor_inicial!: number;
 }

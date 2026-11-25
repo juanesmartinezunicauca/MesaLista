@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CerrarCajaDto {
@@ -12,6 +12,7 @@ export class CerrarCajaDto {
   @Type(() => Number)
   @IsNumber({}, { message: 'El valor físico debe ser un número válido.' })
   @Min(0, { message: 'El valor físico no puede ser negativo.' })
+  @Max(99999999, { message: 'El valor físico excede el límite permitido.' })
   valor_final_fisico!: number;
 
   @ApiPropertyOptional({
@@ -23,6 +24,7 @@ export class CerrarCajaDto {
   @Type(() => Number)
   @IsNumber({}, { message: 'El valor de transferencias debe ser un número válido.' })
   @Min(0, { message: 'El valor de transferencias no puede ser negativo.' })
+  @Max(99999999, { message: 'El valor de transferencias excede el límite permitido.' })
   valor_transferencias_reportado?: number;
 
   @ApiPropertyOptional({

@@ -16,9 +16,12 @@ import { CarritoService, CartItem } from '../../../core/services/carrito/carrito
 import { DomiciliosApiService } from '../../../core/services/api/domicilios-api.service';
 import { AuthService } from '../../../core/services/auth/auth.service';
 import {
+  BARRIOS_POPAYAN,
   CreateDomicilioPayload,
   ZONAS_DOMICILIO_POPAYAN,
   ZonaTarifaPopayan,
+  detectarBarrioEnTexto,
+  determinarZonaPorBarrio,
 } from '../../../core/models/domicilio.model';
 
 @Component({
@@ -61,11 +64,27 @@ export class VistaCarritoComponent implements OnInit {
   observaciones = signal<string>('');
   metodoPago = signal<'Efectivo' | 'Transferencia'>('Efectivo');
 
-  // Zonificación de Popayán para tarifas de domicilio
+  // Barrios quemados de Popayán y determinación automática de zona y tarifa
   readonly zonasPopayan = ZONAS_DOMICILIO_POPAYAN;
-  zonaSeleccionada = signal<ZonaTarifaPopayan>(this.zonasPopayan[0]);
+  readonly barriosPopayan = BARRIOS_POPAYAN;
+  barrioSeleccionado = signal<string>('Catay');
+  zonaSeleccionada = signal<ZonaTarifaPopayan>(determinarZonaPorBarrio('Catay'));
   costoEnvio = computed<number>(() => this.zonaSeleccionada().tarifa);
   totalConEnvio = computed<number>(() => this.carritoService.totalPrecio() + this.costoEnvio());
+
+  cambiarBarrio(nombreBarrio: string): void {
+    this.barrioSeleccionado.set(nombreBarrio);
+    this.zonaSeleccionada.set(determinarZonaPorBarrio(nombreBarrio, this.direccionEntrega()));
+  }
+
+  onDireccionChange(valor: string): void {
+    this.direccionEntrega.set(valor);
+    const detectado = detectarBarrioEnTexto(valor);
+    if (detectado) {
+      this.barrioSeleccionado.set(detectado.nombre);
+      this.zonaSeleccionada.set(determinarZonaPorBarrio(detectado.nombre, valor));
+    }
+  }
 
   cambiarZona(zonaId: string): void {
     const found = this.zonasPopayan.find((z) => z.id === zonaId);
@@ -254,12 +273,15 @@ export class VistaCarritoComponent implements OnInit {
     }));
 
     const zona = this.zonaSeleccionada();
+    const barrio = this.barrioSeleccionado().trim();
     const zonaCorta = zona.nombre.includes('(')
       ? zona.nombre.split('(')[0].trim()
       : zona.nombre.split(':')[0].trim();
 
-    // Combinar dirección, zona y referencia
-    let direccionCompleta = `${dir} [${zonaCorta}]`;
+    // Combinar dirección, barrio, zona y referencia
+    const yaIncluyeBarrio = barrio && dir.toLowerCase().includes(barrio.toLowerCase());
+    const dirConBarrio = barrio && !yaIncluyeBarrio ? `${dir}, Barrio ${barrio}` : dir;
+    let direccionCompleta = `${dirConBarrio} [${zonaCorta}]`;
     if (this.referenciaUbicacion().trim()) {
       direccionCompleta += ` (${this.referenciaUbicacion().trim()})`;
     }
@@ -275,7 +297,8 @@ export class VistaCarritoComponent implements OnInit {
       observacion: this.observaciones().trim() || undefined,
       metodo_pago: this.metodoPago(),
       costo_envio: this.costoEnvio(),
-      zona_entrega: zona.nombre,
+      zona_entrega: barrio ? `${barrio} (${zona.nombre})` : zona.nombre,
+      es_pedido_cliente: true,
     };
 
     this.enviandoPedido.set(true);

@@ -51,10 +51,6 @@
         }
       }
     }
-
-    .sidebar-footer {
-      display: none !important;
-    }
   }
 
   // Formato ultra-compacto para smartphones
@@ -167,26 +163,6 @@
         mat-icon {
           color: #ffffff;
         }
-      }
-    }
-  }
-
-  .sidebar-footer {
-    padding: 12px 16px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-
-    .status-badge {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.75rem;
-      color: #94a3b8;
-
-      .indicator-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: $radius-full;
-        background-color: $color-success;
       }
     }
   }

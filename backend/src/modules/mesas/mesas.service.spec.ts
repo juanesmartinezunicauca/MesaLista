@@ -366,5 +366,44 @@ describe('MesasService', () => {
       });
       expect(res.pedidos_transferidos).toBe(3);
     });
+
+    it('debe rechazar transferir hacia una mesa destino que ya se encuentra ocupada', async () => {
+      prisma.mesa.findUnique
+        .mockResolvedValueOnce({ id_mesa: 1, numero: 1, estado: EstadoMesa.ocupada })
+        .mockResolvedValueOnce({ id_mesa: 2, numero: 2, estado: EstadoMesa.ocupada });
+
+      await expect(
+        service.transferirMesa({ id_origen: 1, id_destino: 2 }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.pedido.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('debe rechazar transferir desde una mesa origen libre sin pedidos activos', async () => {
+      prisma.mesa.findUnique
+        .mockResolvedValueOnce({ id_mesa: 1, numero: 1, estado: EstadoMesa.libre })
+        .mockResolvedValueOnce({ id_mesa: 2, numero: 2, estado: EstadoMesa.libre });
+      prisma.pedido.count.mockResolvedValue(0);
+
+      await expect(
+        service.transferirMesa({ id_origen: 1, id_destino: 2 }),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('protección contra comandas fantasma al liberar mesa', () => {
+    it('debe rechazar liberar una mesa que aún tiene comandas activas sin facturar', async () => {
+      prisma.mesa.findUnique.mockResolvedValue({
+        id_mesa: 3,
+        numero: 3,
+        estado: EstadoMesa.ocupada,
+        pedidos: [{ id_pedido: 20, id_factura: null }],
+      });
+      prisma.pedido.count.mockResolvedValue(1);
+
+      await expect(
+        service.cambiarEstado(3, { estado: EstadoMesa.libre }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.mesa.update).not.toHaveBeenCalled();
+    });
   });
 });

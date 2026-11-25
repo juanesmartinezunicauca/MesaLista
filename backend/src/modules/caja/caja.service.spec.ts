@@ -12,6 +12,7 @@ describe('CajaService', () => {
     prisma = {
       caja: {
         findFirst: jest.fn(),
+        findUnique: jest.fn(),
         findMany: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
@@ -33,6 +34,7 @@ describe('CajaService', () => {
         count: jest.fn().mockResolvedValue(0),
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
+      $transaction: jest.fn((cb) => cb(prisma)),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -150,6 +152,47 @@ describe('CajaService', () => {
       // Efectivo esperado: 100.000 (base) + 50.000 (ventas efectivo) - 15.000 (gastos efectivo) = 135.000
       expect(estado.resumen?.efectivo_esperado).toBe(135000);
       expect(estado.movimientos.length).toBe(3);
+    });
+
+    it('debe descontar el costo de preparación de los productos en utilidad_del_dia (ej. venta 20.000 - costo 10.000 = ganancia 10.000)', async () => {
+      prisma.caja.findFirst.mockResolvedValue({
+        id_caja: 12,
+        fecha_apertura: new Date(),
+        valor_inicial: 50000,
+        usuarioApertura: { nombre: 'Cajero' },
+        facturas: [
+          {
+            id_venta: 1,
+            estado: 'emitida',
+            valor_total: 20000,
+            propina: 0,
+            fecha_hora: new Date(),
+            id_mesa: 1,
+            mesa: { numero: 1 },
+            usuario: { nombre: 'Mesero' },
+            pagos: [{ monto: 20000, medioPago: { nombre: 'Efectivo' } }],
+            pedidos: [
+              {
+                items: [
+                  {
+                    cantidad: 1,
+                    producto: { id_producto: 1, nombre: 'Hamburguesa', precio_venta: 20000, costo: 10000 },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        gastos: [],
+      });
+
+      const estado = await service.obtenerEstadoActual();
+
+      expect(estado.resumen?.total_ventas).toBe(20000);
+      expect(estado.resumen?.costo_insumos).toBe(10000);
+      expect(estado.resumen?.utilidad_del_dia).toBe(10000);
+      expect(estado.resumen?.utilidad_neta).toBe(10000);
+      expect(estado.resumen?.margen_utilidad_porcentaje).toBe(50);
     });
 
     it('debe excluir facturas anuladas del cálculo de ventas y efectivo esperado', async () => {
@@ -340,6 +383,18 @@ describe('CajaService', () => {
 
     it('debe rechazar actualizar base con valor negativo', async () => {
       await expect(service.actualizarBaseCaja(-5000)).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('actualizarObservacionTurno', () => {
+    it('debe truncar observaciones a 255 caracteres para coincidir con VarChar(255) en Prisma', async () => {
+      prisma.caja.findUnique.mockResolvedValue({ id_caja: 1 });
+      prisma.caja.update.mockResolvedValue({ id_caja: 1, observacion: 'a'.repeat(255) });
+
+      await service.actualizarObservacionTurno(1, 'a'.repeat(400));
+
+      const data = prisma.caja.update.mock.calls[0][0].data;
+      expect(data.observacion.length).toBe(255);
     });
   });
 });

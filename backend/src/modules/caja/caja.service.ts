@@ -6,26 +6,9 @@ import {
 } from '@nestjs/common';
 import { EstadoCaja, EstadoFactura, EstadoPedido, Prisma, RolUsuario } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { normalizarMedioPago, redondearMoneda } from '../../common/utils/contabilidad.util';
 import { FiltroRangoFecha, resolverRangoFechaOpcional } from '../../common/utils/date-range.util';
 import { AbrirCajaDto, CerrarCajaDto, CreateGastoDto, UpdateGastoDto } from './dto';
-
-/**
- * Normaliza y categoriza un medio de pago para evitar inconsistencias contables por diferencias de mayúsculas o nombres extendidos.
- */
-function normalizarMedioPago(nombre?: string | null): 'efectivo' | 'tarjeta' | 'transferencia' {
-  const norm = (nombre || '').toLowerCase().trim();
-  if (norm.includes('efectivo')) return 'efectivo';
-  if (norm.includes('tarjeta') || norm.includes('datafono') || norm.includes('pos')) return 'tarjeta';
-  if (norm.includes('transferencia') || norm.includes('nequi') || norm.includes('daviplata') || norm.includes('bancolombia')) return 'transferencia';
-  return 'efectivo'; // Si no se especifica o no coincide, se asume efectivo por estándar físico de cajón
-}
-
-/**
- * Redondea valores a 2 decimales evitando imprecisiones de punto flotante binario (IEEE 754).
- */
-function redondearMoneda(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
-}
 
 @Injectable()
 export class CajaService {
@@ -63,7 +46,7 @@ export class CajaService {
 
   /**
    * Abre un nuevo turno de caja en el restaurante con una base inicial.
-   * Regla de negocio: Solo puede haber 1 caja abierta a la vez.
+   * Regla de negocio: Solo puede haber 1 caja abierta a la vez (serializado con bloqueo asesor).
    */
   async abrirCaja(dto: AbrirCajaDto, id_usuario: number) {
     if (dto.valor_inicial < 0) {
@@ -72,28 +55,38 @@ export class CajaService {
 
     await this.asegurarCatalogosBase();
 
-    const cajaAbierta = await this.prisma.caja.findFirst({
-      where: { estado: EstadoCaja.abierta },
-    });
+    const ejecutarApertura = async (tx: any) => {
+      if (typeof tx.$queryRaw === 'function') {
+        await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(730301)`;
+      }
 
-    if (cajaAbierta) {
-      throw new ConflictException(
-        `Ya existe un turno de caja abierto (Turno #${cajaAbierta.id_caja}) iniciado el ${cajaAbierta.fecha_apertura.toLocaleDateString()}.`,
-      );
-    }
+      const cajaAbierta = await tx.caja.findFirst({
+        where: { estado: EstadoCaja.abierta },
+      });
 
-    return this.prisma.caja.create({
-      data: {
-        id_usuario_apertura: id_usuario,
-        valor_inicial: new Prisma.Decimal(dto.valor_inicial),
-        estado: EstadoCaja.abierta,
-      },
-      include: {
-        usuarioApertura: {
-          select: { id_usuario: true, nombre: true, rol: true },
+      if (cajaAbierta) {
+        throw new ConflictException(
+          `Ya existe un turno de caja abierto (Turno #${cajaAbierta.id_caja}) iniciado el ${cajaAbierta.fecha_apertura.toLocaleDateString()}.`,
+        );
+      }
+
+      return tx.caja.create({
+        data: {
+          id_usuario_apertura: id_usuario,
+          valor_inicial: new Prisma.Decimal(dto.valor_inicial),
+          estado: EstadoCaja.abierta,
         },
-      },
-    });
+        include: {
+          usuarioApertura: {
+            select: { id_usuario: true, nombre: true, rol: true },
+          },
+        },
+      });
+    };
+
+    return typeof this.prisma.$transaction === 'function'
+      ? this.prisma.$transaction((tx) => ejecutarApertura(tx))
+      : ejecutarApertura(this.prisma);
   }
 
   /**
@@ -233,13 +226,11 @@ export class CajaService {
 
     const ventasNetas = redondearMoneda(totalVentas - totalPropinas);
 
-    // Utilidades del día:
-    // 1. Utilidad Operativa de Caja = Ventas Netas - Gastos Registrados en Caja
+    // Utilidades del día (Ganancia real del turno):
+    // Ganancia = Ventas Netas (sin propinas) - Costo de Preparación/Insumos de Productos Vendidos - Gastos Registrados en Caja
     const utilidadOperativa = redondearMoneda(ventasNetas - totalGastos);
-    // 2. Utilidad Neta Real = Ventas Netas - Costo Estimado de Insumos - Gastos Registrados
     const utilidadNeta = redondearMoneda(ventasNetas - totalCostoInsumos - totalGastos);
-    // 3. Margen de Utilidad porcentual sobre ventas netas
-    const margenUtilidadPorcentaje = ventasNetas > 0 ? redondearMoneda((utilidadOperativa / ventasNetas) * 100) : 0;
+    const margenUtilidadPorcentaje = ventasNetas > 0 ? redondearMoneda((utilidadNeta / ventasNetas) * 100) : 0;
 
     // Efectivo esperado en cajón: Base Inicial + Ventas en Efectivo - Gastos retirados en Efectivo
     const efectivoEsperado = redondearMoneda(valorBase + ventasEfectivo - gastosEfectivo);
@@ -299,7 +290,8 @@ export class CajaService {
         total_movimientos_gasto: caja.gastos.length,
         efectivo_esperado: efectivoEsperado,
         costo_insumos: totalCostoInsumos,
-        utilidad_del_dia: utilidadOperativa,
+        utilidad_operativa: utilidadOperativa,
+        utilidad_del_dia: utilidadNeta,
         utilidad_neta: utilidadNeta,
         margen_utilidad_porcentaje: margenUtilidadPorcentaje,
       },
@@ -360,109 +352,205 @@ export class CajaService {
   }
 
   /**
-   * Realiza el arqueo y cierre del turno de caja comparando teórico vs físico.
+   * Realiza el arqueo y cierre atómico del turno de caja comparando teórico vs físico.
    */
   async cerrarCaja(dto: CerrarCajaDto, id_usuario: number) {
     if (dto.valor_final_fisico < 0) {
       throw new BadRequestException('El valor físico final no puede ser negativo.');
     }
 
-    const estadoActual = await this.obtenerEstadoActual();
+    await this.asegurarCatalogosBase();
 
-    if (!estadoActual.abierta || !estadoActual.caja || !estadoActual.resumen) {
-      throw new BadRequestException('No hay ninguna caja abierta en el sistema para realizar arqueo.');
-    }
-
-    // 1. Validar que no existan pedidos pendientes de pago o sin facturar
-    const pedidosSinFacturar = await this.prisma.pedido.count({
-      where: {
-        estado: EstadoPedido.enviada,
-        id_factura: null,
-      },
-    });
-
-    if (pedidosSinFacturar > 0) {
-      throw new BadRequestException(
-        `No es posible cerrar la caja: existen ${pedidosSinFacturar} comanda(s) activas sin cobrar ni facturar. Debes cobrar o cancelar todas las cuentas antes de realizar el arqueo.`,
-      );
-    }
-
-    // 2. Al cerrar formalmente el turno de caja, cualquier pedido facturado en esta jornada
-    // que aún se encuentre en reparto/preparación se archiva operativamente como 'cerrada'.
-    await this.prisma.pedido.updateMany({
-      where: {
-        estado: EstadoPedido.enviada,
-        id_factura: { not: null },
-      },
-      data: {
-        estado: EstadoPedido.cerrada,
-      },
-    });
-
-    const valorTeorico = redondearMoneda(estadoActual.resumen.efectivo_esperado);
-    const valorFisico = redondearMoneda(dto.valor_final_fisico);
-    let diferencia = redondearMoneda(valorFisico - valorTeorico);
-
-    // Evitar discrepancias espurias por microfracciones flotantes IEEE 754
-    if (Math.abs(diferencia) < 0.01) {
-      diferencia = 0;
-    }
-
-    // Consolidar observaciones y conciliación de transferencias bancarias
-    const notas: string[] = [];
-    if (dto.valor_transferencias_reportado !== undefined && dto.valor_transferencias_reportado !== null) {
-      const reporteTransf = redondearMoneda(dto.valor_transferencias_reportado);
-      const difTransf = redondearMoneda(reporteTransf - estadoActual.resumen.ventas_transferencia);
-      if (difTransf !== 0) {
-        notas.push(`[Transf. Banco: $${reporteTransf} vs Sistema: $${estadoActual.resumen.ventas_transferencia} (Dif: ${difTransf > 0 ? '+' : ''}$${difTransf})]`);
-      } else {
-        notas.push(`[Transf. Banco conciliada exacta: $${reporteTransf}]`);
+    const ejecutarCierre = async (tx: any) => {
+      if (typeof tx.$queryRaw === 'function') {
+        await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(730301)`;
       }
-    }
-    if (dto.observacion?.trim()) {
-      notas.push(dto.observacion.trim());
-    }
-    const observacionFinal = notas.length > 0 ? notas.join(' | ').substring(0, 255) : null;
 
-    const cajaCerrada = await this.prisma.caja.update({
-      where: { id_caja: estadoActual.caja.id_caja },
-      data: {
-        id_usuario_cierre: id_usuario,
-        fecha_cierre: new Date(),
-        valor_final_teorico: new Prisma.Decimal(valorTeorico),
-        valor_final_fisico: new Prisma.Decimal(valorFisico),
-        diferencia: new Prisma.Decimal(diferencia),
-        observacion: observacionFinal,
-        estado: EstadoCaja.cerrada,
-      },
-      include: {
-        usuarioApertura: { select: { nombre: true } },
-        usuarioCierre: { select: { nombre: true } },
-      },
-    });
+      const caja = await tx.caja.findFirst({
+        where: { estado: EstadoCaja.abierta },
+        include: {
+          usuarioApertura: {
+            select: { id_usuario: true, nombre: true, rol: true },
+          },
+          facturas: {
+            include: {
+              mesa: true,
+              usuario: { select: { id_usuario: true, nombre: true } },
+              pagos: { include: { medioPago: true } },
+              pedidos: {
+                include: {
+                  items: {
+                    include: {
+                      producto: {
+                        select: { id_producto: true, nombre: true, costo: true, precio_venta: true },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            orderBy: { fecha_hora: 'desc' },
+          },
+          gastos: {
+            include: {
+              tipoGasto: true,
+              medioPago: true,
+              usuario: { select: { id_usuario: true, nombre: true } },
+            },
+            orderBy: { fecha_hora: 'desc' },
+          },
+        },
+      });
 
-    return {
-      exito: true,
-      caja_id: cajaCerrada.id_caja,
-      fecha_apertura: cajaCerrada.fecha_apertura,
-      fecha_cierre: cajaCerrada.fecha_cierre,
-      valor_inicial: Number(cajaCerrada.valor_inicial),
-      total_ventas: estadoActual.resumen.total_ventas,
-      ventas_efectivo: estadoActual.resumen.ventas_efectivo,
-      ventas_transferencia: estadoActual.resumen.ventas_transferencia,
-      ventas_tarjeta: estadoActual.resumen.ventas_tarjeta,
-      total_gastos: estadoActual.resumen.total_gastos,
-      gastos_efectivo: estadoActual.resumen.gastos_efectivo,
-      total_propinas: estadoActual.resumen.total_propinas,
-      valor_final_teorico: valorTeorico,
-      valor_final_fisico: valorFisico,
-      diferencia,
-      utilidad_del_dia: estadoActual.resumen.utilidad_del_dia,
-      utilidad_neta: estadoActual.resumen.utilidad_neta,
-      observacion: cajaCerrada.observacion || undefined,
-      tipo_cuadre: diferencia === 0 ? 'exacto' : diferencia > 0 ? 'sobrante' : 'faltante',
-      cajero_cierre: cajaCerrada.usuarioCierre?.nombre || 'Cajero',
+      if (!caja) {
+        throw new BadRequestException('No hay ninguna caja abierta en el sistema para realizar arqueo.');
+      }
+
+      // 1. Validar que no existan pedidos pendientes de pago o sin facturar
+      const pedidosSinFacturar = await tx.pedido.count({
+        where: {
+          estado: EstadoPedido.enviada,
+          id_factura: null,
+        },
+      });
+
+      if (pedidosSinFacturar > 0) {
+        throw new BadRequestException(
+          `No es posible cerrar la caja: existen ${pedidosSinFacturar} comanda(s) activas sin cobrar ni facturar. Debes cobrar o cancelar todas las cuentas antes de realizar el arqueo.`,
+        );
+      }
+
+      // 2. Archivar operativamente pedidos facturados que sigan en estado 'enviada'
+      await tx.pedido.updateMany({
+        where: {
+          estado: EstadoPedido.enviada,
+          id_factura: { not: null },
+        },
+        data: {
+          estado: EstadoPedido.cerrada,
+        },
+      });
+
+      // 3. Calcular resumen contable dentro de la misma transacción serializada
+      const valorBase = redondearMoneda(Number(caja.valor_inicial));
+      let ventasEfectivo = 0;
+      let ventasTarjeta = 0;
+      let ventasTransferencia = 0;
+      let totalVentas = 0;
+      let totalPropinas = 0;
+      let totalCostoInsumos = 0;
+
+      for (const f of caja.facturas || []) {
+        if (f.estado === EstadoFactura.anulada) continue;
+        totalVentas += Number(f.valor_total);
+        totalPropinas += Number(f.propina || 0);
+        if (Array.isArray(f.pedidos)) {
+          for (const ped of f.pedidos) {
+            if (Array.isArray(ped.items)) {
+              for (const it of ped.items) {
+                totalCostoInsumos += (Number(it.cantidad) || 0) * (Number(it.producto?.costo) || 0);
+              }
+            }
+          }
+        }
+        for (const p of f.pagos || []) {
+          const met = normalizarMedioPago(p.medioPago?.nombre);
+          const monto = Number(p.monto);
+          if (met === 'efectivo') ventasEfectivo += monto;
+          else if (met === 'tarjeta') ventasTarjeta += monto;
+          else ventasTransferencia += monto;
+        }
+      }
+
+      let totalGastos = 0;
+      let gastosEfectivo = 0;
+      for (const g of caja.gastos || []) {
+        const monto = Number(g.total);
+        totalGastos += monto;
+        if (normalizarMedioPago(g.medioPago?.nombre) === 'efectivo' || !g.medioPago) {
+          gastosEfectivo += monto;
+        }
+      }
+
+      ventasEfectivo = redondearMoneda(ventasEfectivo);
+      ventasTarjeta = redondearMoneda(ventasTarjeta);
+      ventasTransferencia = redondearMoneda(ventasTransferencia);
+      totalVentas = redondearMoneda(totalVentas);
+      totalPropinas = redondearMoneda(totalPropinas);
+      totalGastos = redondearMoneda(totalGastos);
+      gastosEfectivo = redondearMoneda(gastosEfectivo);
+      totalCostoInsumos = redondearMoneda(totalCostoInsumos);
+
+      const ventasNetas = redondearMoneda(totalVentas - totalPropinas);
+      const utilidadNeta = redondearMoneda(ventasNetas - totalCostoInsumos - totalGastos);
+      const valorTeorico = redondearMoneda(valorBase + ventasEfectivo - gastosEfectivo);
+      const valorFisico = redondearMoneda(dto.valor_final_fisico);
+      let diferencia = redondearMoneda(valorFisico - valorTeorico);
+
+      if (Math.abs(diferencia) < 0.01) {
+        diferencia = 0;
+      }
+
+      // Consolidar observaciones y conciliación de transferencias bancarias
+      const notas: string[] = [];
+      if (dto.valor_transferencias_reportado !== undefined && dto.valor_transferencias_reportado !== null) {
+        const reporteTransf = redondearMoneda(dto.valor_transferencias_reportado);
+        const difTransf = redondearMoneda(reporteTransf - ventasTransferencia);
+        if (difTransf !== 0) {
+          notas.push(`[Transf. Banco: $${reporteTransf} vs Sistema: $${ventasTransferencia} (Dif: ${difTransf > 0 ? '+' : ''}$${difTransf})]`);
+        } else {
+          notas.push(`[Transf. Banco conciliada exacta: $${reporteTransf}]`);
+        }
+      }
+      if (dto.observacion?.trim()) {
+        notas.push(dto.observacion.trim());
+      }
+      const observacionFinal = notas.length > 0 ? notas.join(' | ').substring(0, 255) : null;
+
+      const cajaCerrada = await tx.caja.update({
+        where: { id_caja: caja.id_caja },
+        data: {
+          id_usuario_cierre: id_usuario,
+          fecha_cierre: new Date(),
+          valor_final_teorico: new Prisma.Decimal(valorTeorico),
+          valor_final_fisico: new Prisma.Decimal(valorFisico),
+          diferencia: new Prisma.Decimal(diferencia),
+          observacion: observacionFinal,
+          estado: EstadoCaja.cerrada,
+        },
+        include: {
+          usuarioApertura: { select: { nombre: true } },
+          usuarioCierre: { select: { nombre: true } },
+        },
+      });
+
+      return {
+        exito: true,
+        caja_id: cajaCerrada.id_caja,
+        fecha_apertura: cajaCerrada.fecha_apertura,
+        fecha_cierre: cajaCerrada.fecha_cierre,
+        valor_inicial: Number(cajaCerrada.valor_inicial),
+        total_ventas: totalVentas,
+        ventas_efectivo: ventasEfectivo,
+        ventas_transferencia: ventasTransferencia,
+        ventas_tarjeta: ventasTarjeta,
+        total_gastos: totalGastos,
+        gastos_efectivo: gastosEfectivo,
+        total_propinas: totalPropinas,
+        valor_final_teorico: valorTeorico,
+        valor_final_fisico: valorFisico,
+        diferencia,
+        utilidad_del_dia: utilidadNeta,
+        utilidad_neta: utilidadNeta,
+        observacion: cajaCerrada.observacion || undefined,
+        tipo_cuadre: diferencia === 0 ? 'exacto' : diferencia > 0 ? 'sobrante' : 'faltante',
+        cajero_cierre: cajaCerrada.usuarioCierre?.nombre || 'Cajero',
+      };
     };
+
+    return typeof this.prisma.$transaction === 'function'
+      ? this.prisma.$transaction((tx) => ejecutarCierre(tx))
+      : ejecutarCierre(this.prisma);
   }
 
   /**
@@ -522,6 +610,17 @@ export class CajaService {
             pagos: {
               include: { medioPago: true },
             },
+            pedidos: {
+              include: {
+                items: {
+                  include: {
+                    producto: {
+                      select: { costo: true },
+                    },
+                  },
+                },
+              },
+            },
           },
         },
         gastos: {
@@ -539,6 +638,7 @@ export class CajaService {
       let ventasTransferencia = 0;
       let ventasTarjeta = 0;
       let totalPropinas = 0;
+      let totalCostoInsumos = 0;
       let facturasValidas = 0;
       let facturasAnuladas = 0;
 
@@ -551,6 +651,16 @@ export class CajaService {
         facturasValidas++;
         totalVentas += Number(fac.valor_total);
         totalPropinas += Number(fac.propina);
+
+        if (Array.isArray((fac as any).pedidos)) {
+          for (const ped of (fac as any).pedidos) {
+            if (Array.isArray(ped.items)) {
+              for (const it of ped.items) {
+                totalCostoInsumos += (Number(it.cantidad) || 0) * (Number(it.producto?.costo) || 0);
+              }
+            }
+          }
+        }
 
         for (const p of fac.pagos) {
           const monto = Number(p.monto);
@@ -584,7 +694,9 @@ export class CajaService {
         diferencia: Number(t.diferencia || 0),
         total_ventas: redondearMoneda(totalVentas),
         ventas_netas: redondearMoneda(totalVentas - totalPropinas),
-        utilidad_del_dia: redondearMoneda(totalVentas - totalPropinas - totalGastos),
+        costo_insumos: redondearMoneda(totalCostoInsumos),
+        utilidad_del_dia: redondearMoneda(totalVentas - totalPropinas - totalCostoInsumos - totalGastos),
+        utilidad_neta: redondearMoneda(totalVentas - totalPropinas - totalCostoInsumos - totalGastos),
         ventas_efectivo: redondearMoneda(ventasEfectivo),
         ventas_transferencia: redondearMoneda(ventasTransferencia),
         ventas_tarjeta: redondearMoneda(ventasTarjeta),
@@ -614,7 +726,7 @@ export class CajaService {
 
     const textoObservacion =
       typeof observacion === 'string' && observacion.trim().length > 0
-        ? observacion.trim().slice(0, 500)
+        ? observacion.trim().slice(0, 255)
         : null;
 
     return this.prisma.caja.update({
@@ -742,6 +854,11 @@ export class CajaService {
         caja: { select: { id_caja: true, estado: true, fecha_apertura: true } },
         usuario: { select: { id_usuario: true, nombre: true, rol: true } },
       },
+    }).then(async (gastoActualizado) => {
+      if (gasto.caja?.estado === EstadoCaja.cerrada) {
+        await this.recalcularArqueoCajaCerrada(gasto.id_caja);
+      }
+      return gastoActualizado;
     });
   }
 
@@ -751,6 +868,7 @@ export class CajaService {
   async eliminarGasto(id: number) {
     const gasto = await this.prisma.gasto.findUnique({
       where: { id_gasto: id },
+      include: { caja: true },
     });
 
     if (!gasto) {
@@ -761,9 +879,61 @@ export class CajaService {
       where: { id_gasto: id },
     });
 
+    if (gasto.caja?.estado === EstadoCaja.cerrada) {
+      await this.recalcularArqueoCajaCerrada(gasto.id_caja);
+    }
+
     return {
       success: true,
       mensaje: `Gasto #${id} eliminado exitosamente.`,
     };
+  }
+
+  /**
+   * Recalcula el valor teórico en efectivo y la diferencia de una caja cerrada tras ajustes retroactivos de un administrador.
+   */
+  private async recalcularArqueoCajaCerrada(id_caja: number): Promise<void> {
+    const caja = await this.prisma.caja.findUnique({
+      where: { id_caja },
+      include: {
+        facturas: {
+          where: { estado: EstadoFactura.emitida },
+          include: { pagos: { include: { medioPago: true } } },
+        },
+        gastos: {
+          include: { medioPago: true },
+        },
+      },
+    });
+    if (!caja || caja.estado !== EstadoCaja.cerrada) return;
+
+    let ventasEfectivo = 0;
+    for (const f of caja.facturas) {
+      for (const p of f.pagos) {
+        if (normalizarMedioPago(p.medioPago?.nombre) === 'efectivo') {
+          ventasEfectivo += Number(p.monto);
+        }
+      }
+    }
+
+    let gastosEfectivo = 0;
+    for (const g of caja.gastos) {
+      if (normalizarMedioPago(g.medioPago?.nombre) === 'efectivo' || !g.medioPago) {
+        gastosEfectivo += Number(g.total);
+      }
+    }
+
+    const nuevoTeorico = redondearMoneda(Number(caja.valor_inicial) + ventasEfectivo - gastosEfectivo);
+    const fisico = Number(caja.valor_final_fisico ?? nuevoTeorico);
+    let nuevaDif = redondearMoneda(fisico - nuevoTeorico);
+    if (Math.abs(nuevaDif) < 0.01) nuevaDif = 0;
+
+    await this.prisma.caja.update({
+      where: { id_caja },
+      data: {
+        valor_final_teorico: new Prisma.Decimal(nuevoTeorico),
+        diferencia: new Prisma.Decimal(nuevaDif),
+      },
+    });
   }
 }

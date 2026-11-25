@@ -39,10 +39,20 @@ export class CatalogoService {
     }
 
     let ingredientesStr: string | null = null;
-    if (createProductoDto.ingredientes_removibles) {
-      ingredientesStr = Array.isArray(createProductoDto.ingredientes_removibles)
-        ? createProductoDto.ingredientes_removibles.join(', ')
-        : createProductoDto.ingredientes_removibles;
+    if (createProductoDto.ingredientes_removibles !== undefined && createProductoDto.ingredientes_removibles !== null) {
+      if (Array.isArray(createProductoDto.ingredientes_removibles)) {
+        ingredientesStr = createProductoDto.ingredientes_removibles
+          .map((s) => String(s).trim())
+          .filter(Boolean)
+          .join(', ')
+          .slice(0, 255);
+      } else if (typeof createProductoDto.ingredientes_removibles === 'string') {
+        ingredientesStr = createProductoDto.ingredientes_removibles.trim().slice(0, 255) || null;
+      } else {
+        throw new BadRequestException(
+          'ingredientes_removibles debe ser texto o una lista de textos.',
+        );
+      }
     }
 
     const controlaInventario = createProductoDto.controla_inventario ?? false;
@@ -69,8 +79,9 @@ export class CatalogoService {
   /**
    * Consulta el catálogo de productos con filtros opcionales de categoría,
    * disponibilidad y búsqueda por coincidencia de nombre.
+   * Por seguridad comercial, omite el campo `costo` en consultas públicas/sin privilegios.
    */
-  async obtenerTodos(query?: QueryProductoDto) {
+  async obtenerTodos(query?: QueryProductoDto, incluirCosto = true) {
     const where: any = {};
 
     if (query?.categoria) {
@@ -92,6 +103,24 @@ export class CatalogoService {
           mode: 'insensitive',
         };
       }
+    }
+
+    if (!incluirCosto) {
+      return this.prisma.producto.findMany({
+        where,
+        orderBy: [{ categoria: 'asc' }, { nombre: 'asc' }],
+        select: {
+          id_producto: true,
+          nombre: true,
+          categoria: true,
+          precio_venta: true,
+          ingredientes_removibles: true,
+          cantidad_inventario: true,
+          controla_inventario: true,
+          disponible: true,
+          imagen: true,
+        },
+      });
     }
 
     return this.prisma.producto.findMany({
@@ -144,9 +173,19 @@ export class CatalogoService {
 
     let ingredientesStr: string | undefined = undefined;
     if (updateProductoDto.ingredientes_removibles !== undefined) {
-      ingredientesStr = Array.isArray(updateProductoDto.ingredientes_removibles)
-        ? updateProductoDto.ingredientes_removibles.join(', ')
-        : updateProductoDto.ingredientes_removibles;
+      if (Array.isArray(updateProductoDto.ingredientes_removibles)) {
+        ingredientesStr = updateProductoDto.ingredientes_removibles
+          .map((s) => String(s).trim())
+          .filter(Boolean)
+          .join(', ')
+          .slice(0, 255);
+      } else if (typeof updateProductoDto.ingredientes_removibles === 'string') {
+        ingredientesStr = updateProductoDto.ingredientes_removibles.trim().slice(0, 255);
+      } else {
+        throw new BadRequestException(
+          'ingredientes_removibles debe ser texto o una lista de textos.',
+        );
+      }
     }
 
     const controlaInventario = updateProductoDto.controla_inventario;
@@ -194,32 +233,34 @@ export class CatalogoService {
   }
 
   /**
-   * Elimina un producto de forma física si no tiene historial comercial en pedidos.
+   * Elimina un producto de forma física atómica si no tiene historial comercial en pedidos.
    */
   async eliminar(id: number) {
     const producto = await this.obtenerPorId(id);
 
-    const pedidosCount = await this.prisma.itemPedido.count({
-      where: { id_producto: id },
+    return this.prisma.$transaction(async (tx) => {
+      const pedidosCount = await tx.itemPedido.count({
+        where: { id_producto: id },
+      });
+
+      if (pedidosCount > 0) {
+        throw new ConflictException(
+          `No es posible eliminar el producto '${producto.nombre}' porque cuenta con ${pedidosCount} registro(s) histórico(s) en comandas. Desactiva su disponibilidad en su lugar.`,
+        );
+      }
+
+      await tx.ajusteInventario.deleteMany({
+        where: { id_producto: id },
+      });
+
+      await tx.producto.delete({
+        where: { id_producto: id },
+      });
+
+      return {
+        mensaje: `Producto '${producto.nombre}' eliminado correctamente del catálogo.`,
+      };
     });
-
-    if (pedidosCount > 0) {
-      throw new ConflictException(
-        `No es posible eliminar el producto '${producto.nombre}' porque cuenta con ${pedidosCount} registro(s) histórico(s) en comandas. Desactiva su disponibilidad en su lugar.`,
-      );
-    }
-
-    await this.prisma.ajusteInventario.deleteMany({
-      where: { id_producto: id },
-    });
-
-    await this.prisma.producto.delete({
-      where: { id_producto: id },
-    });
-
-    return {
-      mensaje: `Producto '${producto.nombre}' eliminado correctamente del catálogo.`,
-    };
   }
 
   /**
@@ -252,6 +293,15 @@ export class CatalogoService {
 
       if (!usuario) {
         throw new NotFoundException(`El usuario con ID #${id_usuario} no fue encontrado.`);
+      }
+
+      if (
+        (dto.tipo_ajuste === TipoAjuste.Entrada || dto.tipo_ajuste === TipoAjuste.Merma) &&
+        dto.cantidad <= 0
+      ) {
+        throw new BadRequestException(
+          `La cantidad para un ajuste de tipo '${dto.tipo_ajuste}' debe ser mayor a 0.`,
+        );
       }
 
       let nuevoStock = producto.cantidad_inventario;

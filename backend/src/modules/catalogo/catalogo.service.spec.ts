@@ -173,6 +173,17 @@ describe('CatalogoService', () => {
         orderBy: [{ categoria: 'asc' }, { nombre: 'asc' }],
       });
     });
+
+    it('debe omitir la columna costo en la proyección cuando incluirCosto es false (vista pública)', async () => {
+      prisma.producto.findMany.mockResolvedValue([{ id_producto: 1, nombre: 'Pizza', precio_venta: 20000 }]);
+
+      await service.obtenerTodos({}, false);
+
+      const args = prisma.producto.findMany.mock.calls[0][0];
+      expect(args.select).toBeDefined();
+      expect(args.select.costo).toBeUndefined();
+      expect(args.select.precio_venta).toBe(true);
+    });
   });
 
   describe('obtenerPorId', () => {
@@ -380,6 +391,27 @@ describe('CatalogoService', () => {
           tipo_ajuste: TipoAjuste.Entrada,
           cantidad: 10,
           motivo: 'Intento de ajuste en comida preparada',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('debe rechazar cantidad 0 para ajustes de tipo Entrada o Merma', async () => {
+      prisma.producto.findUnique.mockResolvedValue(mockProducto);
+      prisma.usuario.findUnique.mockResolvedValue(mockUsuario);
+
+      await expect(
+        service.registrarAjusteInventario(1, 5, {
+          tipo_ajuste: TipoAjuste.Entrada,
+          cantidad: 0,
+          motivo: 'Entrada cero inválida',
+        }),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        service.registrarAjusteInventario(1, 5, {
+          tipo_ajuste: TipoAjuste.Merma,
+          cantidad: 0,
+          motivo: 'Merma cero inválida',
         }),
       ).rejects.toThrow(BadRequestException);
     });

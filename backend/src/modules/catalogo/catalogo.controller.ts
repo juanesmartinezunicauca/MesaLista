@@ -86,8 +86,13 @@ export class CatalogoController {
   @ApiResponse({ status: 200, description: 'Catálogo obtenido exitosamente.' })
   @Public()
   @Get('productos')
-  obtenerProductos(@Query() query: QueryProductoDto) {
-    return this.catalogoService.obtenerTodos(query);
+  obtenerProductos(
+    @Query() query: QueryProductoDto,
+    @CurrentUser() usuario?: { rol?: RolUsuario },
+  ) {
+    const incluirCosto =
+      usuario?.rol === RolUsuario.administrador || usuario?.rol === RolUsuario.cajero;
+    return this.catalogoService.obtenerTodos(query, incluirCosto);
   }
 
   /**

@@ -72,11 +72,23 @@
             <span>Iniciar Sesión / Registrarse</span>
           </button>
         } @else {
+          @if (esPersonalOperativo()) {
+            <button
+              type="button"
+              class="btn-back-pos"
+              (click)="volverAlPos()"
+              title="Volver al panel operativo del restaurante"
+              aria-label="Volver al panel operativo"
+            >
+              <mat-icon>point_of_sale</mat-icon>
+              <span>Ir al POS</span>
+            </button>
+          }
           <div class="user-chip-box">
             <div class="user-avatar">{{ currentUser()?.iniciales || 'CL' }}</div>
             <div class="user-meta">
               <span class="user-name">{{ currentUser()?.nombre }}</span>
-              <span class="user-role-badge">Cliente</span>
+              <span class="user-role-badge">{{ esPersonalOperativo() ? (currentUser()?.rol | titlecase) : 'Cliente' }}</span>
             </div>
             <button
               mat-icon-button
@@ -642,27 +654,29 @@
               id="clienteModalDir"
               type="text"
               class="field-input"
-              placeholder="Ej. Calle 15 # 8-42, Barrio Bolívar"
+              placeholder="Ej. Calle 15 # 8-42"
               [value]="direccionEntrega()"
-              (input)="direccionEntrega.set($any($event.target).value)"
+              (input)="onDireccionChange($any($event.target).value)"
             />
           </div>
 
           <div class="field-item">
-            <label class="field-label" for="zonaEntregaCliente">Zona de Entrega en Popayán *</label>
+            <label class="field-label" for="zonaEntregaCliente">Barrio en Popayán *</label>
             <select
               id="zonaEntregaCliente"
               class="field-input zone-select"
-              [value]="zonaSeleccionada().id"
-              (change)="cambiarZona($any($event.target).value)"
+              [value]="barrioSeleccionado()"
+              (change)="cambiarBarrio($any($event.target).value)"
             >
-              @for (z of zonasPopayan; track z.id) {
-                <option [value]="z.id">
-                  {{ z.nombre }} — ${{ z.tarifa | number:'1.0-0' }} COP
+              @for (b of barriosPopayan; track b.nombre) {
+                <option [value]="b.nombre">
+                  {{ b.nombre }}
                 </option>
               }
             </select>
-            <small class="field-help">Cobertura: {{ zonaSeleccionada().descripcion }}</small>
+            <small class="field-help">
+              Zona asignada automáticamente: <strong>{{ zonaSeleccionada().nombre }}</strong> — Envío: <strong>${{ costoEnvio() | number:'1.0-0' }} COP</strong>
+            </small>
           </div>
 
           <div class="field-item">

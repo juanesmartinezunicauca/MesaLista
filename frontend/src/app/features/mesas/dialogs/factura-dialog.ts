@@ -182,7 +182,10 @@ export class FacturaDialogComponent {
       return this.data.mesa.total_acumulado || 0;
     }
     if (this.data?.pedido) {
-      return Number(this.data.pedido.totalCalculado || 0);
+      if (this.data.pedido.subtotalProductos !== undefined) {
+        return Number(this.data.pedido.subtotalProductos);
+      }
+      return Math.max(0, Number(this.data.pedido.totalCalculado || 0) - this.costoEnvio());
     }
     return 0;
   });

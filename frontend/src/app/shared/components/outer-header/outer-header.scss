@@ -16,6 +16,34 @@
     display: flex;
     align-items: center;
 
+    .btn-vista-cliente {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: $radius-full;
+      border: 1px solid $border-color;
+      background-color: $bg-app;
+      color: $text-primary;
+      text-decoration: none;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      transition: all $transition-fast;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: $brand-orange;
+      }
+
+      &:hover {
+        border-color: $brand-orange;
+        color: $brand-orange;
+        background-color: rgba(249, 115, 22, 0.08);
+      }
+    }
+
     .brand-venue-badge {
       display: inline-flex;
       align-items: center;

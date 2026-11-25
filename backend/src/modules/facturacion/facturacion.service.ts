@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -14,6 +16,7 @@ import {
   TipoPedido,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { normalizarMedioPago, redondearMoneda } from '../../common/utils/contabilidad.util';
 import { FiltroRangoFecha, resolverRangoFechaOpcional } from '../../common/utils/date-range.util';
 import { CreateFacturaDto, UpdateFacturaDto } from './dto';
 
@@ -33,126 +36,168 @@ export class FacturacionService {
     disponible: true,
   } as const;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
+
+  /**
+   * Extrae el costo de envío embebido en la etiqueta [ENVIO: XXXX] de un pedido a domicilio.
+   */
+  private extraerCostoEnvioDePedido(observacion?: string | null): number {
+    if (!observacion) return 0;
+    const match = observacion.match(/\[ENVIO:([^\]]+)\]/i);
+    if (!match) return 0;
+    const digitos = match[1].replace(/\D/g, '');
+    return digitos ? Number.parseInt(digitos, 10) : 0;
+  }
 
   /**
    * Genera la factura de cobro, registra los pagos, asocia a la caja activa
-   * del turno, cierra los pedidos y libera la mesa.
+   * del turno, cierra los pedidos y libera la mesa de forma completamente transaccional.
    */
   async crearFactura(dto: CreateFacturaDto, id_usuario: number) {
-    // 1. Validar que exista una caja abierta en el restaurante
-    const cajaActiva = await this.prisma.caja.findFirst({
-      where: { estado: EstadoCaja.abierta },
-    });
-
-    if (!cajaActiva) {
-      throw new BadRequestException(
-        'No se puede procesar el cobro: No hay un turno de caja abierto. Por favor abra la caja antes de facturar.',
-      );
+    if (!dto.pagos || dto.pagos.length === 0) {
+      throw new BadRequestException('Debe especificar al menos un medio de pago.');
     }
 
-    // 2. Si es una mesa o un pedido específico (ej. domicilio), buscar los pedidos activos
-    let subtotal = 0;
-    let pedidosActivos: any[] = [];
-    let clienteNombreFinal = dto.cliente_nombre;
-    let clienteEmailFinal = dto.cliente_email;
-
-    if (dto.id_mesa) {
-      const mesa = await this.prisma.mesa.findUnique({
-        where: { id_mesa: dto.id_mesa },
-      });
-
-      if (!mesa) {
-        throw new NotFoundException(`La mesa #${dto.id_mesa} no existe.`);
+    return this.prisma.$transaction(async (tx) => {
+      // Bloqueo asesor de transacción en PostgreSQL para evitar doble facturación simultánea
+      if (typeof (tx as any).$queryRaw === 'function') {
+        await (tx as any).$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(730201)`;
       }
 
-      pedidosActivos = await this.prisma.pedido.findMany({
-        where: {
-          id_mesa: dto.id_mesa,
-          estado: EstadoPedido.enviada,
-        },
-        include: {
-          items: true,
-        },
+      // 1. Validar que exista una caja abierta en el restaurante dentro de la transacción
+      const cajaActiva = await tx.caja.findFirst({
+        where: { estado: EstadoCaja.abierta },
       });
 
-      if (pedidosActivos.length === 0) {
+      if (!cajaActiva) {
         throw new BadRequestException(
-          `La mesa #${mesa.numero} no tiene pedidos activos pendientes de cobro.`,
+          'No se puede procesar el cobro: No hay un turno de caja abierto. Por favor abra la caja antes de facturar.',
         );
       }
 
-      for (const ped of pedidosActivos) {
-        for (const it of ped.items) {
+      // 2. Si es una mesa o un pedido específico (ej. domicilio), buscar los pedidos activos sin facturar
+      let subtotal = 0;
+      let pedidosActivos: any[] = [];
+      let clienteNombreFinal = dto.cliente_nombre;
+      let clienteEmailFinal = dto.cliente_email;
+      const propina = redondearMoneda(dto.propina || 0);
+
+      if (dto.id_mesa) {
+        const mesa = await tx.mesa.findUnique({
+          where: { id_mesa: dto.id_mesa },
+        });
+
+        if (!mesa) {
+          throw new NotFoundException(`La mesa #${dto.id_mesa} no existe.`);
+        }
+
+        pedidosActivos = await tx.pedido.findMany({
+          where: {
+            id_mesa: dto.id_mesa,
+            estado: EstadoPedido.enviada,
+            id_factura: null,
+          },
+          include: {
+            items: true,
+          },
+        });
+
+        if (pedidosActivos.length === 0) {
+          throw new BadRequestException(
+            `La mesa #${mesa.numero} no tiene pedidos activos pendientes de cobro.`,
+          );
+        }
+
+        for (const ped of pedidosActivos) {
+          for (const it of ped.items) {
+            subtotal += it.cantidad * Number(it.precio_unitario);
+          }
+        }
+      } else if (dto.id_pedido) {
+        const pedido = await tx.pedido.findUnique({
+          where: { id_pedido: dto.id_pedido },
+          include: {
+            items: true,
+          },
+        });
+
+        if (!pedido) {
+          throw new NotFoundException(`El pedido #${dto.id_pedido} no existe.`);
+        }
+
+        // Prevenir doble facturación o bypass de permisos de edición de factura
+        if (pedido.id_factura) {
+          throw new ConflictException(
+            `El pedido #${dto.id_pedido} ya cuenta con la factura #FAC-${pedido.id_factura}. Para modificarla utiliza la edición de factura con rol autorizado.`,
+          );
+        }
+
+        if (pedido.estado !== EstadoPedido.enviada) {
+          throw new BadRequestException(
+            `El pedido #${dto.id_pedido} no puede ser cobrado porque se encuentra en estado '${pedido.estado}'.`,
+          );
+        }
+
+        pedidosActivos = [pedido];
+        clienteNombreFinal = clienteNombreFinal || pedido.cliente_nombre || undefined;
+        clienteEmailFinal = clienteEmailFinal || pedido.cliente_email || undefined;
+
+        for (const it of pedido.items) {
           subtotal += it.cantidad * Number(it.precio_unitario);
         }
-      }
-    } else if (dto.id_pedido) {
-      const pedido = await this.prisma.pedido.findUnique({
-        where: { id_pedido: dto.id_pedido },
-        include: {
-          items: true,
-        },
-      });
-
-      if (!pedido) {
-        throw new NotFoundException(`El pedido #${dto.id_pedido} no existe.`);
-      }
-
-      // Si el pedido ya cuenta con una factura registrada, editar la misma en vez de crear duplicados
-      if (pedido.id_factura) {
-        return this.actualizarFactura(pedido.id_factura, {
-          pagos: dto.pagos,
-          propina: dto.propina,
-          observacion: dto.observacion,
-        });
+        subtotal += this.extraerCostoEnvioDePedido(pedido.observacion);
+      } else {
+        // Venta directa sin mesa ni pedido: el total recibido incluye el valor de la venta + propina
+        const sumaPagos = redondearMoneda(dto.pagos.reduce((acc, p) => acc + Number(p.monto), 0));
+        if (sumaPagos < propina) {
+          throw new BadRequestException(
+            `El monto pagado ($${sumaPagos.toLocaleString()}) no puede ser inferior a la propina ($${propina.toLocaleString()}).`,
+          );
+        }
+        subtotal = redondearMoneda(sumaPagos - propina);
       }
 
-      if (pedido.estado !== EstadoPedido.enviada) {
+      subtotal = redondearMoneda(subtotal);
+      const valorTotal = redondearMoneda(subtotal + propina);
+
+      // 3. Validar que la suma de los pagos cubra el total (sin mutar el DTO original)
+      const pagosAjustados = dto.pagos.map((p) => ({
+        medio_pago: p.medio_pago.trim(),
+        monto: redondearMoneda(Number(p.monto)),
+      }));
+      const totalPagado = redondearMoneda(pagosAjustados.reduce((acc, p) => acc + p.monto, 0));
+      if (totalPagado < valorTotal) {
         throw new BadRequestException(
-          `El pedido #${dto.id_pedido} no puede ser cobrado porque se encuentra en estado '${pedido.estado}'.`,
+          `El monto pagado ($${totalPagado.toLocaleString()}) no cubre el valor total ($${valorTotal.toLocaleString()}).`,
         );
       }
 
-      pedidosActivos = [pedido];
-      clienteNombreFinal = clienteNombreFinal || pedido.cliente_nombre || undefined;
-      clienteEmailFinal = clienteEmailFinal || pedido.cliente_email || undefined;
-
-      for (const it of pedido.items) {
-        subtotal += it.cantidad * Number(it.precio_unitario);
+      // Regla contable: Si el monto pagado supera el valor total (ej. cambio/vueltos en efectivo en pago único o mixto),
+      // ajustar el tramo en efectivo para que la suma de pagos asentada en caja coincida exactamente con valor_total.
+      if (totalPagado > valorTotal) {
+        const excedente = redondearMoneda(totalPagado - valorTotal);
+        const pagoEfectivo = pagosAjustados.find(
+          (p) => normalizarMedioPago(p.medio_pago) === 'efectivo' && p.monto >= excedente,
+        );
+        if (pagoEfectivo) {
+          pagoEfectivo.monto = redondearMoneda(pagoEfectivo.monto - excedente);
+        } else if (pagosAjustados.length === 1) {
+          pagosAjustados[0].monto = valorTotal;
+        } else {
+          throw new BadRequestException(
+            `La suma de los pagos electrónicos ($${totalPagado.toLocaleString()}) no puede exceder el valor total de la factura ($${valorTotal.toLocaleString()}).`,
+          );
+        }
       }
-    } else {
-      // Venta directa sin mesa ni pedido: el subtotal se toma del pago total
-      subtotal = dto.pagos.reduce((acc, p) => acc + p.monto, 0);
-    }
 
-    const propina = dto.propina || 0;
-    const valorTotal = subtotal + propina;
-
-    // 3. Validar que la suma de los pagos cubra el total
-    let totalPagado = Math.round((dto.pagos.reduce((acc, p) => acc + p.monto, 0) + Number.EPSILON) * 100) / 100;
-    if (totalPagado < valorTotal) {
-      throw new BadRequestException(
-        `El monto pagado ($${totalPagado.toLocaleString()}) no cubre el valor total ($${valorTotal.toLocaleString()}).`,
-      );
-    }
-
-    // Regla contable: Si el pago fue en efectivo con billete de mayor denominación (se dio cambio/vueltos físico),
-    // el monto a asentar contablemente en el pago de caja es el valor total exacto de la factura.
-    if (totalPagado > valorTotal && dto.pagos.length === 1 && dto.pagos[0].medio_pago.toLowerCase().includes('efectivo')) {
-      dto.pagos[0].monto = valorTotal;
-    }
-
-    // 4. Transacción atómica: Factura + Pagos + Actualización de pedidos y mesa
-    return this.prisma.$transaction(async (tx) => {
-      // Crear la Factura
+      // 4. Crear la Factura
       const factura = await tx.factura.create({
         data: {
           id_caja: cajaActiva.id_caja,
           id_usuario,
           id_mesa: dto.id_mesa || null,
-          cliente_nombre: clienteNombreFinal || null,
-          cliente_email: clienteEmailFinal || null,
+          cliente_nombre: clienteNombreFinal ? clienteNombreFinal.trim().slice(0, 100) : null,
+          cliente_email: clienteEmailFinal ? clienteEmailFinal.trim().slice(0, 100) : null,
           valor: new Prisma.Decimal(subtotal),
           propina: new Prisma.Decimal(propina),
           valor_total: new Prisma.Decimal(valorTotal),
@@ -161,14 +206,14 @@ export class FacturacionService {
       });
 
       // Crear cada registro de Pago
-      for (const p of dto.pagos) {
+      for (const p of pagosAjustados) {
         let medio = await tx.medioPago.findUnique({
           where: { nombre: p.medio_pago },
         });
 
         if (!medio) {
           medio = await tx.medioPago.create({
-            data: { nombre: p.medio_pago },
+            data: { nombre: p.medio_pago.slice(0, 50) },
           });
         }
 
@@ -181,30 +226,25 @@ export class FacturacionService {
         });
       }
 
-      // Marcar los pedidos como asociados a la factura
+      // Marcar los pedidos como asociados a la factura verificando que sigan sin facturar
       if (pedidosActivos.length > 0) {
-        if (dto.id_mesa) {
-          // Si es salón, cerrar pedidos de la mesa
-          await tx.pedido.updateMany({
-            where: {
-              id_pedido: { in: pedidosActivos.map((p) => p.id_pedido) },
-            },
-            data: {
-              id_factura: factura.id_venta,
-              estado: EstadoPedido.cerrada,
-            },
-          });
-        } else {
-          // Si es domicilio (o pedido específico), asociar factura sin cerrar comanda obligatoriamente
-          await tx.pedido.updateMany({
-            where: {
-              id_pedido: { in: pedidosActivos.map((p) => p.id_pedido) },
-            },
-            data: {
-              id_factura: factura.id_venta,
-              ...(dto.cerrar_pedido ? { estado: EstadoPedido.cerrada } : {}),
-            },
-          });
+        const idsPedidos = pedidosActivos.map((p) => p.id_pedido);
+        const resUpdate = await tx.pedido.updateMany({
+          where: {
+            id_pedido: { in: idsPedidos },
+            id_factura: null,
+            estado: EstadoPedido.enviada,
+          },
+          data: {
+            id_factura: factura.id_venta,
+            ...(dto.id_mesa || dto.cerrar_pedido ? { estado: EstadoPedido.cerrada } : {}),
+          },
+        });
+
+        if (resUpdate && typeof resUpdate.count === 'number' && resUpdate.count !== idsPedidos.length) {
+          throw new ConflictException(
+            'Uno o más pedidos ya fueron facturados o modificados por otra operación concurrente.',
+          );
         }
       }
 
@@ -250,6 +290,12 @@ export class FacturacionService {
     }
 
     if (filtros?.estado) {
+      const estadosValidos = Object.values(EstadoFactura) as string[];
+      if (!estadosValidos.includes(filtros.estado)) {
+        throw new BadRequestException(
+          `El parámetro estado '${filtros.estado}' no es válido. Use: ${estadosValidos.join(', ')}.`,
+        );
+      }
       where.estado = filtros.estado as EstadoFactura;
     }
 
@@ -417,14 +463,29 @@ export class FacturacionService {
           });
         }
 
-        // Insertar los nuevos items calculando subtotales
-        nuevoSubtotal = 0;
+        // Insertar los nuevos items calculando subtotales (preservando costo de envío si es domicilio)
+        const costoEnvioExistente = facturaExistente.pedidos.reduce(
+          (acc, p) => acc + this.extraerCostoEnvioDePedido(p.observacion),
+          0,
+        );
+        nuevoSubtotal = costoEnvioExistente;
         for (const it of dto.items || []) {
           const prod = productoMap.get(it.id_producto);
           if (!prod) {
             throw new NotFoundException(`El producto #${it.id_producto} no fue encontrado.`);
           }
-          const precioUnit = it.precio_unitario !== undefined ? Number(it.precio_unitario) : Number(prod.precio_venta);
+          const precioCatalogo = Number(prod.precio_venta);
+          const precioUnit =
+            it.precio_unitario !== undefined ? Number(it.precio_unitario) : precioCatalogo;
+          if (
+            it.precio_unitario !== undefined &&
+            Math.abs(precioUnit - precioCatalogo) > 0.01 &&
+            usuarioAuth?.rol !== RolUsuario.administrador
+          ) {
+            throw new ForbiddenException(
+              `Solo un Administrador puede modificar el precio unitario de '${prod.nombre}' respecto al catálogo ($${precioCatalogo.toLocaleString('es-CO')}).`,
+            );
+          }
           nuevoSubtotal += it.cantidad * precioUnit;
 
           await tx.itemPedido.create({
@@ -450,6 +511,10 @@ export class FacturacionService {
         const totalPagosDto = dto.pagos.reduce((acc, p) => acc + Number(p.monto), 0);
         if (dto.pagos.length === 1 && Math.abs(totalPagosDto - nuevoTotal) > 0.01) {
           dto.pagos[0].monto = nuevoTotal;
+        } else if (dto.pagos.length > 1 && Math.abs(totalPagosDto - nuevoTotal) > 0.01) {
+          throw new BadRequestException(
+            `La suma de los pagos suministrados ($${totalPagosDto.toLocaleString()}) debe coincidir exactamente con el nuevo total de la factura ($${nuevoTotal.toLocaleString()}).`,
+          );
         }
 
         for (const p of dto.pagos) {
@@ -477,11 +542,25 @@ export class FacturacionService {
           });
         } else if (pagosExistentes.length > 1) {
           const totalOtros = pagosExistentes.slice(1).reduce((acc, p) => acc + Number(p.monto), 0);
-          const primerPagoMonto = Math.max(0, nuevoTotal - totalOtros);
-          await tx.pago.update({
-            where: { id_pago: pagosExistentes[0].id_pago },
-            data: { monto: new Prisma.Decimal(primerPagoMonto) },
-          });
+          if (nuevoTotal >= totalOtros) {
+            const primerPagoMonto = nuevoTotal - totalOtros;
+            await tx.pago.update({
+              where: { id_pago: pagosExistentes[0].id_pago },
+              data: { monto: new Prisma.Decimal(primerPagoMonto) },
+            });
+          } else {
+            // Si el nuevo total es menor a la suma de los pagos secundarios, concentrar en el primer medio y poner el resto en 0
+            await tx.pago.update({
+              where: { id_pago: pagosExistentes[0].id_pago },
+              data: { monto: new Prisma.Decimal(nuevoTotal) },
+            });
+            for (const pSec of pagosExistentes.slice(1)) {
+              await tx.pago.update({
+                where: { id_pago: pSec.id_pago },
+                data: { monto: new Prisma.Decimal(0) },
+              });
+            }
+          }
         }
       }
 
@@ -519,6 +598,49 @@ export class FacturacionService {
           observacion: observacionFinal || null,
         },
       });
+
+      // Si la factura pertenecía a un turno cerrado, recalcular el arqueo teórico y diferencia de esa caja
+      if (facturaExistente.caja.estado === EstadoCaja.cerrada && tx.caja?.findUnique && tx.caja?.update) {
+        const cajaCerrada = await tx.caja.findUnique({
+          where: { id_caja: facturaExistente.id_caja },
+          include: {
+            facturas: {
+              where: { estado: EstadoFactura.emitida },
+              include: { pagos: { include: { medioPago: true } } },
+            },
+            gastos: {
+              include: { medioPago: true },
+            },
+          },
+        });
+        if (cajaCerrada) {
+          let vEfe = 0;
+          for (const fac of cajaCerrada.facturas) {
+            for (const pag of fac.pagos) {
+              if (normalizarMedioPago(pag.medioPago?.nombre) === 'efectivo') {
+                vEfe += Number(pag.monto);
+              }
+            }
+          }
+          let gEfe = 0;
+          for (const gas of cajaCerrada.gastos) {
+            if (!gas.medioPago || normalizarMedioPago(gas.medioPago?.nombre) === 'efectivo') {
+              gEfe += Number(gas.total);
+            }
+          }
+          const nuevoTeorico = redondearMoneda(Number(cajaCerrada.valor_inicial) + vEfe - gEfe);
+          const fisico = Number(cajaCerrada.valor_final_fisico ?? nuevoTeorico);
+          let nuevaDif = redondearMoneda(fisico - nuevoTeorico);
+          if (Math.abs(nuevaDif) < 0.01) nuevaDif = 0;
+          await tx.caja.update({
+            where: { id_caja: facturaExistente.id_caja },
+            data: {
+              valor_final_teorico: new Prisma.Decimal(nuevoTeorico),
+              diferencia: new Prisma.Decimal(nuevaDif),
+            },
+          });
+        }
+      }
 
       return tx.factura.findUnique({
         where: { id_venta: id },
@@ -621,6 +743,9 @@ export class FacturacionService {
       });
 
       for (const ped of pedidosAsociados) {
+        if (ped.estado === EstadoPedido.cancelada) {
+          continue; // Evitar doble devolución de stock si el pedido ya había sido cancelado antes
+        }
         for (const item of ped.items) {
           if (item.producto?.controla_inventario) {
             await tx.producto.update({
@@ -640,6 +765,18 @@ export class FacturacionService {
         data: { estado: EstadoPedido.cancelada },
       });
 
+      if (factura.id_mesa && typeof (tx.pedido as any).count === 'function') {
+        const restantesMesa = await tx.pedido.count({
+          where: { id_mesa: factura.id_mesa, estado: EstadoPedido.enviada },
+        });
+        if (restantesMesa === 0) {
+          await tx.mesa.update({
+            where: { id_mesa: factura.id_mesa },
+            data: { estado: EstadoMesa.libre },
+          });
+        }
+      }
+
       this.logger.warn(
         `[SECURITY_AUDIT] Factura #FAC-${id} ANULADA por usuario #${id_usuario}. Motivo: ${motivo.trim()}`,
       );
@@ -654,9 +791,9 @@ export class FacturacionService {
 
   /**
    * Elimina / anula una factura registrada en el turno de caja.
-   * Por retrocompatibilidad, redirige a anularFactura.
+   * Por retrocompatibilidad, redirige a anularFactura con el usuario autenticado.
    */
-  async eliminarFactura(id: number) {
-    return this.anularFactura(id, 'Eliminación solicitada por administración', 1);
+  async eliminarFactura(id: number, id_usuario: number) {
+    return this.anularFactura(id, 'Eliminación solicitada por administración', id_usuario);
   }
 }

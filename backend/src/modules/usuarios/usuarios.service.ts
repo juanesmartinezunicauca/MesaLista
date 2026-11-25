@@ -36,7 +36,7 @@ export class UsuariosService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
-  ) {}
+  ) { }
 
   /**
    * Genera el código de invitación unívoco para nuevos colaboradores.
@@ -301,6 +301,12 @@ export class UsuariosService {
         );
       }
 
+      if (usuarioInvitado.estado === EstadoUsuario.inactivo) {
+        throw new UnauthorizedException(
+          'El usuario invitado se encuentra inactivo en el sistema. Contacte a la administración.',
+        );
+      }
+
       // Validar si el código ha expirado
       if (
         usuarioInvitado.codigoInvitacionExpira &&
@@ -367,12 +373,13 @@ export class UsuariosService {
         data: { googleId: null },
       });
 
-      // Vincular el empleado con su Google ID y su email
+      // Vincular el empleado con su Google ID (para colaboradores operativos NO se persiste el correo en BD)
+      const esColaboradorInvitado = usuarioInvitado.rol !== RolUsuario.cliente;
       return this.prisma.usuario.update({
         where: { id_usuario: usuarioInvitado.id_usuario },
         data: {
           googleId: perfil.googleId,
-          email: emailNorm,
+          email: esColaboradorInvitado ? null : emailNorm,
           codigoInvitacion: null,
           codigoInvitacionExpira: null,
         },
@@ -439,10 +446,51 @@ export class UsuariosService {
   }
 
   /**
+   * Verifica que una operación administrativa no deje al sistema sin ningún administrador activo.
+   */
+  private async validarProteccionUltimoAdmin(idObjetivo: number, accion: string): Promise<void> {
+    if (typeof (this.prisma.usuario as any).count !== 'function') return;
+    const otrosAdminsActivos = await this.prisma.usuario.count({
+      where: {
+        rol: RolUsuario.administrador,
+        estado: EstadoUsuario.activo,
+        id_usuario: { not: idObjetivo },
+      },
+    });
+    if (otrosAdminsActivos === 0) {
+      throw new BadRequestException(
+        `Operación denegada: no se puede ${accion} al único administrador activo del sistema.`,
+      );
+    }
+  }
+
+  /**
    * Actualiza datos de un usuario.
    */
-  async actualizar(id: number, updateDto: UpdateUsuarioDto) {
-    await this.obtenerPorId(id);
+  async actualizar(id: number, updateDto: UpdateUsuarioDto, idActor?: number) {
+    const usuarioActual = await this.obtenerPorId(id);
+
+    if (idActor !== undefined && idActor === id) {
+      if (updateDto.estado === EstadoUsuario.inactivo) {
+        throw new BadRequestException('No puedes desactivar tu propia cuenta de administrador.');
+      }
+      if (
+        usuarioActual.rol === RolUsuario.administrador &&
+        updateDto.rol &&
+        updateDto.rol !== RolUsuario.administrador
+      ) {
+        throw new BadRequestException('No puedes degradar tu propio rol de administrador.');
+      }
+    }
+
+    const pierdeAdmin =
+      usuarioActual.rol === RolUsuario.administrador &&
+      usuarioActual.estado === EstadoUsuario.activo &&
+      ((updateDto.estado !== undefined && updateDto.estado !== EstadoUsuario.activo) ||
+        (updateDto.rol !== undefined && updateDto.rol !== RolUsuario.administrador));
+    if (pierdeAdmin) {
+      await this.validarProteccionUltimoAdmin(id, 'desactivar o degradar');
+    }
 
     if (updateDto.usuario) {
       const colision = await this.prisma.usuario.findUnique({
@@ -456,14 +504,23 @@ export class UsuariosService {
       }
     }
 
-    if (updateDto.email) {
+    const rolFinal = updateDto.rol ?? usuarioActual.rol;
+    const emailNormalizado =
+      updateDto.email !== undefined && updateDto.email !== null
+        ? updateDto.email.trim().toLowerCase()
+        : undefined;
+    // Regla de privacidad: solo los clientes persisten correo en tabla usuario
+    const debeActualizarEmail =
+      emailNormalizado !== undefined && rolFinal === RolUsuario.cliente;
+
+    if (debeActualizarEmail && emailNormalizado) {
       const colisionEmail = await this.prisma.usuario.findUnique({
-        where: { email: updateDto.email },
+        where: { email: emailNormalizado },
       });
 
       if (colisionEmail && colisionEmail.id_usuario !== id) {
         throw new ConflictException(
-          `El correo '${updateDto.email}' ya está en uso.`,
+          `El correo '${emailNormalizado}' ya está en uso.`,
         );
       }
     }
@@ -471,9 +528,9 @@ export class UsuariosService {
     return this.prisma.usuario.update({
       where: { id_usuario: id },
       data: {
-        ...(updateDto.nombre && { nombre: updateDto.nombre }),
-        ...(updateDto.usuario && { usuario: updateDto.usuario }),
-        ...(updateDto.email !== undefined && { email: updateDto.email }),
+        ...(updateDto.nombre && { nombre: updateDto.nombre.trim() }),
+        ...(updateDto.usuario && { usuario: updateDto.usuario.trim() }),
+        ...(debeActualizarEmail && { email: emailNormalizado || null }),
         ...(updateDto.rol && { rol: updateDto.rol }),
         ...(updateDto.estado && { estado: updateDto.estado }),
       },
@@ -484,8 +541,20 @@ export class UsuariosService {
   /**
    * Cambia el estado de un usuario (activo / inactivo).
    */
-  async cambiarEstado(id: number, estado: EstadoUsuario) {
-    await this.obtenerPorId(id);
+  async cambiarEstado(id: number, estado: EstadoUsuario, idActor?: number) {
+    const usuarioActual = await this.obtenerPorId(id);
+
+    if (idActor !== undefined && idActor === id && estado === EstadoUsuario.inactivo) {
+      throw new BadRequestException('No puedes desactivar tu propia cuenta.');
+    }
+
+    if (
+      usuarioActual.rol === RolUsuario.administrador &&
+      usuarioActual.estado === EstadoUsuario.activo &&
+      estado === EstadoUsuario.inactivo
+    ) {
+      await this.validarProteccionUltimoAdmin(id, 'desactivar');
+    }
 
     return this.prisma.usuario.update({
       where: { id_usuario: id },
@@ -496,12 +565,24 @@ export class UsuariosService {
 
   /**
    * Eliminación segura:
+   * - Impide eliminar la propia cuenta o al último administrador activo.
    * - Si el usuario tiene registros operativos históricos (pedidos, cajas, facturas, etc.),
    *   se desactiva (borrado lógico) para proteger la trazabilidad y la integridad referencial.
    * - Si no tiene historial, se elimina de forma física de la base de datos.
    */
-  async eliminar(id: number) {
-    await this.obtenerPorId(id);
+  async eliminar(id: number, idActor?: number) {
+    const usuarioActual = await this.obtenerPorId(id);
+
+    if (idActor !== undefined && idActor === id) {
+      throw new BadRequestException('No puedes eliminar tu propia cuenta de administrador.');
+    }
+
+    if (
+      usuarioActual.rol === RolUsuario.administrador &&
+      usuarioActual.estado === EstadoUsuario.activo
+    ) {
+      await this.validarProteccionUltimoAdmin(id, 'eliminar');
+    }
 
     const usuarioConRelaciones = await this.prisma.usuario.findUnique({
       where: { id_usuario: id },

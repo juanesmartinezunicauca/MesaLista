@@ -2,10 +2,10 @@
   <!-- Lado Izquierdo: Branding & Hero Visual -->
   <div class="brand-panel">
     <div class="brand-content">
-      <div class="logo-box">
+      <a class="logo-box" routerLink="/cliente" title="Ir a la vista de clientes">
         <mat-icon class="brand-icon">restaurant_menu</mat-icon>
         <span class="brand-name">MesaLista</span>
-      </div>
+      </a>
 
       <div class="hero-text">
         <h2>El motor operativo para tu restaurante moderno.</h2>
@@ -69,7 +69,7 @@
               <mat-icon>vpn_key</mat-icon>
             </div>
             <input id="codigoInvitacionInput" type="text" class="code-input" [value]="codigoInvitacion()"
-              (input)="onCodigoInvitacionInput($event)" placeholder="INV-XXXXXX" maxlength="10" autocomplete="off"
+              (input)="onCodigoInvitacionInput($event)" placeholder="INV-XXXXXXXX" maxlength="20" autocomplete="off"
               spellcheck="false" />
             @if (codigoInvitacion()) {
             <button type="button" class="btn-clear-code" (click)="codigoInvitacion.set('')" title="Borrar código">

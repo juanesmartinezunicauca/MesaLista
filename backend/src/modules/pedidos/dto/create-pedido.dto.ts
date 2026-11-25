@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TipoPedido } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   IsArray,
   IsEnum,
@@ -54,6 +55,7 @@ export class CreatePedidoDto {
   })
   @IsArray({ message: 'Los items del pedido deben enviarse como una lista.' })
   @ArrayMinSize(1, { message: 'El pedido debe contener al menos un producto.' })
+  @ArrayMaxSize(100, { message: 'El pedido no puede superar los 100 ítems.' })
   @ValidateNested({ each: true })
   @Type(() => CreateItemPedidoDto)
   items!: CreateItemPedidoDto[];

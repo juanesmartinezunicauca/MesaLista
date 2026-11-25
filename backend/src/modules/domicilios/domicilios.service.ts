@@ -9,6 +9,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { FiltroRangoFecha, resolverRangoFechaOpcional } from '../../common/utils/date-range.util';
+import { resolverZonaPorBarrioODireccion } from './barrios-popayan.constant';
 import {
   CambiarEstadoDomicilioDto,
   CreateDomicilioDto,
@@ -233,7 +234,15 @@ export class DomiciliosService {
    * desglosa y congela precios unitarios históricos y asigna consecutivo diario.
    */
   async crear(createDto: CreateDomicilioDto, id_usuario: number) {
-    const { cliente: clienteDto, items, observacion, metodo_pago, costo_envio, zona_entrega } = createDto;
+    const {
+      cliente: clienteDto,
+      items,
+      observacion,
+      metodo_pago,
+      costo_envio,
+      zona_entrega,
+      es_pedido_cliente,
+    } = createDto;
 
     // 0. Validar disponibilidad del restaurante y recepción de domicilios
     const estadoServicio = await this.obtenerEstadoServicio();
@@ -243,35 +252,37 @@ export class DomiciliosService {
       );
     }
 
-    // 1. Validar productos en catálogo, disponibilidad y existencias
-    const productIds = items.map((i) => i.id_producto);
-    const productos = await this.prisma.producto.findMany({
-      where: { id_producto: { in: productIds } },
-    });
-
-    const productMap = new Map(productos.map((p) => [p.id_producto, p]));
-
-    for (const item of items) {
-      const prod = productMap.get(item.id_producto);
-      if (!prod) {
-        throw new NotFoundException(
-          `El producto con ID #${item.id_producto} no existe en la carta.`,
-        );
-      }
-      if (!prod.disponible) {
-        throw new BadRequestException(
-          `El producto '${prod.nombre}' no se encuentra disponible actualmente.`,
-        );
-      }
-      if (prod.controla_inventario && (prod.cantidad_inventario ?? 0) < item.cantidad) {
-        throw new BadRequestException(
-          `Stock insuficiente para '${prod.nombre}'. Disponible: ${prod.cantidad_inventario}, solicitado: ${item.cantidad}.`,
-        );
-      }
-    }
-
-    // 2. Transacción atómica: stock, consecutivo y comanda
+    // 1. Transacción atómica: validación y descuento condicional de stock, consecutivo y comanda
     return this.prisma.$transaction(async (tx) => {
+      const productIds = Array.from(new Set(items.map((i) => i.id_producto)));
+      const productos = await tx.producto.findMany({
+        where: { id_producto: { in: productIds } },
+      });
+
+      const productMap = new Map(productos.map((p) => [p.id_producto, p]));
+      const cantidadPorProducto = new Map<number, number>();
+
+      for (const item of items) {
+        const prod = productMap.get(item.id_producto);
+        if (!prod) {
+          throw new NotFoundException(
+            `El producto con ID #${item.id_producto} no existe en la carta.`,
+          );
+        }
+        if (!prod.disponible) {
+          throw new BadRequestException(
+            `El producto '${prod.nombre}' no se encuentra disponible actualmente.`,
+          );
+        }
+        const acumulado = (cantidadPorProducto.get(item.id_producto) || 0) + item.cantidad;
+        cantidadPorProducto.set(item.id_producto, acumulado);
+        if (prod.controla_inventario && (prod.cantidad_inventario ?? 0) < acumulado) {
+          throw new BadRequestException(
+            `Stock insuficiente para '${prod.nombre}'. Disponible: ${prod.cantidad_inventario}, solicitado: ${acumulado}.`,
+          );
+        }
+      }
+
       // 2.1 Obtener datos del cliente: si el creador es rol 'cliente', tomar nombre y correo de su sesión
       const usuarioCreador = await tx.usuario.findUnique({
         where: { id_usuario },
@@ -290,22 +301,46 @@ export class DomiciliosService {
       const clienteTelefono = clienteDto?.telefono?.trim() || null;
       const clienteDireccion = clienteDto?.direccion?.trim() || null;
 
-      // 2.2 Descontar stock para productos controlados
-      for (const item of items) {
-        const prod = productMap.get(item.id_producto)!;
+      // 2.2 Descontar stock de forma condicional atómica para productos controlados
+      for (const [id_producto, cantTotal] of cantidadPorProducto.entries()) {
+        const prod = productMap.get(id_producto)!;
         if (prod.controla_inventario) {
-          await tx.producto.update({
-            where: { id_producto: item.id_producto },
-            data: {
-              cantidad_inventario: {
-                decrement: item.cantidad,
+          if (typeof (tx.producto as any).updateMany === 'function') {
+            const dec = await tx.producto.updateMany({
+              where: {
+                id_producto,
+                cantidad_inventario: { gte: cantTotal },
               },
-            },
-          });
+              data: {
+                cantidad_inventario: {
+                  decrement: cantTotal,
+                },
+              },
+            });
+            if (dec.count === 0) {
+              throw new BadRequestException(
+                `Stock insuficiente para '${prod.nombre}' debido a pedidos concurrentes.`,
+              );
+            }
+          } else {
+            await tx.producto.update({
+              where: { id_producto },
+              data: {
+                cantidad_inventario: {
+                  decrement: cantTotal,
+                },
+              },
+            });
+          }
         }
       }
 
-      // 2.3 Calcular consecutivo diario (zona horaria Colombia UTC-5)
+      // 2.3 Bloqueo asesor de transacción en PostgreSQL para evitar consecutivos duplicados
+      if (typeof (tx as any).$queryRaw === 'function') {
+        await (tx as any).$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(730101)`;
+      }
+
+      // Calcular consecutivo diario (zona horaria Colombia UTC-5)
       const ahora = new Date();
       const fechaColStr = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Bogota',
@@ -339,13 +374,35 @@ export class DomiciliosService {
           : 'Efectivo';
       const etiquetaPago = `[PAGO: ${metodoNormalizado}]`;
 
-      // Tarificación por zona de Popayán
-      const costoEnvioNum = costo_envio !== undefined ? Number(costo_envio) : undefined;
+      // Tarificación automática por barrio/zona de Popayán
+      const deteccionBarrio = resolverZonaPorBarrioODireccion(zona_entrega, clienteDireccion);
+      const costoEnvioNum =
+        costo_envio !== undefined
+          ? Number(costo_envio)
+          : deteccionBarrio?.zona.tarifa;
+      const zonaResuelta = zona_entrega
+        ? (deteccionBarrio?.barrio && !zona_entrega.includes(deteccionBarrio.zona.nombre)
+            ? `${deteccionBarrio.barrio} (${deteccionBarrio.zona.nombre})`
+            : zona_entrega.trim())
+        : deteccionBarrio
+          ? (deteccionBarrio.barrio
+              ? `${deteccionBarrio.barrio} (${deteccionBarrio.zona.nombre})`
+              : deteccionBarrio.zona.nombre)
+          : '';
+      const etiquetaPortalCliente =
+        esClienteAuth || es_pedido_cliente === true ? '[PORTAL_CLIENTE]' : '';
       const etiquetaEnvio = costoEnvioNum !== undefined ? `[ENVIO: ${costoEnvioNum}]` : '';
-      const etiquetaZona = zona_entrega ? `[ZONA: ${zona_entrega.trim()}]` : '';
+      const etiquetaZona = zonaResuelta ? `[ZONA: ${zonaResuelta}]` : '';
 
       const obsLimpia = observacion ? observacion.trim() : '';
-      let observacionConPendiente = ['[PENDIENTE]', etiquetaPago, etiquetaEnvio, etiquetaZona, obsLimpia]
+      let observacionConPendiente = [
+        '[PENDIENTE]',
+        etiquetaPortalCliente,
+        etiquetaPago,
+        etiquetaEnvio,
+        etiquetaZona,
+        obsLimpia,
+      ]
         .filter(Boolean)
         .join(' ');
       if (observacionConPendiente.length > 255) {
@@ -391,6 +448,7 @@ export class DomiciliosService {
       estado?: string;
       buscar?: string;
       id_usuario?: number;
+      soloPortalCliente?: boolean;
     } & FiltroRangoFecha,
   ) {
     const where: any = {
@@ -399,6 +457,13 @@ export class DomiciliosService {
 
     if (filtros?.id_usuario) {
       where.id_usuario = Number(filtros.id_usuario);
+    }
+
+    if (filtros?.soloPortalCliente) {
+      where.AND = [
+        ...(Array.isArray(where.AND) ? where.AND : []),
+        { observacion: { contains: '[PORTAL_CLIENTE]' } },
+      ];
     }
 
     const rangoFecha = resolverRangoFechaOpcional(filtros);
@@ -431,6 +496,7 @@ export class DomiciliosService {
           not: { contains: '[EN REPARTO]' },
         };
         where.AND = [
+          ...(Array.isArray(where.AND) ? where.AND : []),
           {
             OR: [
               { observacion: null },
@@ -462,15 +528,32 @@ export class DomiciliosService {
   }
 
   /**
-   * Consulta los pedidos propios del cliente autenticado.
+   * Consulta los pedidos propios realizados como cliente por el usuario autenticado.
+   * Si el usuario tiene rol operativo (administrador, cajero, mesero, cocina), filtra por la marca
+   * [PORTAL_CLIENTE] para no mezclar pedidos personales con domicilios de terceros tomados en el POS.
    */
-  async obtenerMisPedidos(id_usuario: number) {
-    return this.obtenerTodos({ id_usuario });
+  async obtenerMisPedidos(usuarioOrId: number | { id_usuario: number; rol?: RolUsuario }) {
+    const id_usuario = typeof usuarioOrId === 'number' ? usuarioOrId : usuarioOrId.id_usuario;
+    let rol = typeof usuarioOrId === 'number' ? undefined : usuarioOrId.rol;
+
+    if (!rol && this.prisma.usuario?.findUnique) {
+      const u = await this.prisma.usuario.findUnique({
+        where: { id_usuario },
+        select: { rol: true },
+      });
+      rol = u?.rol;
+    }
+
+    const esPersonalOperativo = !!rol && rol !== RolUsuario.cliente;
+    return this.obtenerTodos({
+      id_usuario,
+      ...(esPersonalOperativo ? { soloPortalCliente: true } : {}),
+    });
   }
 
   /**
    * Consulta el detalle de un pedido a domicilio por su ID.
-   * Valida IDOR: Si el usuario es de rol cliente, verifica que sea el titular del pedido.
+   * Valida IDOR: Si el usuario es de rol cliente o cocina, verifica que sea el titular del pedido.
    */
   async obtenerPorId(id: number, usuarioAuth?: any) {
     const pedido = await this.prisma.pedido.findUnique({
@@ -485,7 +568,7 @@ export class DomiciliosService {
     // OWASP A01: Control de acceso basado en propietario (prevención de IDOR)
     if (
       usuarioAuth &&
-      usuarioAuth.rol === RolUsuario.cliente &&
+      (usuarioAuth.rol === RolUsuario.cliente || usuarioAuth.rol === RolUsuario.cocina) &&
       pedido.id_usuario !== usuarioAuth.id_usuario
     ) {
       throw new ForbiddenException(
@@ -536,6 +619,7 @@ export class DomiciliosService {
     // Limpiar texto libre del usuario
     const observacionLimpia = (pedido.observacion || '')
       .replace(/\[PENDIENTE\]/gi, '')
+      .replace(/\[PORTAL_CLIENTE\]/gi, '')
       .replace(/\[EN REPARTO\]/gi, '')
       .replace(/\[REPARTIDOR:[^\]]+\]/gi, '')
       .replace(/\[PAGO:[^\]]+\]/gi, '')
@@ -543,8 +627,9 @@ export class DomiciliosService {
       .replace(/\[ZONA:[^\]]+\]/gi, '')
       .trim();
 
-    // Preservar la forma de pago original del cliente y costo de envío / zona
+    // Preservar la marca de origen portal cliente, forma de pago original del cliente y costo de envío / zona
     const rawObs = (pedido as any).observacion_raw || pedido.observacion || '';
+    const tagPortalCliente = /\[PORTAL_CLIENTE\]/i.test(rawObs) ? '[PORTAL_CLIENTE]' : '';
     const matchPagoRaw = rawObs.match(/\[PAGO:([^\]]+)\]/i);
     const tagPago = matchPagoRaw ? `[PAGO: ${matchPagoRaw[1].trim()}]` : '';
 
@@ -567,6 +652,7 @@ export class DomiciliosService {
       tags.push('[PENDIENTE]');
     }
 
+    if (tagPortalCliente) tags.push(tagPortalCliente);
     if (tagPago) tags.push(tagPago);
     if (tagEnvio) tags.push(tagEnvio);
     if (tagZona) tags.push(tagZona);
@@ -631,6 +717,7 @@ export class DomiciliosService {
       const notaCancelado = motivo ? `[CANCELADO: ${motivo}]` : '[CANCELADO]';
       const observacionLimpia = (pedido.observacion || '')
         .replace(/\[PENDIENTE\]/gi, '')
+        .replace(/\[PORTAL_CLIENTE\]/gi, '')
         .replace(/\[EN REPARTO\]/gi, '')
         .replace(/\[REPARTIDOR:[^\]]+\]/gi, '')
         .replace(/\[PAGO:[^\]]+\]/gi, '')
@@ -638,6 +725,7 @@ export class DomiciliosService {
         .replace(/\[ZONA:[^\]]+\]/gi, '')
         .trim();
       const rawObs = (pedido as any).observacion_raw || pedido.observacion || '';
+      const tagPortalCliente = /\[PORTAL_CLIENTE\]/i.test(rawObs) ? '[PORTAL_CLIENTE]' : '';
       const matchPagoRaw = rawObs.match(/\[PAGO:([^\]]+)\]/i);
       const tagPago = matchPagoRaw ? `[PAGO: ${matchPagoRaw[1].trim()}]` : '';
 
@@ -647,7 +735,10 @@ export class DomiciliosService {
       const matchZonaRaw = rawObs.match(/\[ZONA:([^\]]+)\]/i);
       const tagZona = matchZonaRaw ? `[ZONA: ${matchZonaRaw[1].trim()}]` : '';
 
-      let observacionFinal = [notaCancelado, tagPago, tagEnvio, tagZona, observacionLimpia].filter(Boolean).join(' ').trim();
+      let observacionFinal = [notaCancelado, tagPortalCliente, tagPago, tagEnvio, tagZona, observacionLimpia]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
       if (observacionFinal.length > 255) {
         observacionFinal = observacionFinal.slice(0, 255);
       }
@@ -747,6 +838,7 @@ export class DomiciliosService {
 
     const observacionLimpia = (pedido.observacion || '')
       .replace(/\[PENDIENTE\]/gi, '')
+      .replace(/\[PORTAL_CLIENTE\]/gi, '')
       .replace(/\[EN REPARTO\]/gi, '')
       .replace(/\[REPARTIDOR:[^\]]*\]/gi, '')
       .replace(/\[PAGO:[^\]]*\]/gi, '')
@@ -792,6 +884,10 @@ export class DomiciliosService {
       where: {
         tipo: TipoPedido.domicilio,
         estado: { in: [EstadoPedido.cerrada, EstadoPedido.cancelada] },
+        OR: [
+          { id_factura: null },
+          { factura: { estado: EstadoFactura.anulada } },
+        ],
       },
       select: { id_pedido: true },
     });
@@ -829,6 +925,10 @@ export class DomiciliosService {
       throw new NotFoundException(`El pedido a domicilio #${id} no existe.`);
     }
 
+    if (dto.estado === EstadoPedido.cancelada && pedido.estado !== EstadoPedido.cancelada) {
+      return this.cancelar(id, dto.observacion || 'Cancelado desde edición de historial');
+    }
+
     const data: any = {};
     if (dto.cliente_nombre !== undefined) data.cliente_nombre = dto.cliente_nombre.trim();
     if (dto.cliente_email !== undefined) data.cliente_email = dto.cliente_email ? dto.cliente_email.trim() : null;
@@ -847,13 +947,13 @@ export class DomiciliosService {
       const tagPago = `[PAGO: ${metodoFinal}]`;
 
       const etiquetasOperativas =
-        rawObs.match(/\[(PENDIENTE|EN REPARTO|REPARTIDOR:[^\]]+|ENVIO:[^\]]+|ZONA:[^\]]+|CANCELADO(?::[^\]]+)?)\]/g) || [];
+        rawObs.match(/\[(PENDIENTE|PORTAL_CLIENTE|EN REPARTO|REPARTIDOR:[^\]]+|ENVIO:[^\]]+|ZONA:[^\]]+|CANCELADO(?::[^\]]+)?)\]/g) || [];
 
       const textoLimpio =
         dto.observacion !== undefined
           ? dto.observacion.trim()
           : rawObs
-            .replace(/\[(PENDIENTE|EN REPARTO|REPARTIDOR:[^\]]+|ENVIO:[^\]]+|ZONA:[^\]]+|PAGO:[^\]]+|CANCELADO(?::[^\]]+)?)\]/g, '')
+            .replace(/\[(PENDIENTE|PORTAL_CLIENTE|EN REPARTO|REPARTIDOR:[^\]]+|ENVIO:[^\]]+|ZONA:[^\]]+|PAGO:[^\]]+|CANCELADO(?::[^\]]+)?)\]/g, '')
             .trim();
 
       const obsActual = [...etiquetasOperativas, tagPago, textoLimpio].filter(Boolean).join(' ');
@@ -875,13 +975,40 @@ export class DomiciliosService {
   async eliminar(id: number) {
     const pedido = await this.prisma.pedido.findUnique({
       where: { id_pedido: id },
+      include: {
+        factura: true,
+        items: {
+          include: { producto: true },
+        },
+      },
     });
 
     if (!pedido || pedido.tipo !== TipoPedido.domicilio) {
       throw new NotFoundException(`El pedido a domicilio #${id} no existe.`);
     }
 
+    if (pedido.factura && pedido.factura.estado === EstadoFactura.emitida) {
+      throw new BadRequestException(
+        `No se puede eliminar el domicilio #${pedido.numero_pedido} porque está vinculado a la factura activa #FAC-${pedido.id_factura}. Anule primero la factura en caja para preservar la trazabilidad de costos y utilidades.`,
+      );
+    }
+
     return this.prisma.$transaction(async (tx) => {
+      if (pedido.estado === EstadoPedido.enviada) {
+        for (const item of pedido.items || []) {
+          if (item.producto?.controla_inventario) {
+            await tx.producto.update({
+              where: { id_producto: item.id_producto },
+              data: {
+                cantidad_inventario: {
+                  increment: item.cantidad,
+                },
+              },
+            });
+          }
+        }
+      }
+
       await tx.itemPedido.deleteMany({
         where: { id_pedido: id },
       });

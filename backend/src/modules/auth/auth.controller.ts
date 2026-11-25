@@ -15,7 +15,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { CurrentUser } from '../../common/decorators';
 import { JwtAuthGuard } from '../../common/guards';
 import { AuthService } from './auth.service';
@@ -28,7 +28,7 @@ import { GoogleLoginDto, UpdatePerfilDto } from './dto';
 @ApiTags('Autenticación')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   // =========================================================================
   // 1. FLUJO PRINCIPAL DE PRODUCCIÓN: AUTENTICACIÓN GOOGLE OAUTH 2.0 (SSO)
@@ -75,6 +75,7 @@ export class AuthController {
   @Post('google')
   @HttpCode(HttpStatus.OK)
   @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 15, ttl: 60_000 } })
   googleLogin(@Body() googleLoginDto: GoogleLoginDto) {
     return this.authService.loginConGoogle(googleLoginDto);
   }

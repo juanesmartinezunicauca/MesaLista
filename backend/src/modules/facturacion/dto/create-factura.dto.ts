@@ -1,5 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength, Min, ValidateNested } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class PagoItemDto {
@@ -9,6 +21,7 @@ export class PagoItemDto {
   })
   @IsNotEmpty({ message: 'El medio de pago es obligatorio.' })
   @IsString()
+  @MaxLength(50, { message: 'El medio de pago no puede superar los 50 caracteres.' })
   medio_pago!: string;
 
   @ApiProperty({
@@ -20,6 +33,7 @@ export class PagoItemDto {
   @Type(() => Number)
   @IsNumber({}, { message: 'El monto debe ser un número válido.' })
   @Min(0, { message: 'El monto no puede ser negativo.' })
+  @Max(99999999, { message: 'El monto del pago excede el máximo permitido.' })
   monto!: number;
 }
 
@@ -39,6 +53,7 @@ export class CreateFacturaDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(100, { message: 'El nombre del cliente no puede superar los 100 caracteres.' })
   cliente_nombre?: string;
 
   @ApiPropertyOptional({
@@ -47,6 +62,7 @@ export class CreateFacturaDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(100, { message: 'El correo del cliente no puede superar los 100 caracteres.' })
   cliente_email?: string;
 
   @ApiPropertyOptional({
@@ -68,6 +84,7 @@ export class CreateFacturaDto {
   @Type(() => Number)
   @IsNumber()
   @Min(0)
+  @Max(99999999, { message: 'La propina excede el máximo permitido.' })
   propina?: number;
 
   @ApiPropertyOptional({
@@ -94,6 +111,8 @@ export class CreateFacturaDto {
   })
   @IsNotEmpty({ message: 'Debe especificar al menos un pago.' })
   @IsArray()
+  @ArrayMinSize(1, { message: 'Debe especificar al menos un pago.' })
+  @ArrayMaxSize(20, { message: 'No se admiten más de 20 pagos en una sola factura.' })
   @ValidateNested({ each: true })
   @Type(() => PagoItemDto)
   pagos!: PagoItemDto[];

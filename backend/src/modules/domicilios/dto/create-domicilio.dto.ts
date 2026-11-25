@@ -1,8 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -30,6 +32,7 @@ export class CreateDomicilioDto {
   })
   @IsArray({ message: 'Los items del pedido deben enviarse como una lista.' })
   @ArrayMinSize(1, { message: 'El pedido debe contener al menos un producto.' })
+  @ArrayMaxSize(100, { message: 'El pedido no puede superar los 100 ítems.' })
   @ValidateNested({ each: true })
   @Type(() => CreateItemPedidoDto)
   items!: CreateItemPedidoDto[];
@@ -73,4 +76,12 @@ export class CreateDomicilioDto {
   @IsString({ message: 'La zona de entrega debe ser un texto.' })
   @MaxLength(100, { message: 'La zona de entrega no puede superar los 100 caracteres.' })
   zona_entrega?: string;
+
+  @ApiPropertyOptional({
+    description: 'Indica si el pedido fue originado desde el portal de clientes (separa pedidos personales de empleados de los registrados en el POS)',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'El indicador de origen cliente debe ser booleano.' })
+  es_pedido_cliente?: boolean;
 }

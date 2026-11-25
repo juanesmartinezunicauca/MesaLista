@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EstadoMesa, EstadoPedido, TipoPedido } from '@prisma/client';
+import { EstadoFactura, EstadoMesa, EstadoPedido, TipoPedido } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { resolverRangoFechaOpcional } from '../../common/utils/date-range.util';
 import {
@@ -41,49 +41,89 @@ export class PedidosService {
       );
     }
 
-    // 2. Verificar existencia de la mesa si es salón
-    if (createPedidoDto.tipo === TipoPedido.salon && createPedidoDto.id_mesa) {
-      const mesa = await this.prisma.mesa.findUnique({
-        where: { id_mesa: createPedidoDto.id_mesa },
-      });
-      if (!mesa) {
-        throw new NotFoundException(
-          `La mesa con ID #${createPedidoDto.id_mesa} no fue encontrada.`,
-        );
-      }
-    }
-
-
-
-    // 3. Verificar productos en catálogo, disponibilidad y stock
-    const productIds = createPedidoDto.items.map((i) => i.id_producto);
-    const productos = await this.prisma.producto.findMany({
-      where: { id_producto: { in: productIds } },
-    });
-
-    const productMap = new Map(productos.map((p) => [p.id_producto, p]));
-
-    for (const item of createPedidoDto.items) {
-      const prod = productMap.get(item.id_producto);
-      if (!prod) {
-        throw new NotFoundException(
-          `El producto con ID #${item.id_producto} no existe en la carta.`,
-        );
-      }
-      if (!prod.disponible) {
-        throw new BadRequestException(
-          `El producto '${prod.nombre}' no se encuentra disponible actualmente.`,
-        );
-      }
-      if (prod.controla_inventario && (prod.cantidad_inventario ?? 0) < item.cantidad) {
-        throw new BadRequestException(
-          `Stock insuficiente para '${prod.nombre}'. Disponible: ${prod.cantidad_inventario}, solicitado: ${item.cantidad}.`,
-        );
-      }
-    }
-
-    // 4. Transacción atómica de persistencia, descuento de inventario y transición de mesa
+    // 2. Transacción atómica de validación, consecutivo protegido, persistencia, descuento de inventario y mesa
     return this.prisma.$transaction(async (tx) => {
+      // 2.1 Verificar existencia de la mesa si es salón
+      if (createPedidoDto.tipo === TipoPedido.salon && createPedidoDto.id_mesa) {
+        const mesa = await tx.mesa.findUnique({
+          where: { id_mesa: createPedidoDto.id_mesa },
+        });
+        if (!mesa) {
+          throw new NotFoundException(
+            `La mesa con ID #${createPedidoDto.id_mesa} no fue encontrada.`,
+          );
+        }
+      }
+
+      // 2.2 Verificar productos en catálogo, disponibilidad y stock acumulado dentro de la transacción
+      const productIds = Array.from(new Set(createPedidoDto.items.map((i) => i.id_producto)));
+      const productos = await tx.producto.findMany({
+        where: { id_producto: { in: productIds } },
+      });
+
+      const productMap = new Map(productos.map((p) => [p.id_producto, p]));
+      const cantidadPorProducto = new Map<number, number>();
+
+      for (const item of createPedidoDto.items) {
+        const prod = productMap.get(item.id_producto);
+        if (!prod) {
+          throw new NotFoundException(
+            `El producto con ID #${item.id_producto} no existe en la carta.`,
+          );
+        }
+        if (!prod.disponible) {
+          throw new BadRequestException(
+            `El producto '${prod.nombre}' no se encuentra disponible actualmente.`,
+          );
+        }
+        const acumulado = (cantidadPorProducto.get(item.id_producto) || 0) + item.cantidad;
+        cantidadPorProducto.set(item.id_producto, acumulado);
+        if (prod.controla_inventario && (prod.cantidad_inventario ?? 0) < acumulado) {
+          throw new BadRequestException(
+            `Stock insuficiente para '${prod.nombre}'. Disponible: ${prod.cantidad_inventario}, solicitado: ${acumulado}.`,
+          );
+        }
+      }
+
+      // 2.3 Descontar inventario de forma condicional atómica (previene stock negativo bajo concurrencia)
+      for (const [id_producto, cantTotal] of cantidadPorProducto.entries()) {
+        const prod = productMap.get(id_producto);
+        if (prod?.controla_inventario) {
+          if (typeof (tx.producto as any).updateMany === 'function') {
+            const dec = await tx.producto.updateMany({
+              where: {
+                id_producto,
+                cantidad_inventario: { gte: cantTotal },
+              },
+              data: {
+                cantidad_inventario: {
+                  decrement: cantTotal,
+                },
+              },
+            });
+            if (dec.count === 0) {
+              throw new BadRequestException(
+                `Stock insuficiente para '${prod.nombre}' debido a pedidos concurrentes.`,
+              );
+            }
+          } else {
+            await tx.producto.update({
+              where: { id_producto },
+              data: {
+                cantidad_inventario: {
+                  decrement: cantTotal,
+                },
+              },
+            });
+          }
+        }
+      }
+
+      // 2.4 Bloqueo asesor de transacción en PostgreSQL para evitar consecutivos numero_pedido duplicados
+      if (typeof (tx as any).$queryRaw === 'function') {
+        await (tx as any).$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(730101)`;
+      }
+
       // Calcular consecutivo diario en zona horaria local de Colombia (America/Bogota - UTC-5)
       const ahora = new Date();
       const fechaColStr = new Intl.DateTimeFormat('en-CA', {
@@ -94,9 +134,10 @@ export class PedidosService {
       }).format(ahora);
 
       const inicioDiaCol = new Date(`${fechaColStr}T00:00:00.000-05:00`);
+      const finDiaCol = new Date(`${fechaColStr}T23:59:59.999-05:00`);
 
       const ultimoPedidoHoy = await tx.pedido.findFirst({
-        where: { fecha_hora: { gte: inicioDiaCol } },
+        where: { fecha_hora: { gte: inicioDiaCol, lte: finDiaCol } },
         orderBy: { numero_pedido: 'desc' },
       });
 
@@ -142,21 +183,6 @@ export class PedidosService {
           },
         },
       });
-
-      // Descontar inventario automáticamente para productos con control de stock
-      for (const item of createPedidoDto.items) {
-        const prod = productMap.get(item.id_producto);
-        if (prod?.controla_inventario) {
-          await tx.producto.update({
-            where: { id_producto: item.id_producto },
-            data: {
-              cantidad_inventario: {
-                decrement: item.cantidad,
-              },
-            },
-          });
-        }
-      }
 
       // Si es salón, transicionar la mesa a 'ocupada'
       if (
@@ -290,73 +316,114 @@ export class PedidosService {
   }
 
   /**
-   * Actualiza el estado de una comanda (ej. cerrada o cancelada).
-   * Si se cancela y la mesa no cuenta con otros pedidos activos, libera la mesa.
+   * Actualiza el estado de una comanda (ej. cerrada o cancelada) de forma atómica.
+   * Reglas contables:
+   * - No se puede modificar un pedido ya 'cerrada' o 'cancelada'.
+   * - No se puede cerrar manualmente un pedido sin factura emitida (id_factura = null).
+   * - No se puede cancelar un pedido que ya tiene factura emitida (debe anularse la factura).
    */
   async cambiarEstado(id: number, cambiarEstadoDto: CambiarEstadoPedidoDto) {
-    const pedido = await this.obtenerPorId(id);
-
-    if (pedido.estado === EstadoPedido.cerrada) {
-      throw new BadRequestException(
-        'No se puede modificar el estado de un pedido que ya ha sido facturado y cerrado.',
-      );
-    }
-
-    const pedidoActualizado = await this.prisma.pedido.update({
-      where: { id_pedido: id },
-      data: { estado: cambiarEstadoDto.estado },
-      include: {
-        mesa: true,
-        items: {
-          include: {
-            producto: {
-              select: this.productoSelectOperativo,
+    return this.prisma.$transaction(async (tx) => {
+      const pedido = await tx.pedido.findUnique({
+        where: { id_pedido: id },
+        include: {
+          mesa: true,
+          factura: true,
+          items: {
+            include: {
+              producto: {
+                select: this.productoSelectOperativo,
+              },
             },
           },
         },
-      },
-    });
+      });
 
-    // Si se cancela y es de salón, revisar si la mesa queda libre
-    if (
-      cambiarEstadoDto.estado === EstadoPedido.cancelada &&
-      pedido.id_mesa
-    ) {
-      const pedidosActivosMesa = await this.prisma.pedido.count({
-        where: {
-          id_mesa: pedido.id_mesa,
-          estado: EstadoPedido.enviada,
+      if (!pedido) {
+        throw new NotFoundException(`El pedido #${id} no fue encontrado.`);
+      }
+
+      if (pedido.estado === EstadoPedido.cerrada) {
+        throw new BadRequestException(
+          'No se puede modificar el estado de un pedido que ya ha sido facturado y cerrado.',
+        );
+      }
+
+      if (pedido.estado === EstadoPedido.cancelada) {
+        throw new BadRequestException(
+          'No se puede modificar el estado de un pedido que ya fue cancelado.',
+        );
+      }
+
+      if (cambiarEstadoDto.estado === EstadoPedido.cerrada && !pedido.id_factura) {
+        throw new BadRequestException(
+          'No es posible cerrar manualmente una comanda sin cobrar y facturar en caja.',
+        );
+      }
+
+      if (
+        cambiarEstadoDto.estado === EstadoPedido.cancelada &&
+        pedido.id_factura &&
+        (!pedido.factura || pedido.factura.estado === EstadoFactura.emitida)
+      ) {
+        throw new BadRequestException(
+          `No se puede cancelar la comanda porque está asociada a la factura activa #FAC-${pedido.id_factura}. Anule primero la factura en caja.`,
+        );
+      }
+
+      const pedidoActualizado = await tx.pedido.update({
+        where: { id_pedido: id },
+        data: { estado: cambiarEstadoDto.estado },
+        include: {
+          mesa: true,
+          items: {
+            include: {
+              producto: {
+                select: this.productoSelectOperativo,
+              },
+            },
+          },
         },
       });
 
-      if (pedidosActivosMesa === 0) {
-        await this.prisma.mesa.update({
-          where: { id_mesa: pedido.id_mesa },
-          data: { estado: EstadoMesa.libre },
+      // Si se cancela y es de salón, revisar si la mesa queda libre
+      if (
+        cambiarEstadoDto.estado === EstadoPedido.cancelada &&
+        pedido.id_mesa
+      ) {
+        const pedidosActivosMesa = await tx.pedido.count({
+          where: {
+            id_mesa: pedido.id_mesa,
+            estado: EstadoPedido.enviada,
+          },
         });
-      }
-    }
 
-    // Si se cancela la comanda, restituir existencias en inventario para productos controlados
-    if (
-      cambiarEstadoDto.estado === EstadoPedido.cancelada &&
-      pedido.estado !== EstadoPedido.cancelada
-    ) {
-      for (const item of (pedido.items || [])) {
-        if (item.producto?.controla_inventario) {
-          await this.prisma.producto.update({
-            where: { id_producto: item.id_producto },
-            data: {
-              cantidad_inventario: {
-                increment: item.cantidad,
-              },
-            },
+        if (pedidosActivosMesa === 0) {
+          await tx.mesa.update({
+            where: { id_mesa: pedido.id_mesa },
+            data: { estado: EstadoMesa.libre },
           });
         }
       }
-    }
 
-    return pedidoActualizado;
+      // Si se cancela la comanda, restituir existencias en inventario para productos controlados
+      if (cambiarEstadoDto.estado === EstadoPedido.cancelada) {
+        for (const item of pedido.items || []) {
+          if (item.producto?.controla_inventario) {
+            await tx.producto.update({
+              where: { id_producto: item.id_producto },
+              data: {
+                cantidad_inventario: {
+                  increment: item.cantidad,
+                },
+              },
+            });
+          }
+        }
+      }
+
+      return pedidoActualizado;
+    });
   }
 
   /**
@@ -376,6 +443,35 @@ export class PedidosService {
 
     if (!pedido) {
       throw new NotFoundException(`El pedido #${id} no fue encontrado.`);
+    }
+
+    if (dto.estado !== undefined && dto.estado !== pedido.estado) {
+      if (pedido.estado === EstadoPedido.cancelada || pedido.estado === EstadoPedido.cerrada) {
+        throw new BadRequestException(
+          `No se puede cambiar el estado de un pedido que ya está '${pedido.estado}'.`,
+        );
+      }
+
+      if (dto.estado === EstadoPedido.cerrada && !pedido.id_factura) {
+        throw new BadRequestException(
+          'No es posible cerrar manualmente una comanda sin factura emitida en caja.',
+        );
+      }
+
+      if (dto.estado === EstadoPedido.cancelada) {
+        if (dto.observacion !== undefined || dto.id_mesa !== undefined) {
+          await this.prisma.pedido.update({
+            where: { id_pedido: id },
+            data: {
+              ...(dto.observacion !== undefined && {
+                observacion: dto.observacion ? dto.observacion.trim().slice(0, 255) : null,
+              }),
+              ...(dto.id_mesa !== undefined && { id_mesa: dto.id_mesa }),
+            },
+          });
+        }
+        return this.cambiarEstado(id, { estado: EstadoPedido.cancelada });
+      }
     }
 
     const data: any = {};
@@ -412,14 +508,41 @@ export class PedidosService {
   async eliminar(id: number) {
     const pedido = await this.prisma.pedido.findUnique({
       where: { id_pedido: id },
-      include: { factura: true },
+      include: {
+        factura: true,
+        items: {
+          include: { producto: true },
+        },
+      },
     });
 
     if (!pedido) {
       throw new NotFoundException(`El pedido #${id} no fue encontrado.`);
     }
 
+    if (pedido.factura && pedido.factura.estado === EstadoFactura.emitida) {
+      throw new BadRequestException(
+        `No se puede eliminar el pedido #${pedido.numero_pedido} porque está vinculado a la factura activa #FAC-${pedido.id_factura}. Anule primero la factura en caja para preservar la integridad contable y de costos.`,
+      );
+    }
+
     return this.prisma.$transaction(async (tx) => {
+      // Si el pedido seguía activo (enviada), restituir el stock descontado antes de eliminar
+      if (pedido.estado === EstadoPedido.enviada) {
+        for (const item of pedido.items || []) {
+          if (item.producto?.controla_inventario) {
+            await tx.producto.update({
+              where: { id_producto: item.id_producto },
+              data: {
+                cantidad_inventario: {
+                  increment: item.cantidad,
+                },
+              },
+            });
+          }
+        }
+      }
+
       await tx.itemPedido.deleteMany({
         where: { id_pedido: id },
       });

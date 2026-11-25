@@ -108,7 +108,7 @@ export class CatalogoApiService {
       nombre: raw.nombre,
       categoria: raw.categoria,
       precio_venta: Number(raw.precio_venta),
-      costo: Number(raw.costo),
+      costo: Number(raw.costo ?? 0),
       cantidad_inventario: Number(raw.cantidad_inventario ?? 0),
       controla_inventario: Boolean(raw.controla_inventario ?? false),
       disponible: Boolean(raw.disponible),

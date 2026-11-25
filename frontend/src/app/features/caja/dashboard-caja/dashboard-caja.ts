@@ -138,7 +138,11 @@ export class DashboardCajaComponent implements OnInit {
   }
 
   get utilidadDia(): number {
-    return this.resumen()?.utilidad_del_dia ?? (this.ventasNetas - this.gastosRetiros);
+    return (
+      this.resumen()?.utilidad_neta ??
+      this.resumen()?.utilidad_del_dia ??
+      (this.ventasNetas - this.costoInsumos - this.gastosRetiros)
+    );
   }
 
   get utilidadNeta(): number {

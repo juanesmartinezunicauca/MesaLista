@@ -143,4 +143,17 @@ describe('NewDeliveryDialogComponent', () => {
     });
     expect(fakeDialogRef.close).toHaveBeenCalledWith({ id_pedido: 99 });
   });
+
+  it('debe determinar automáticamente la zona y tarifa de envío al seleccionar un barrio de Popayán', () => {
+    component.agregarProducto(mockProductos[0]); // 25.000
+    component.cambiarBarrio('La Esmeralda');
+    expect(component.zonaDetectada().nombre).toBe('Zona Sur');
+    expect(component.costoEnvio()).toBe(6000);
+    expect(component.totalConEnvio()).toBe(31000);
+
+    component.cambiarBarrio('Bello Horizonte');
+    expect(component.zonaDetectada().nombre).toBe('Zona Norte');
+    expect(component.costoEnvio()).toBe(7000);
+    expect(component.totalConEnvio()).toBe(32000);
+  });
 });

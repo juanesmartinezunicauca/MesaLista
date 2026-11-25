@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, Length, Matches } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, Length, Matches, MaxLength } from 'class-validator';
 
 export class CreateClienteDomicilioDto {
   @ApiProperty({
@@ -45,6 +45,7 @@ export class CreateClienteDomicilioDto {
     example: 'laura.gomez@gmail.com',
   })
   @IsOptional()
-  @IsString({ message: 'El correo electrónico debe ser una cadena de texto.' })
+  @IsEmail({}, { message: 'El correo electrónico del cliente no tiene un formato válido.' })
+  @MaxLength(100, { message: 'El correo electrónico no puede exceder 100 caracteres.' })
   email?: string;
 }

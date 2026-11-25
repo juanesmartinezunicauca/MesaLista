@@ -39,14 +39,45 @@ export class PrismaExceptionFilter implements ExceptionFilter {
       error = 'BadRequest';
       code = 'VALIDATION_ERROR';
     } else if (exception instanceof Prisma.PrismaClientUnknownRequestError) {
-      status = HttpStatus.BAD_REQUEST;
-      message = 'La petición contiene caracteres, secuencias de bytes o parámetros no admitidos por la base de datos.';
-      error = 'BadRequest';
-      code = 'DB_REQUEST_ERROR';
+      const msgLower = (exception.message || '').toLowerCase();
+      const esFalloInfraestructura =
+        msgLower.includes('connection') ||
+        msgLower.includes('econnrefused') ||
+        msgLower.includes('etimedout') ||
+        msgLower.includes('timed out') ||
+        msgLower.includes('terminated') ||
+        msgLower.includes('socket') ||
+        msgLower.includes('pool') ||
+        msgLower.includes("can't reach") ||
+        msgLower.includes('server closed') ||
+        msgLower.includes('broken pipe') ||
+        msgLower.includes('too many clients') ||
+        msgLower.includes('shutting down');
+
+      if (esFalloInfraestructura) {
+        this.logger.error(
+          `Error desconocido de Prisma: ${exception.message}`,
+          exception.stack,
+        );
+        status = HttpStatus.INTERNAL_SERVER_ERROR;
+        message = 'Error interno en la base de datos.';
+        error = 'DatabaseError';
+        code = 'DB_REQUEST_ERROR';
+      } else {
+        status = HttpStatus.BAD_REQUEST;
+        message =
+          'La petición contiene caracteres, secuencias de bytes o parámetros no admitidos por la base de datos.';
+        error = 'BadRequest';
+        code = 'DB_REQUEST_ERROR';
+      }
     } else if (exception instanceof Prisma.PrismaClientRustPanicError) {
-      status = HttpStatus.BAD_REQUEST;
-      message = 'Error en el motor de consulta por datos anómalos o fuera de rango.';
-      error = 'BadRequest';
+      this.logger.error(
+        `Pánico interno del motor Prisma: ${exception.message}`,
+        exception.stack,
+      );
+      status = HttpStatus.INTERNAL_SERVER_ERROR;
+      message = 'Error interno en el motor de base de datos.';
+      error = 'DatabaseError';
       code = 'DB_PANIC_ERROR';
     } else {
       code = exception.code;
