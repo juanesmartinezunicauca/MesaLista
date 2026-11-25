@@ -21,7 +21,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { RolUsuario } from '@prisma/client';
-import { Roles } from '../../common/decorators';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { CurrentUser, Roles } from '../../common/decorators';
 import { JwtAuthGuard, RolesGuard } from '../../common/guards';
 import {
   CambiarEstadoDto,
@@ -95,6 +96,8 @@ export class UsuariosController {
   @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
   @Post(':id/enviar-codigo')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   enviarCodigo(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: EnviarCodigoDto,
@@ -169,8 +172,9 @@ export class UsuariosController {
   actualizar(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: UpdateUsuarioDto,
+    @CurrentUser('id_usuario') idActor?: number,
   ) {
-    return this.usuariosService.actualizar(id, updateDto);
+    return this.usuariosService.actualizar(id, updateDto, idActor);
   }
 
   /**
@@ -196,8 +200,9 @@ export class UsuariosController {
   cambiarEstado(
     @Param('id', ParseIntPipe) id: number,
     @Body() cambiarEstadoDto: CambiarEstadoDto,
+    @CurrentUser('id_usuario') idActor?: number,
   ) {
-    return this.usuariosService.cambiarEstado(id, cambiarEstadoDto.estado);
+    return this.usuariosService.cambiarEstado(id, cambiarEstadoDto.estado, idActor);
   }
 
   /**
@@ -218,7 +223,10 @@ export class UsuariosController {
   @ApiResponse({ status: 403, description: 'Acceso denegado: requiere rol administrador.' })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
   @Delete(':id')
-  eliminar(@Param('id', ParseIntPipe) id: number) {
-    return this.usuariosService.eliminar(id);
+  eliminar(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('id_usuario') idActor?: number,
+  ) {
+    return this.usuariosService.eliminar(id, idActor);
   }
 }

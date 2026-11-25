@@ -1,41 +1,46 @@
 # MesaLista POS 🍽️ — Sistema Integral de Gestión Restaurantera y Punto de Venta
 
-[![NestJS](https://img.shields.io/badge/Backend-NestJS%2011-ea2845?style=flat&logo=nestjs)](https://nestjs.com/)
-[![Angular](https://img.shields.io/badge/Frontend-Angular%2019%2B-dd0031?style=flat&logo=angular)](https://angular.dev/)
-[![Prisma](https://img.shields.io/badge/ORM-Prisma%20ORM-2d3748?style=flat&logo=prisma)](https://www.prisma.io/)
+[![NestJS](https://img.shields.io/badge/Backend-NestJS%2012-ea2845?style=flat&logo=nestjs)](https://nestjs.com/)
+[![Angular](https://img.shields.io/badge/Frontend-Angular%2022-dd0031?style=flat&logo=angular)](https://angular.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6?style=flat&logo=typescript)](https://www.typescriptlang.org/)
+[![Prisma](https://img.shields.io/badge/ORM-Prisma%206-2d3748?style=flat&logo=prisma)](https://www.prisma.io/)
 [![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL%2016-336791?style=flat&logo=postgresql)](https://www.postgresql.org/)
 [![OpenAPI](https://img.shields.io/badge/Docs-OpenAPI%203.0%20%2F%20Swagger-85ea2d?style=flat&logo=swagger)](http://localhost:3000/api/docs)
 [![Arc42](https://img.shields.io/badge/Architecture-Arc42%20v8.2-blue)](docs/arquitectura/arc42.md)
 [![IEEE](https://img.shields.io/badge/Standard-IEEE%201063%20%7C%20ISO%2026514-informational)](docs/manual-tecnico-usuario.md)
-[![Security](https://img.shields.io/badge/Security-OWASP%20Top%2010-brightgreen)](OWASP_COMPLIANCE.md)
+[![Security](https://img.shields.io/badge/Security-OWASP%20Top%2010%20(2025)-brightgreen)](OWASP_COMPLIANCE.md)
 
 ---
 
 ## 📌 1. Visión General del Sistema
 
-**MesaLista POS** es una solución de Punto de Venta y Gestión Operativa diseñada bajo un enfoque híbrido **Cloud & Local-First (LAN)** para locales gastronómicos de alta rotación, implementada y validada en su fase piloto con el **Restaurante Nocturno Luigie's** (Popayán, Cauca, Colombia).
+**MesaLista POS** es una solución integral de Punto de Venta, Comandería y Gestión Operativa diseñada para locales gastronómicos de alta rotación, implementada y validada con el **Restaurante Nocturno Luigie's** (Popayán, Cauca, Colombia).
 
 El sistema centraliza y sincroniza en tiempo real las operaciones clave del restaurante:
-- **Gestión de Salón y Mesas:** Plano interactivo visual, control de estados (libre, ocupada, atendida, sucia), cambio de ubicación y comandería rápida por mesero.
-- **Cocina y Barra (KDS - Kitchen Display System):** Cola visual de pedidos en tiempo real con tiempos de preparación, estados de cocción y despachos parciales.
-- **Domicilios y Pedidos Externos:** Registro de clientes de domicilio, cálculo de costos de despacho, trazabilidad de ruta y panel público de recepción de pedidos.
-- **Arqueo y Control de Turnos de Caja:** Apertura con base inicial, registro de egresos/gastos menores en tiempo real, arqueo ciego o supervisado y balance de cierre.
-- **Facturación y Liquidación:** Múltiples medios de pago (efectivo, datáfono, transferencia QR), gestión voluntaria de propina (10%), anulación auditada y soporte de impresión térmica ESC/POS.
-- **Autenticación Federada de Alta Seguridad:** Acceso exclusivo corporativo mediante **Google OAuth 2.0 (Identity Services)** con enrolamiento por tokens efímeros y control de acceso basado en roles (**RBAC**).
+- **Gestión de Salón y Mesas:** Plano interactivo visual, control de estados (`libre`, `ocupada`), transferencia transaccional de cuentas entre mesas y comandería rápida por mesero.
+- **Cocina (KDS - Kitchen Display System):** Cola visual de comandas en tiempo real con tiempos de preparación, observaciones personalizadas por plato e ingredientes removibles.
+- **Domicilios y Portal Cliente:** Carta digital pública (`/cliente`), carrito de compras (`/cliente/carrito`) accesible para clientes y también para colaboradores que deseen hacer pedidos personales, control de disponibilidad del servicio y seguimiento por etapas (`Pendiente` → `En Preparación` → `En Reparto` → `Entregado`).
+- **Arqueo y Control de Turnos de Caja:** Apertura con fondo base inicial, registro de gastos menores por categoría y medio de pago, arqueo físico ciego y cierre con cálculo exacto de sobrante/faltante y protección contra concurrencia.
+- **Facturación y Liquidación:** Pagos simples o mixtos (efectivo, datáfono/tarjeta, transferencia/QR), propina voluntaria, anulación auditada con restitución de estado de mesa, consecutivo atómico y soporte para impresión térmica ESC/POS.
+- **Reportes y Analítica (BI):** Dashboard consolidado, ventas por canal/categoría, conciliación de caja y medios de pago, inventario valorizado, egresos, rentabilidad bruta y operación en cocina con filtros por rango de fechas y exportación CSV/Excel/PDF.
+- **Autenticación Federada de Alta Seguridad:** Acceso mediante **Google OAuth 2.0 (Google Identity Services)** sin contraseñas locales, enrolamiento de colaboradores mediante códigos criptográficos efímeros (`INV-XXXXXXXX`, vigencia 48 h) sin persistir correos personales de empleados en base de datos, y control de acceso basado en roles (**RBAC**).
 
 ---
 
 ## 📚 2. Estándares y Documentación Técnica del Repositorio
 
-El proyecto implementa los estándares internacionales de arquitectura, especificación de APIs y documentación de software:
+El proyecto sigue estándares internacionales de arquitectura, documentación de usuario, especificación de APIs y aseguramiento de calidad/seguridad:
 
 | Documento | Estándar / Marco | Descripción |
 |---|---|---|
-| [**Swagger UI Interactivo**](http://localhost:3000/api/docs) | **OpenAPI Specification 3.0** | Catálogo vivo de endpoints, esquemas DTO, ejemplos y autenticación Bearer interactiva en `/api/docs`. |
-| [**Arc42 Architectural Blueprint**](docs/arquitectura/arc42.md) | **Arc42 v8.2** | Especificación integral de arquitectura: contexto, bloques C4, vistas de ejecución, ADRs y análisis de calidad ATAM. |
-| [**Manual Técnico y de Usuario**](docs/manual-tecnico-usuario.md) | **IEEE 1063 & ISO/IEC/IEEE 26514** | Guía de instalación paso a paso, diccionario de base de datos, manual por roles operativos y resolución de fallos. |
-| [**Guía de Sustentación de Autenticación**](docs/sustentacion-auth.md) | **OAuth 2.0 RFC 6749 & OIDC** | Trazabilidad archivo por archivo del flujo de autenticación Google, mitigación Anti-Account Takeover y banco de preguntas para evaluación oral. |
-| [**Matriz de Cumplimiento OWASP**](OWASP_COMPLIANCE.md) | **OWASP Top 10 (2025/2026)** | Auditoría técnica de mitigación de vulnerabilidades (Inyecciones, Broken Auth, SSRF, DoS, Exposición de Datos). |
+| [**Swagger UI Interactivo**](http://localhost:3000/api/docs) | **OpenAPI Specification 3.0** | Catálogo vivo de endpoints bajo `/api/v1`, esquemas DTO, ejemplos y autenticación Bearer interactiva en `/api/docs`. |
+| [**Arc42 Architectural Blueprint**](docs/arquitectura/arc42.md) | **Arc42 v8.2 / ISO 42010** | Especificación integral de arquitectura: contexto, bloques C4, vista de ejecución, despliegue, ADRs y escenarios de calidad. |
+| [**Manual Técnico y de Usuario**](docs/manual-tecnico-usuario.md) | **IEEE 1063 & ISO/IEC/IEEE 26514** | Guía de instalación, diccionario relacional de BD, manual operativo por rol y guía de solución de fallos. |
+| [**Documento de Entrega y Acuerdos Finales**](docs/entrega-final-y-acuerdos.md) | **Cierre de Proyecto** | Inventario de entregables, resumen de pruebas, limitaciones acordadas, transferencia operativa y acta de aceptación. |
+| [**Matriz de Cumplimiento OWASP**](OWASP_COMPLIANCE.md) | **OWASP Top 10 (2025)** | Auditoría de mitigaciones A01–A10, evidencia de pruebas automatizadas y reporte HTML interactivo. |
+| [**Informe Técnico de Pruebas Fuzzy**](INFORME_TECNICO_FUZZY.md) | **Fuzzing & Resiliencia** | Análisis de límites del motor PostgreSQL/Prisma, concurrencia, `fast-check` y reporte HTML de fuzzing. |
+| [**Informe DAST OWASP ZAP + CVSS v3.1**](reports/INFORME_CVSS_OWASP_ZAP.md) | **OWASP ZAP / CVSS v3.1** | Evaluación dinámica de seguridad contra despliegue en producción y catálogo de hallazgos. |
+| [**Guía de Despliegue Cloud**](GUIA_DESPLIEGUE.md) | **Neon + Render + Vercel** | Procedimiento paso a paso para despliegue gratuito permanente con Google OAuth 2.0 y Brevo. |
 
 ---
 
@@ -44,16 +49,16 @@ El proyecto implementa los estándares internacionales de arquitectura, especifi
 ```mermaid
 flowchart LR
     subgraph Client["Frontend (SPA)"]
-        A[Angular 19 Standalone] --> B[Signals & RxJS Reactive State]
-        B --> C[Tailwind CSS & SCSS]
+        A[Angular 22 Standalone] --> B[Signals & RxJS 7]
+        B --> C[Angular Material & SCSS]
         C --> D[Google Identity Services GIS]
     end
-    
+
     subgraph Server["Backend API"]
-        E[NestJS 11+ REST] --> F[Prisma ORM 6]
+        E[NestJS 12 REST] --> F[Prisma ORM 6]
         E --> G[Passport JWT & Class-Validator]
-        E --> H[Swagger OpenAPI 3.0]
-        E --> I[Brevo API Mailer]
+        E --> H[Helmet, Throttler & Swagger 3.0]
+        E --> I[Brevo REST API / SMTP Mailer]
     end
 
     subgraph Data["Infraestructura & Datos"]
@@ -63,76 +68,78 @@ flowchart LR
     end
 
     Client -->|HTTPS / JSON + Bearer JWT| Server
-    Server -->|Pool TCP / SSL| Data
+    Server -->|Pool TCP / TLS| Data
 ```
 
-- **Frontend:** Angular 19/20+, TypeScript 5+, RxJS 7+, Standalone Components, Reactive Forms, SCSS modular.
-- **Backend:** NestJS 11+, Node.js 20+ LTS, TypeScript 5+, Passport.js, Helmet, Express.
-- **Capa de Persistencia:** Prisma ORM, PostgreSQL 16 (Compatible con Neon Cloud Serverless y PostgreSQL Local).
-- **Seguridad & Comunicaciones:** Google Identity Services (`@google/accounts`), JWT (`RS256/HS256`), Brevo REST API v3 (Emails transaccionales sin bloqueo de puertos SMTP).
-- **Hardware Integrado:** Soporte para impresoras de recibos térmicas de 80mm y 58mm vía socket TCP/LAN o driver nativo.
+- **Frontend:** Angular 22, TypeScript 6.0, RxJS 7.8, Standalone Components, Angular Signals, Angular Material 22, Reactive Forms, SCSS modular, exportación `xlsx`/`jspdf`, pruebas con **Vitest 4**.
+- **Backend:** NestJS 12, Node.js 20/24 LTS, TypeScript 6.0, Passport JWT, `class-validator`, Helmet, `@nestjs/throttler`, `oxlint`, pruebas con **Jest 30** y **fast-check**.
+- **Persistencia:** Prisma ORM 6.19, PostgreSQL 16 (Neon Serverless en nube o PostgreSQL local).
+- **Seguridad y Correo:** Google Identity Services (`google-auth-library`), JWT Bearer, Brevo REST API v3 (HTTPS 443) con respaldo Resend/SMTP endurecido.
+- **Hardware Integrado:** Impresión de recibos térmicos de 80 mm / 58 mm vía ESC/POS (`node-thermal-printer`).
 
 ---
 
 ## 📋 4. Requisitos Previos
 
-Antes de ejecutar el proyecto, asegúrate de tener instalado:
-- **Node.js:** v20.x LTS o superior ([Descargar](https://nodejs.org/))
-- **npm:** v9.x o superior
-- **Base de Datos PostgreSQL:** v15+ en local **O** una cadena de conexión a un clúster PostgreSQL en la nube ([Neon.tech](https://neon.tech), Supabase, etc.).
-- **Docker & Docker Compose** *(Opcional, si deseas levantar todo el entorno mediante contenedores)*.
-- **Google Cloud Console:** Client ID configurado en OAuth 2.0 Web Client con orígenes autorizados `http://localhost:4200`.
+Antes de ejecutar el proyecto en local, asegúrate de contar con:
+- **Node.js:** v20.x o v24.x LTS ([Descargar](https://nodejs.org/))
+- **npm:** v10+
+- **PostgreSQL:** v15/v16 local **o** conexión a PostgreSQL en la nube ([Neon.tech](https://neon.tech)).
+- **Docker & Docker Compose** *(Opcional, para despliegue en contenedores)*.
+- **Google Cloud Console:** OAuth 2.0 Web Client ID con `http://localhost:4200` en orígenes JavaScript autorizados.
 
 ---
 
 ## ⚙️ 5. Configuración de Variables de Entorno
 
 ### 5.1 Backend (`backend/.env`)
-Copia la plantilla `backend/.env.example` como `backend/.env`:
+Copia la plantilla [`backend/.env.example`](backend/.env.example) como `backend/.env` (este archivo está ignorado en `.gitignore` y **nunca** se versiona):
 
 ```bash
 # Windows PowerShell:
 Copy-Item backend/.env.example backend/.env
 
-# Linux / macOS / Bash:
+# Linux / macOS:
 cp backend/.env.example backend/.env
 ```
 
-Edita `backend/.env` con tus credenciales reales (este archivo está en `.gitignore` y **nunca** se versiona):
+Variables principales:
 
 ```ini
 # Servidor HTTP
 PORT=3000
 NODE_ENV=development
 
-# Base de datos PostgreSQL (Ejemplo Neon Cloud o Local)
-DATABASE_URL="postgresql://usuario:contraseña@ep-ejemplo.us-east-2.aws.neon.tech/mesalista?sslmode=require"
+# Base de datos PostgreSQL (Local o Neon Cloud)
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/mesalista?schema=public"
 
-# Seguridad JWT (Generar con: openssl rand -hex 32)
-JWT_SECRET="CAMBIE_ESTO_POR_UNA_CLAVE_ALEATORIA_SUPER_SEGURA_DE_32_BYTES"
+# Seguridad JWT (mínimo 32 caracteres de alta entropía)
+JWT_SECRET="CAMBIE_ESTO_POR_UN_SECRETO_SEGURO_DE_AL_MENOS_32_CHARS"
 JWT_EXPIRES_IN="12h"
 
-# CORS (Orígenes autorizados separados por coma)
-CORS_ORIGIN="http://localhost:4200"
+# CORS (orígenes autorizados separados por coma) y URL pública del frontend
+CORS_ORIGIN="http://localhost:4200,https://mesa-lista-virid.vercel.app"
+FRONTEND_URL="https://mesa-lista-virid.vercel.app"
 
 # Google OAuth 2.0
 GOOGLE_CLIENT_ID="123456789012-ejemplo.apps.googleusercontent.com"
 
-# Impresora térmica ESC/POS (opcional)
-PRINTER_INTERFACE="tcp://192.168.1.200:9100"
-
-# Despacho de Correo Electrónico (Brevo REST API - Invitaciones de Empleados)
+# Correo transaccional (Brevo REST API v3 — puerto 443 HTTPS)
 BREVO_API_KEY="xkeysib-tu-api-key-de-brevo"
 BREVO_SENDER_EMAIL="notificaciones@tudominio.com"
+
+# Impresora térmica ESC/POS (opcional)
+PRINTER_INTERFACE="tcp://192.168.1.200:9100"
 ```
 
 ### 5.2 Frontend (`frontend/src/environments/`)
-Configura las variables públicas en `frontend/src/environments/environment.ts`:
+Configura el entorno local en [`frontend/src/environments/environment.development.ts`](frontend/src/environments/environment.development.ts) (y producción en [`frontend/src/environments/environment.ts`](frontend/src/environments/environment.ts)):
 
 ```typescript
 export const environment = {
   production: false,
   apiUrl: 'http://localhost:3000/api/v1',
+  appName: 'MesaLista',
   googleClientId: '123456789012-ejemplo.apps.googleusercontent.com',
 };
 ```
@@ -141,8 +148,7 @@ export const environment = {
 
 ## 🚀 6. Guía de Instalación y Ejecución Local
 
-### Paso 1: Dependencias del Backend y Base de Datos
-En tu primera terminal:
+### Paso 1: Backend y Base de Datos
 ```bash
 cd backend
 npm install
@@ -153,44 +159,42 @@ npx prisma generate
 # Sincronizar el modelo relacional en PostgreSQL
 npx prisma db push
 
-# Poblar datos iniciales (Mesas del 1 al 6 y usuario super-admin inicial)
+# Poblar datos iniciales (mesas, medios de pago, tipos de gasto y administrador inicial)
 npx prisma db seed
 
-# Iniciar servidor en desarrollo con hot-reload
+# Iniciar servidor en desarrollo con recarga en vivo
 npm run start:dev
 ```
-> El backend quedará escuchando en: `http://localhost:3000`  
+> Backend activo en: `http://localhost:3000/api/v1`  
 > Documentación interactiva Swagger: `http://localhost:3000/api/docs`
 
-### Paso 2: Dependencias y Ejecución del Frontend
-En tu segunda terminal:
+### Paso 2: Frontend SPA (Angular 22)
+En una segunda terminal:
 ```bash
 cd frontend
 npm install
 
-# Iniciar la SPA de Angular
+# Iniciar la aplicación Angular
 npm start
 ```
-> La interfaz gráfica estará disponible en: `http://localhost:4200`
+> Interfaz web disponible en: `http://localhost:4200` (el portal público de clientes está en `/cliente` y el acceso operativo en `/login`).
 
 ---
 
 ## 🐳 7. Ejecución con Docker Compose (Todo en Uno)
 
-Si prefieres levantar el stack completo sin instalar PostgreSQL ni Node en tu máquina anfitriona:
-
 ```bash
-# Iniciar todos los servicios (Base de datos PostgreSQL, Backend NestJS y Frontend Nginx)
+# Construir e iniciar PostgreSQL, Backend NestJS y Frontend Nginx
 docker compose up --build -d
 
-# Ver logs en vivo
+# Ver logs en tiempo real
 docker compose logs -f
 
 # Detener los contenedores
 docker compose down
 ```
 
-Puertos expuestos por Docker:
+Puertos expuestos:
 - **Frontend Web:** `http://localhost:80`
 - **Backend API & Swagger:** `http://localhost:3000/api/v1` y `http://localhost:3000/api/docs`
 - **PostgreSQL:** `localhost:5432`
@@ -199,172 +203,109 @@ Puertos expuestos por Docker:
 
 ## 🔐 8. Roles de Usuario y Flujo de Autenticación
 
-El acceso al sistema está blindado mediante **Google OAuth 2.0**:
+El sistema utiliza autenticación federada **Google OAuth 2.0 (OIDC)** sin contraseñas locales y privacidad por diseño para empleados:
 
 ```mermaid
 flowchart TD
-    A[Usuario pulsa 'Iniciar sesión con Google'] --> B[Google One Tap / GIS Popup]
-    B -->|ID Token firmado JWT| C[Frontend envía ID Token a POST /auth/google]
-    C --> D[Backend valida firma criptográfica con Google Auth Library]
-    D --> E{¿Email existe en tabla 'usuario'?}
-    E -->|No| F[401 Unauthorized: Usuario no registrado en nómina]
-    E -->|Sí, pero inactivo| G[401 Unauthorized: Cuenta desactivada]
-    E -->|Sí y activo| H[Enlaza google_id si es primera vez]
-    H --> I[Backend emite JWT con id_usuario, rol y nombre]
-    I --> J[Frontend almacena JWT y redirige según Rol]
+    A[Usuario pulsa 'Continuar con Google'] --> B[Google Identity Services GIS]
+    B -->|ID Token JWT firmado| C[Frontend envía idToken a POST /api/v1/auth/google]
+    C --> D[Backend verifica firma criptográfica con google-auth-library]
+    D --> E{¿Incluye codigoInvitacion INV-XXXXXXXX?}
+    E -->|Sí| F[Valida código vigente 48h y cuenta activa]
+    F --> G[Quema código atómicamente con updateMany y enlaza googleId sin guardar email]
+    E -->|No| H{¿Existe usuario por googleId?}
+    H -->|Sí y activo| I[Emite JWT con id_usuario y rol operativo o cliente]
+    H -->|Sí pero inactivo| J[401 Unauthorized: Cuenta inactiva]
+    H -->|No| K[Crea cuenta rol 'cliente' con googleId y email para domicilios]
+    G --> I
+    K --> I
+    I --> L[Frontend guarda JWT y redirige según rol]
 ```
 
-### Roles del Sistema (RBAC)
-- **`super_admin` / `administrador`:** Acceso integral a métricas, catálogo, nómina de empleados, caja y reportes.
-- **`cajero`:** Gestión exclusiva del turno de caja, egresos menores, arqueo físico y cobro de pedidos.
-- **`mesero`:** Asignación visual de comandas a mesas, traslado de cuentas y visualización de pedidos activos.
-- **`cocinero`:** Panel KDS en cocina, cambio de estados a "en preparación" y "listo para entregar".
-- **`domiciliario`:** Despacho, trazabilidad de pedidos fuera de salón y confirmación de entrega.
+### Roles del Sistema (`RolUsuario` en Prisma / RBAC)
+- **`administrador`:** Control total del sistema (gestión de colaboradores e invitaciones, catálogo, ajustes de inventario, mesas, caja, anulaciones, auditoría y módulo BI de reportes).
+- **`cajero`:** Apertura y cierre ciego de caja, registro de gastos menores, facturación/cobros, anulación auditada, gestión de mesas, comandas y domicilios.
+- **`mesero`:** Plano de mesas, toma y edición de comandas, transferencia de cuentas entre mesas, consulta de carta y cobro de pedidos.
+- **`cocina`:** Pantalla KDS de cocina para visualizar y gestionar el estado de preparación de comandas.
+- **`cliente`:** Acceso al portal público `/cliente`, carrito `/cliente/carrito`, creación de pedidos a domicilio y consulta exclusiva de sus propios pedidos (protección anti-IDOR).
+- **Colaboradores como clientes:** Cualquier empleado autenticado (`administrador`, `cajero`, `mesero`, `cocina`) puede acceder también a `/cliente` y hacer pedidos personales a domicilio (etiquetados internamente con `[PORTAL_CLIENTE]` para no mezclarlos con domicilios tomados en el POS). Desde `/login`, hacer clic en el logo de MesaLista redirige directamente a `/cliente`.
 
 ---
 
-## 📡 9. Ejemplos de Uso de la API (cURL / HTTP)
+## 📡 9. Ejemplos de Uso de la API (`cURL`)
 
-Todos los endpoints (excepto el login de Google y webhook/recepción pública) requieren la cabecera `Authorization: Bearer <TOKEN_JWT>`.
+Todos los endpoints protegidos requieren la cabecera `Authorization: Bearer <TOKEN_JWT>`.
 
-### 9.1 Autenticación con Google OAuth
+### 9.1 Autenticación con Google OAuth 2.0 (con o sin código de invitación)
 ```bash
 curl -X POST http://localhost:3000/api/v1/auth/google \
   -H "Content-Type: application/json" \
   -d '{
-    "credential": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEy..."
+    "idToken": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEy...",
+    "codigoInvitacion": "INV-A7B9C3D5"
   }'
 ```
-**Respuesta (`201 Created`):**
+**Respuesta (`200 OK`):**
 ```json
 {
   "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "usuario": {
-    "id_usuario": 1,
-    "nombre": "Juan Esteban Martínez",
-    "usuario": "admin",
-    "email": "jesmartinez@unicauca.edu.co",
-    "rol": "administrador",
+    "id_usuario": 2,
+    "nombre": "Carlos Mesero",
+    "usuario": "cmesero",
+    "email": null,
+    "rol": "mesero",
     "estado": "activo"
   }
 }
 ```
-
----
 
 ### 9.2 Consultar Estado Operativo de Caja
 ```bash
 curl -X GET http://localhost:3000/api/v1/caja/estado \
   -H "Authorization: Bearer $TOKEN"
 ```
-**Respuesta (`200 OK`):**
-```json
-{
-  "cajaAbierta": true,
-  "caja": {
-    "id_caja": 14,
-    "monto_apertura": 150000.00,
-    "total_ventas_efectivo": 420000.00,
-    "total_gastos": 35000.00,
-    "saldo_esperado": 535000.00,
-    "fecha_apertura": "2026-11-12T18:00:00.000Z",
-    "estado": "abierta"
-  }
-}
-```
-
----
 
 ### 9.3 Listar Mesas del Salón
 ```bash
 curl -X GET http://localhost:3000/api/v1/mesas \
   -H "Authorization: Bearer $TOKEN"
 ```
-**Respuesta (`200 OK`):**
-```json
-[
-  {
-    "id_mesa": 1,
-    "numero_mesa": "Mesa 1",
-    "capacidad": 4,
-    "estado": "libre",
-    "posicion_x": 120,
-    "posicion_y": 80
-  },
-  {
-    "id_mesa": 2,
-    "numero_mesa": "Mesa 2",
-    "capacidad": 6,
-    "estado": "ocupada",
-    "posicion_x": 280,
-    "posicion_y": 80
-  }
-]
-```
 
----
-
-### 9.4 Crear una Comanda / Pedido de Mesa
+### 9.4 Crear una Comanda de Salón
 ```bash
 curl -X POST http://localhost:3000/api/v1/pedidos \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "id_mesa": 2,
-    "tipo_pedido": "mesa",
-    "observaciones": "Sin cebolla en la hamburguesa especial",
+    "tipo": "salon",
+    "observacion": "Sin cebolla en la hamburguesa especial",
     "items": [
       {
         "id_producto": 5,
         "cantidad": 2,
-        "notas": "Término medio"
-      },
-      {
-        "id_producto": 12,
-        "cantidad": 2,
-        "notas": "Con hielo"
+        "observacion": "Término medio"
       }
     ]
   }'
 ```
-**Respuesta (`201 Created`):**
-```json
-{
-  "id_pedido": 88,
-  "id_mesa": 2,
-  "estado": "pendiente",
-  "total": 54000.00,
-  "fecha_creacion": "2026-11-12T20:15:30.000Z"
-}
-```
 
----
-
-### 9.5 Facturar y Liquidar un Pedido
+### 9.5 Emitir Factura y Registrar Pagos en Caja
 ```bash
-curl -X POST http://localhost:3000/api/v1/facturacion \
+curl -X POST http://localhost:3000/api/v1/facturas \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "id_pedido": 88,
-    "metodo_pago": "efectivo",
-    "monto_recibido": 60000.00,
-    "incluye_propina": true,
-    "porcentaje_propina": 10
+    "propina": 5400,
+    "pagos": [
+      {
+        "medio_pago": "Efectivo",
+        "monto": 60000
+      }
+    ]
   }'
-```
-**Respuesta (`201 Created`):**
-```json
-{
-  "id_factura": 45,
-  "id_pedido": 88,
-  "subtotal": 54000.00,
-  "propina": 5400.00,
-  "total": 59400.00,
-  "cambio": 600.00,
-  "metodo_pago": "efectivo",
-  "fecha_emision": "2026-11-12T21:05:12.000Z"
-}
 ```
 
 ---
@@ -372,19 +313,27 @@ curl -X POST http://localhost:3000/api/v1/facturacion \
 ## 🧪 10. Pruebas y Aseguramiento de Calidad
 
 ```bash
-# Backend - Pruebas Unitarias y de Integración con Jest
-cd backend
-npm test
+# Backend — Linting ultrarrápido con oxlint
+npm --prefix backend run lint
 
-# Backend - Cobertura de Código
-npm run test:cov
+# Backend — Batería completa (Unitarias, Integración, OWASP y Fuzzing con Jest 30)
+npm --prefix backend run test
 
-# Frontend - Pruebas Unitarias con Vitest
-cd frontend
-npm test
+# Backend — Cobertura de código
+npm --prefix backend run test:cov
 
-# Análisis de Calidad y Deuda Técnica con SonarQube
-cd ..
+# Backend — Reporte HTML dedicado de cumplimiento OWASP Top 10
+npm --prefix backend run test:owasp
+
+# Backend — Reporte HTML dedicado de pruebas Fuzzy / fast-check
+npm --prefix backend run test:fuzz
+
+# Frontend — Pruebas unitarias con Vitest 4
+npm --prefix frontend run test -- --watch=false
+
+# Rendimiento (Artillery / Lighthouse) y Calidad (SonarQube)
+npm run perf:backend
+npm run perf:frontend
 .\ejecutar_sonar_scan.bat
 ```
 
@@ -392,7 +341,8 @@ cd ..
 
 ## 👥 11. Equipo de Desarrollo y Créditos
 
-Proyecto desarrollado como parte de la asignatura **Programación II**, Universidad del Cauca (2026):
-- **Equipo Trinity** — Ingeniería de Sistemas.
-- **Cliente:** Luigie's Restaurante Nocturno (Popayán, Cauca).
+Proyecto desarrollado en la asignatura **Programación II**, Universidad del Cauca (2026):
+- **Autores (Equipo Trinity):** Juan Esteban Martínez y Daniel Piedrahita — Ingeniería de Sistemas.
+- **Docente:** Siler Amador.
+- **Cliente Piloto:** Luigie's Restaurante Nocturno — Luis Miguel (Popayán, Cauca).
 - **Licencia:** MIT License.

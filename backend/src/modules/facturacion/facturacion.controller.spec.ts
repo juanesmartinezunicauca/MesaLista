@@ -39,10 +39,8 @@ describe('FacturacionController (Unit Tests)', () => {
     it('debe invocar facturacionService.crearFactura con el DTO y el id del usuario', async () => {
       const dto: CreateFacturaDto = {
         id_pedido: 1,
-        metodo_pago: 'efectivo',
-        monto_recibido: 50000,
-        incluye_propina: true,
-        porcentaje_propina: 10,
+        propina: 4500,
+        pagos: [{ medio_pago: 'Efectivo', monto: 50000 }],
       };
       const mockResult = { id_factura: 1, total: 45000 };
       mockFacturacionService.crearFactura.mockResolvedValue(mockResult as any);
@@ -69,6 +67,20 @@ describe('FacturacionController (Unit Tests)', () => {
       });
       expect(result).toEqual(mockResult);
     });
+
+    it('debe reenviar el filtro opcional estado a facturacionService.obtenerTodas', async () => {
+      mockFacturacionService.obtenerTodas.mockResolvedValue([] as any);
+
+      await controller.obtenerTodas(undefined, undefined, undefined, undefined, undefined, undefined, 'anulada');
+
+      expect(service.obtenerTodas).toHaveBeenCalledWith({
+        tipo: undefined,
+        fecha: undefined,
+        buscar: undefined,
+        id_caja: undefined,
+        estado: 'anulada',
+      });
+    });
   });
 
   describe('obtenerPorId', () => {
@@ -85,9 +97,9 @@ describe('FacturacionController (Unit Tests)', () => {
 
   describe('actualizar', () => {
     it('debe invocar facturacionService.actualizarFactura con id, dto y usuario autenticado', async () => {
-      const dto: UpdateFacturaDto = { observaciones: 'Ajuste de propina' };
+      const dto: UpdateFacturaDto = { observacion: 'Ajuste de propina' };
       const authUser = { id_usuario: 1, rol: 'administrador' };
-      const mockResult = { id_factura: 10, observaciones: 'Ajuste de propina' };
+      const mockResult = { id_factura: 10, observacion: 'Ajuste de propina' };
       mockFacturacionService.actualizarFactura.mockResolvedValue(mockResult as any);
 
       const result = await controller.actualizar(10, dto, authUser);

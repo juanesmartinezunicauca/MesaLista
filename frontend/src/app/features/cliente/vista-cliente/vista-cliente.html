@@ -72,11 +72,23 @@
             <span>Iniciar Sesión / Registrarse</span>
           </button>
         } @else {
+          @if (esPersonalOperativo()) {
+            <button
+              type="button"
+              class="btn-back-pos"
+              (click)="volverAlPos()"
+              title="Volver al panel operativo del restaurante"
+              aria-label="Volver al panel operativo"
+            >
+              <mat-icon>point_of_sale</mat-icon>
+              <span>Ir al POS</span>
+            </button>
+          }
           <div class="user-chip-box">
             <div class="user-avatar">{{ currentUser()?.iniciales || 'CL' }}</div>
             <div class="user-meta">
               <span class="user-name">{{ currentUser()?.nombre }}</span>
-              <span class="user-role-badge">Cliente</span>
+              <span class="user-role-badge">{{ esPersonalOperativo() ? (currentUser()?.rol | titlecase) : 'Cliente' }}</span>
             </div>
             <button
               mat-icon-button

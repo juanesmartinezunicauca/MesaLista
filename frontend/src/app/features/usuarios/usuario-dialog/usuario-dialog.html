@@ -215,10 +215,10 @@
             </mat-select>
           </mat-form-field>
 
-          <!-- 4. Correo de Entrega del Código (Creación) O Correo Electrónico (Edición) -->
+          <!-- 4. Correo de Entrega del Código (Solo Creación — efímero, no se persiste en BD) -->
           @if (!esEdicion()) {
             <mat-form-field appearance="outline" class="w-full" subscriptSizing="dynamic">
-              <mat-label>Correo para Enviar Código de Registro (Opcional)</mat-label>
+              <mat-label>Correo para Enviar Código de Registro *</mat-label>
               <input
                 matInput
                 type="email"
@@ -227,23 +227,11 @@
                 autocomplete="email"
               >
               <mat-icon matPrefix>forward_to_inbox</mat-icon>
-              <mat-hint>🛡️ Se usa únicamente para despachar el código. NO se guarda en la base de datos.</mat-hint>
-              @if (tieneError('correoEnvioCodigo', 'email')) {
-                <mat-error>El correo electrónico no es válido.</mat-error>
+              <mat-hint>🛡️ Necesario para despachar el código de activación. NO se guarda en la base de datos.</mat-hint>
+              @if (tieneError('correoEnvioCodigo', 'required')) {
+                <mat-error>El correo electrónico es obligatorio para enviar el código de registro.</mat-error>
               }
-            </mat-form-field>
-          } @else {
-            <mat-form-field appearance="outline" class="w-full" subscriptSizing="dynamic">
-              <mat-label>Correo Electrónico (Cuentas Registradas)</mat-label>
-              <input
-                matInput
-                type="email"
-                formControlName="email"
-                placeholder="colaborador@correo.com"
-                autocomplete="email"
-              >
-              <mat-icon matPrefix>mail</mat-icon>
-              @if (tieneError('email', 'email')) {
+              @if (tieneError('correoEnvioCodigo', 'email')) {
                 <mat-error>El correo electrónico no es válido.</mat-error>
               }
             </mat-form-field>

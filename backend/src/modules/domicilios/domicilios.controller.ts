@@ -165,7 +165,7 @@ export class DomiciliosController {
     summary: 'Crear pedido a domicilio',
     description:
       'Registra un pedido con entrega a domicilio desde el portal de clientes o el POS del restaurante. Verifica que el servicio esté habilitado, congela los precios del catálogo, valida existencias y descuenta inventario automáticamente.\n\n' +
-      '**Roles autorizados:** `administrador`, `cajero`, `mesero`, `cliente`.',
+      '**Roles autorizados:** `administrador`, `cajero`, `mesero`, `cocina`, `cliente`.',
   })
   @ApiBearerAuth('JWT-auth')
   @ApiBody({ type: CreateDomicilioDto })
@@ -179,6 +179,7 @@ export class DomiciliosController {
     RolUsuario.administrador,
     RolUsuario.cajero,
     RolUsuario.mesero,
+    RolUsuario.cocina,
     RolUsuario.cliente,
   )
   crear(
@@ -239,30 +240,36 @@ export class DomiciliosController {
   @ApiOperation({
     summary: 'Consultar mis pedidos a domicilio (Portal Cliente)',
     description:
-      'Retorna exclusivamente el historial y estado en tiempo real de los pedidos a domicilio vinculados al usuario autenticado en el token JWT.\n\n' +
-      '**Roles autorizados:** `cliente`, `administrador`, `cajero`, `mesero`.',
+      'Retorna exclusivamente el historial y estado en tiempo real de los pedidos a domicilio realizados como cliente por el usuario autenticado en el token JWT.\n\n' +
+      '**Roles autorizados:** `cliente`, `administrador`, `cajero`, `mesero`, `cocina`.',
   })
   @ApiBearerAuth('JWT-auth')
   @ApiResponse({ status: 200, description: 'Historial personal de pedidos del cliente.' })
   @ApiResponse({ status: 401, description: 'No autenticado.' })
   @Get('mis-pedidos')
-  @Roles(RolUsuario.cliente, RolUsuario.administrador, RolUsuario.cajero, RolUsuario.mesero)
-  obtenerMisPedidos(@CurrentUser('id_usuario') id_usuario: number) {
-    return this.domiciliosService.obtenerMisPedidos(id_usuario);
+  @Roles(
+    RolUsuario.cliente,
+    RolUsuario.administrador,
+    RolUsuario.cajero,
+    RolUsuario.mesero,
+    RolUsuario.cocina,
+  )
+  obtenerMisPedidos(@CurrentUser() usuario: { id_usuario: number; rol: RolUsuario }) {
+    return this.domiciliosService.obtenerMisPedidos(usuario);
   }
 
   /**
    * Obtiene la información detallada de un domicilio por ID.
    *
    * @param id Identificador numérico del pedido.
-   * @param usuario Usuario autenticado (validación de propiedad si es cliente).
+   * @param usuario Usuario autenticado (validación de propiedad si es cliente o cocina).
    * @returns Detalle del domicilio y su comanda.
    */
   @ApiOperation({
     summary: 'Obtener pedido a domicilio por ID',
     description:
-      'Consulta el detalle de entrega, repartidor asignado e ítems de un pedido a domicilio. Aplica protección anti-IDOR: si quien consulta tiene rol `cliente`, solo permite ver pedidos de su propiedad.\n\n' +
-      '**Roles autorizados:** `administrador`, `cajero`, `mesero`, `cliente` (solo propios).',
+      'Consulta el detalle de entrega, repartidor asignado e ítems de un pedido a domicilio. Aplica protección anti-IDOR: si quien consulta tiene rol `cliente` o `cocina`, solo permite ver pedidos de su propiedad.\n\n' +
+      '**Roles autorizados:** `administrador`, `cajero`, `mesero`, `cocina` (solo propios), `cliente` (solo propios).',
   })
   @ApiBearerAuth('JWT-auth')
   @ApiParam({ name: 'id', description: 'ID del pedido a domicilio', example: 10 })
@@ -275,6 +282,7 @@ export class DomiciliosController {
     RolUsuario.administrador,
     RolUsuario.cajero,
     RolUsuario.mesero,
+    RolUsuario.cocina,
     RolUsuario.cliente,
   )
   obtenerPorId(

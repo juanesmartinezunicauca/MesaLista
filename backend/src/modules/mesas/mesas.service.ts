@@ -136,7 +136,7 @@ export class MesasService {
      * Actualiza el número y/o estado de una mesa existente.
      */
     async actualizar(id: number, updateDto: UpdateMesaDto) {
-        await this.obtenerPorId(id);
+        const mesa = await this.obtenerPorId(id);
 
         if (updateDto.numero !== undefined) {
             const mesaConMismoNumero = await this.prisma.mesa.findUnique({
@@ -146,6 +146,21 @@ export class MesasService {
             if (mesaConMismoNumero && mesaConMismoNumero.id_mesa !== id) {
                 throw new ConflictException(
                     `El número de mesa #${updateDto.numero} ya está asignado a otra mesa.`,
+                );
+            }
+        }
+
+        if (updateDto.estado === EstadoMesa.libre) {
+            const sinFacturar = await this.prisma.pedido.count({
+                where: {
+                    id_mesa: id,
+                    estado: EstadoPedido.enviada,
+                    id_factura: null,
+                },
+            });
+            if (sinFacturar > 0) {
+                throw new BadRequestException(
+                    `No se puede liberar la mesa #${mesa.numero} porque tiene ${sinFacturar} comanda(s) activas pendientes de cobro o cancelación.`,
                 );
             }
         }
@@ -161,20 +176,26 @@ export class MesasService {
 
     /**
      * Cambia el estado operativo de la mesa (libre u ocupada).
-     * Si la mesa pasa a estado libre, cierra automáticamente todas las comandas activas ('enviada') de la mesa.
+     * Impide liberar una mesa con comandas activas sin facturar para evitar cuentas "fantasma".
      */
     async cambiarEstado(id: number, cambiarEstadoDto: CambiarEstadoMesaDto) {
-        await this.obtenerPorId(id);
+        const mesa = await this.obtenerPorId(id);
 
         return this.prisma.$transaction(async (tx) => {
-            const mesaActualizada = await tx.mesa.update({
-                where: { id_mesa: id },
-                data: {
-                    estado: cambiarEstadoDto.estado,
-                },
-            });
-
             if (cambiarEstadoDto.estado === EstadoMesa.libre) {
+                const sinFacturar = await tx.pedido.count({
+                    where: {
+                        id_mesa: id,
+                        estado: EstadoPedido.enviada,
+                        id_factura: null,
+                    },
+                });
+                if (sinFacturar > 0) {
+                    throw new BadRequestException(
+                        `No se puede liberar la mesa #${mesa.numero} porque tiene ${sinFacturar} comanda(s) activas pendientes de cobro o cancelación.`,
+                    );
+                }
+
                 await tx.pedido.updateMany({
                     where: {
                         id_mesa: id,
@@ -187,13 +208,18 @@ export class MesasService {
                 });
             }
 
-            return mesaActualizada;
+            return tx.mesa.update({
+                where: { id_mesa: id },
+                data: {
+                    estado: cambiarEstadoDto.estado,
+                },
+            });
         });
     }
 
     /**
      * Transfiere las comandas activas de una mesa origen a una mesa destino.
-     * Actualiza el estado de la mesa origen a libre y la mesa destino a ocupada de manera transaccional.
+     * Valida que la mesa destino no esté ocupada y que la mesa origen esté ocupada o tenga comandas activas.
      */
     async transferirMesa(dto: TransferirMesaDto) {
         if (dto.id_origen === dto.id_destino) {
@@ -210,6 +236,11 @@ export class MesasService {
             if (!destino) {
                 throw new NotFoundException(`La mesa destino con ID #${dto.id_destino} no fue encontrada.`);
             }
+            if (destino.estado === EstadoMesa.ocupada) {
+                throw new BadRequestException(
+                    `La mesa destino #${destino.numero} ya se encuentra ocupada. Elige una mesa libre para evitar mezclar cuentas.`,
+                );
+            }
 
             const pedidosActivos = await tx.pedido.count({
                 where: {
@@ -217,6 +248,12 @@ export class MesasService {
                     estado: EstadoPedido.enviada,
                 },
             });
+
+            if (pedidosActivos === 0 && origen.estado === EstadoMesa.libre) {
+                throw new BadRequestException(
+                    `La mesa origen #${origen.numero} se encuentra libre y no tiene comandas activas para transferir.`,
+                );
+            }
 
             if (pedidosActivos > 0) {
                 // Mover pedidos activos a la mesa destino

@@ -1,128 +1,131 @@
-# 🛡️ Matriz de Cumplimiento OWASP Top 10 (2025) - Mesa Lista
+# 🛡️ Matriz de Cumplimiento OWASP Top 10 (2025) — MesaLista POS
 
-Resumen ejecutivo y evidencia técnica de controles de seguridad implementados en **Mesa Lista** frente al estándar **OWASP Top 10:2025**.
+Resumen ejecutivo y evidencia técnica actualizada de los controles de seguridad implementados en **MesaLista POS** frente al estándar **OWASP Top 10:2025** (actualizado a noviembre de 2026).
 
-> 💡 **Cómo navegar:** Abre este documento en **Vista Previa de Markdown** en tu editor (`Ctrl+Shift+V` en VS Code). Al hacer clic en cada enlace, saltarás directamente a la línea exacta del código fuente o al reporte de evidencia correspondiente.
+> 💡 **Cómo navegar:** Abre este documento en vista previa de Markdown (`Ctrl+Shift+V` en VS Code) para navegar directamente a cada archivo del código fuente y a los reportes HTML generados.
 
 ---
 
-### 1. A01:2025 – Broken Access Control (Control de Acceso, IDOR y SSRF)
-* **Mitigación**: Se previene IDOR validando que los usuarios con rol `cliente` únicamente puedan acceder a sus propios pedidos (`pedido.id_usuario === usuarioAuth.id_usuario`), denegando con `ForbiddenException (403)`. Asimismo, `RolesGuard` bloquea accesos no autorizados a nivel de endpoint. Además, se absorbe la mitigación de SSRF al no procesar URLs externas provistas por usuarios (las imágenes se manejan en base64 de tamaño controlado).
-* **Código Clave**: 📂 [backend/src/modules/domicilios/domicilios.service.ts (Línea 346)](./backend/src/modules/domicilios/domicilios.service.ts#L346)
+### 1. A01:2025 – Broken Access Control (Control de Acceso, IDOR, Privacidad y SSRF)
+* **Mitigación:**
+  - `RolesGuard` aplica RBAC estricto en cada controlador y emite alertas `[SECURITY_AUDIT]`.
+  - Prevención de **IDOR** en domicilios: usuarios con rol `cliente` o `cocina` solo pueden consultar pedidos propios (`pedido.id_usuario === usuarioAuth.id_usuario`), devolviendo `403 Forbidden`.
+  - Protección de datos sensibles de negocio: `GET /catalogo/productos` omite el campo `costo` para visitantes públicos y roles no administrativos (solo visible para `administrador` y `cajero`), y modificar `precio_unitario` en facturas queda restringido al rol `administrador`.
+  - Prevención de auto-bloqueo administrativo: `UsuariosService` impide que un administrador se desactive, elimine o cambie de rol a sí mismo y bloquea dejar el sistema sin al menos un `administrador` activo.
+  - Prevención de escalada de privilegios en facturación: `POST /facturas` rechaza con `409 Conflict` cualquier intento de re-facturar pedidos ya asociados a una factura.
+  - Mitigación de **SSRF**: el backend no realiza peticiones hacia URLs arbitrarias provistas por usuarios (las imágenes se gestionan en formato controlado).
+* **Código Clave:** 📂 [`backend/src/modules/domicilios/domicilios.service.ts` (Línea 569)](./backend/src/modules/domicilios/domicilios.service.ts#L569)
 ```typescript
-if (usuarioAuth?.rol === RolUsuario.cliente && pedido.id_usuario !== usuarioAuth.id_usuario) {
-  throw new ForbiddenException('No tienes autorización para acceder a los datos de este pedido.');
+if (
+  usuarioAuth &&
+  (usuarioAuth.rol === RolUsuario.cliente || usuarioAuth.rol === RolUsuario.cocina) &&
+  pedido.id_usuario !== usuarioAuth.id_usuario
+) {
+  throw new ForbiddenException(
+    'No tienes autorización para acceder a los datos de este pedido.',
+  );
 }
 ```
 
 ---
 
 ### 2. A02:2025 – Security Misconfiguration (Configuración Insegura)
-* **Mitigación**: Implementación del middleware **Helmet** para forzar cabeceras HTTP de seguridad (`X-Frame-Options`, `nosniff`, `HSTS`), limitación de tamaño de payload a 2MB para mitigar saturación DoS, y política de **CORS estricto** que rechaza de forma determinista orígenes no autorizados.
-* **Código Clave**: 📂 [backend/src/main.ts (Línea 12)](./backend/src/main.ts#L12)
-```typescript
-app.use(helmet());
-app.use(json({ limit: '2mb' }));
-app.enableCors({ origin: (origin, callback) => { /* Solo localhost, LAN o dominios autorizados */ } });
-```
+* **Mitigación:**
+  - Middleware **Helmet** en backend con política CSP compatible con Swagger UI (`/api/docs`), límite de payload en `2mb` para evitar saturación DoS y `trust proxy = 1` para identificar la IP real detrás de Render/Nginx.
+  - Política de **CORS estricto por `URL.hostname`** en [`esOrigenCorsPermitido`](./backend/src/common/utils/contabilidad.util.ts), bloqueando suplantaciones como `localhost.atacante.com` y subdominios `*.vercel.app` de terceros.
+  - Cabeceras defensivas configuradas también en el despliegue estático de Vercel ([`frontend/vercel.json`](./frontend/vercel.json)): `Content-Security-Policy`, `Strict-Transport-Security`, `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Referrer-Policy` y `Permissions-Policy`.
+  - Validación de variables de entorno críticas al arranque mediante **Joi** en [`AppModule`](./backend/src/app.module.ts).
+* **Código Clave:** 📂 [`backend/src/main.ts` (Líneas 14–73)](./backend/src/main.ts#L14-L73)
 
 ---
 
 ### 3. A03:2025 – Software Supply Chain Failures (Cadena de Suministro de Software)
-* **Mitigación**: Depuración del árbol de dependencias eliminando librerías huérfanas o deprecadas (`@nestjs/mau`), verificación de hashes criptográficos SHA-512 en `package-lock.json`, fijación estricta de versiones y resolución mediante auditoría continua alcanzando **0 vulnerabilidades críticas o altas**.
-* **Código Clave**: 📂 [backend/package.json (Línea 24)](./backend/package.json#L24)
+* **Mitigación:** Árbol de dependencias depurado (sin paquetes obsoletos ni huérfanos), lockfiles versionados con integridad criptográfica SHA-512 y verificación estática continua con TypeScript 6.0 estricto y `oxlint`.
+* **Código Clave:** 📂 [`backend/package.json`](./backend/package.json) y [`frontend/package.json`](./frontend/package.json)
 
 ---
 
-### 4. A04:2025 – Cryptographic Failures (Fallas Criptográficas)
-* **Mitigación**: Almacenamiento seguro de contraseñas mediante **Argon2id** (algoritmo recomendado por OWASP) con 64 MB de memoria (`m=65536`), 3 iteraciones (`t=3`), paralelismo 4 y sal (*salt*) aleatoria única por usuario, además de tokens JWT firmados criptográficamente y exclusión estricta del campo `password` en respuestas DTO.
-* **Código Clave**: 📂 [backend/src/modules/usuarios/usuarios.service.ts (Línea 70)](./backend/src/modules/usuarios/usuarios.service.ts#L70)
+### 4. A04:2025 – Cryptographic Failures (Fallas Criptográficas y Privacidad)
+* **Mitigación:**
+  - **Cero contraseñas almacenadas:** el sistema opera exclusivamente con **Google OAuth 2.0 / OIDC** (eliminando el riesgo de exposición o fuerza bruta sobre credenciales locales).
+  - Generación de códigos de invitación (`INV-XXXXXXXX`, 8 caracteres Base32 Crockford, ~35 bits de entropía) mediante generador criptográfico seguro **`crypto.randomInt`** (CSPRNG), con expiración de 48 horas y canje atómico de un solo uso.
+  - **Privacy by Design:** el correo electrónico de colaboradores operativos nunca se persiste en la tabla `usuario` (`email: null`); se usa de forma efímera solo para entregar el código y la identidad queda vinculada por `googleId`.
+  - Tokens de sesión JWT firmados con secreto mínimo de 32 caracteres validado al arranque.
+* **Código Clave:** 📂 [`backend/src/modules/usuarios/usuarios.service.ts` (Líneas 24–32)](./backend/src/modules/usuarios/usuarios.service.ts#L24-L32)
 ```typescript
-const passwordHash = await argon2.hash(createUsuarioDto.password, {
-  type: argon2.argon2id, memoryCost: 65536, timeCost: 3, parallelism: 4,
-});
-```
-
----
-
-### 5. A05:2025 – Injection (Inyecciones y Validación Estricta)
-* **Mitigación**: Uso exclusivo de **Prisma ORM** con consultas 100% tipadas y parametrizadas (cero consultas SQL crudas o concatenadas), sumado a un `ValidationPipe` global con lista blanca estricta (`whitelist: true, forbidNonWhitelisted: true`) que rechaza payloads maliciosos (*Mass Assignment* o inyección de propiedades).
-* **Código Clave**: 📂 [backend/src/main.ts (Línea 50)](./backend/src/main.ts#L50)
-```typescript
-app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
-```
-
----
-
-### 6. A06:2025 – Insecure Design (Diseño Inseguro y Consistencia)
-* **Mitigación**: Transaccionalidad atómica con `prisma.$transaction` para evitar inconsistencias contables en movimientos de inventario, pagos y caja, y congelamiento inmutable del precio unitario (`DetallePedido.precio_unitario`) al ordenar para prevenir alteraciones de precios desde el cliente.
-* **Código Clave**: 📂 [backend/src/modules/facturacion/facturacion.service.ts (Línea 378)](./backend/src/modules/facturacion/facturacion.service.ts#L378)
-```typescript
-return this.prisma.$transaction(async (tx) => {
-  await tx.pedido.updateMany({ where: { id_factura: id }, data: { id_factura: null } });
-  await tx.pago.deleteMany({ where: { id_venta: id } });
-  await tx.factura.delete({ where: { id_venta: id } });
-});
-```
-
----
-
-### 7. A07:2025 – Authentication Failures (Fallas de Autenticación)
-* **Mitigación**: Directiva de contraseñas robustas validada en DTOs y formularios de frontend: mínimo **8 caracteres** con requisito de contener al menos **una letra y un número** (`/^(?=.*[a-zA-Z])(?=.*\d)/`). Bloqueo de acceso a cuentas con estado inactivo.
-* **Código Clave**: 📂 [backend/src/modules/usuarios/dto/create-usuario.dto.ts (Línea 26)](./backend/src/modules/usuarios/dto/create-usuario.dto.ts#L26)
-```typescript
-@Length(8, 100, { message: 'La contraseña debe tener al menos 8 caracteres' })
-@Matches(/^(?=.*[a-zA-Z])(?=.*\d)/, { message: 'La contraseña debe contener al menos una letra y un número' })
-password?: string;
-```
-
----
-
-### 8. A08:2025 – Software and Data Integrity Failures (Integridad de Datos)
-* **Mitigación**: Verificación de firmas asimétricas obligatoria de ID Tokens de terceros con la librería oficial `google-auth-library`, previniendo suplantación de identidad o tokens falsificados.
-* **Código Clave**: 📂 [backend/src/modules/auth/auth.service.ts (Línea 110)](./backend/src/modules/auth/auth.service.ts#L110)
-```typescript
-const ticket = await this.googleClient.verifyIdToken({ idToken: googleDto.idToken, audience: googleClientId });
-```
-
----
-
-### 9. A09:2025 – Security Logging and Alerting Failures (Registro y Alerta de Seguridad)
-* **Mitigación**: Registro estructurado con prefijo de alerta `[SECURITY_AUDIT]` ante intentos de acceso denegados por rol, fallos de autenticación o anulaciones de facturas, protegiendo la confidencialidad al **no registrar contraseñas ni tokens** en los logs.
-* **Código Clave**: 📂 [backend/src/common/guards/roles.guard.ts (Línea 43)](./backend/src/common/guards/roles.guard.ts#L43)
-```typescript
-this.logger.warn(`[SECURITY_AUDIT] Acceso denegado: Usuario '${user?.usuario}' (Rol: ${user?.rol}) intentó acceder a recurso que requiere: [${requiredRoles.join(', ')}].`);
-```
-
----
-
-### 10. A10:2025 – Mishandling of Exceptional Conditions (Manejo Inadecuado de Condiciones Excepcionales)
-* **Mitigación**: Filtro global de excepciones `PrismaExceptionFilter` que intercepta fallos de persistencia (unicidad `P2002`, registros no encontrados `P2025`, violaciones de clave foránea `P2003`), traduciéndolos a respuestas HTTP semánticas (`409 Conflict`, `404 NotFound`, `400 BadRequest`) e impidiendo la fuga de trazas de pila internas (*stack traces*) o schemas de base de datos.
-* **Código Clave**: 📂 [backend/src/common/filters/prisma-exception.filter.ts (Línea 12)](./backend/src/common/filters/prisma-exception.filter.ts#L12)
-```typescript
-@Catch(Prisma.PrismaClientKnownRequestError)
-export class PrismaExceptionFilter implements ExceptionFilter {
-  catch(exception: Prisma.PrismaClientKnownRequestError, host: ArgumentsHost) {
-    // Traduce errores internos a respuestas limpias sin fugar esquemas ni crashear el servidor
+function generarCodigoInvitacionSeguro(): string {
+  const ALFABETO = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let codigo = '';
+  for (let i = 0; i < 8; i++) {
+    const idx = crypto.randomInt(0, ALFABETO.length);
+    codigo += ALFABETO[idx];
   }
+  return `INV-${codigo}`;
 }
 ```
 
 ---
 
-## 🧪 Evidencias Ejecutables de Cumplimiento (Compliance Testing)
+### 5. A05:2025 – Injection (Inyecciones y Validación Estricta)
+* **Mitigación:**
+  - Uso exclusivo de **Prisma ORM 6** con consultas tipadas y parametrizadas (sin SQL concatenado).
+  - `ValidationPipe` global con `whitelist: true` y `forbidNonWhitelisted: true` contra *Mass Assignment*, más límites explícitos en DTOs (`@Max`, `@MaxLength`, `@ArrayMaxSize`, `@IsEmail`).
+  - Middleware dedicado contra inyección de bytes nulos (`\0`, CWE-158) en parámetros de consulta.
+  - Sanitización anti-inyección CRLF en cabeceras y *dot-stuffing* RFC 5321 en [`MailService`](./backend/src/modules/mail/mail.service.ts), con timeout HTTP de 8 s en Brevo/Resend.
+* **Código Clave:** 📂 [`backend/src/main.ts` (Líneas 40–88)](./backend/src/main.ts#L40-L88)
 
-### 📊 Métricas Cuantitativas
-* **Batería de Pruebas de Seguridad OWASP Top 10 (2025)**: ✅ **25/25 pruebas aprobadas (100% de tasa de éxito)** en 4.0 segundos.
-* **Comando de Ejecución**: `npm run test:owasp` (en la carpeta `backend`).
-* **Reporte Visual Interactivo Generado**: 📂 [`backend/reports/owasp-compliance/reporte-owasp-top10.html`](./backend/reports/owasp-compliance/reporte-owasp-top10.html) (Generado con gráficos circulares interactivos, desglose y tiempos mediante `jest-html-reporters`).
-* **Pruebas Unitarias Generales del Sistema**: ✅ **16 suites / 150 tests aprobados** (`npm run test`).
-* **Vulnerabilidades en Dependencias**: ✅ **0 vulnerabilidades críticas** (`npm audit`).
+---
 
-### 📑 Métricas Cualitativas y Auditoría Dinámica (DAST)
-* **Auditoría Dinámica de Vulnerabilidades (DAST)**: Ejecutable con **OWASP ZAP (Zed Attack Proxy)** contra los endpoints de la API (`/api/v1/...`).
-* **Guía y Scripts de Auditoría ZAP**: Consulta la 📂 [GUIA_OWASP_ZAP.md](./GUIA_OWASP_ZAP.md) para instrucciones de réplica con Docker o la aplicación de escritorio oficial.
-* **Clasificación de Riesgos Detectados**:
-  * Riesgo Crítico / Alto: **0 alertas**
-  * Riesgo Medio: **0 alertas**
-  * Riesgo Bajo / Informativo: Mitigado con cabeceras Helmet (`X-Frame-Options`, `X-Content-Type-Options: nosniff`).
+### 6. A06:2025 – Insecure Design (Diseño Inseguro y Consistencia Contable)
+* **Mitigación:**
+  - Transacciones atómicas `prisma.$transaction` reforzadas con **`pg_advisory_xact_lock`** en consecutivos de pedidos (`730101`), facturación (`730201`) y apertura/cierre de caja (`730301`).
+  - Descuento condicional atómico de inventario (`producto.updateMany` con `cantidad_inventario: { gte: cantTotal }`) y cierre atómico de pedidos facturados (`pedido.updateMany` verificando `count === idsPedidos.length`) para imposibilitar stock negativo y doble facturación concurrente.
+  - Congelamiento inmutable del `precio_unitario` en `ItemPedido`, bloqueo de cierre de pedidos sin factura y bloqueo de liberación de mesas con comandas sin cobrar.
+* **Código Clave:** 📂 [`backend/src/modules/facturacion/facturacion.service.ts` (Líneas 194–245)](./backend/src/modules/facturacion/facturacion.service.ts#L194-L245)
+
+---
+
+### 7. A07:2025 – Authentication Failures (Fallas de Autenticación)
+* **Mitigación:**
+  - Eliminación total de contraseñas locales en DTOs (`CreateUsuarioDto` y `UpdatePerfilDto` rechazan cualquier propiedad `password`).
+  - Validación de estado `activo` antes de quemar códigos de invitación y bloqueo inmediato de cuentas inactivas.
+  - **Rate Limiting (`@nestjs/throttler`)** configurado globalmente (30 req/min), con topes estrictos en `POST /auth/google` (`15 req/min`) y `POST /usuarios/:id/enviar-codigo` (`10 req/min`).
+* **Código Clave:** 📂 [`backend/src/modules/auth/auth.controller.ts`](./backend/src/modules/auth/auth.controller.ts) y [`backend/src/modules/usuarios/usuarios.controller.ts`](./backend/src/modules/usuarios/usuarios.controller.ts)
+
+---
+
+### 8. A08:2025 – Software and Data Integrity Failures (Integridad de Software y Datos)
+* **Mitigación:** Verificación criptográfica asimétrica obligatoria de Google ID Tokens mediante `google-auth-library` (`verifyIdToken`), validando firma JWKS, audiencia (`GOOGLE_CLIENT_ID`), vigencia (`maxExpiry`) y rechazando tokens de acceso (`ya29.`) o JWT malformados.
+* **Código Clave:** 📂 [`backend/src/modules/auth/auth.service.ts` (Líneas 112–120)](./backend/src/modules/auth/auth.service.ts#L112-L120)
+```typescript
+ticket = await this.googleClient.verifyIdToken({
+  idToken: tokenLimpio,
+  audience: clientIds.length === 1 ? clientIds[0] : clientIds,
+  maxExpiry: 86400, // 24 horas máximo de vigencia
+});
+```
+
+---
+
+### 9. A09:2025 – Security Logging and Alerting Failures (Registro y Auditoría)
+* **Mitigación:** Registro estructurado con prefijo `[SECURITY_AUDIT]` en `RolesGuard` y `AuthService` ante accesos denegados por rol, intentos inválidos de autenticación y fallos de configuración, garantizando que **nunca** se escriban tokens JWT ni códigos de invitación en los logs.
+* **Código Clave:** 📂 [`backend/src/common/guards/roles.guard.ts` (Líneas 42–49)](./backend/src/common/guards/roles.guard.ts#L42-L49)
+
+---
+
+### 10. A10:2025 – Mishandling of Exceptional Conditions (Manejo Seguro de Excepciones)
+* **Mitigación:** Filtro global `PrismaExceptionFilter` que captura `PrismaClientKnownRequestError` (`P2000`, `P2002`, `P2003`, `P2006`, `P2011`, `P2020`, `P2025`, `P2028`, `P2034`), `PrismaClientValidationError`, `PrismaClientUnknownRequestError` (distinguiendo errores UTF-8/null-byte con `400` de fallas de infraestructura con `500`) y `PrismaClientRustPanicError` (`500` con log interno), sin filtrar trazas de pila ni esquemas SQL al cliente.
+* **Código Clave:** 📂 [`backend/src/common/filters/prisma-exception.filter.ts` (Líneas 11–74)](./backend/src/common/filters/prisma-exception.filter.ts#L11-L74)
+
+---
+
+## 🧪 Evidencias Ejecutables de Cumplimiento (Actualizado: Noviembre 2026)
+
+### 📊 Métricas Cuantitativas Verificadas
+* **Batería OWASP Top 10 (2025):** ✅ **25/25 pruebas aprobadas (100%)** — `npm --prefix backend run test:owasp`.
+* **Reporte HTML Interactivo OWASP:** 📂 [`backend/reports/owasp-compliance/reporte-owasp-top10.html`](./backend/reports/owasp-compliance/reporte-owasp-top10.html).
+* **Batería Fuzzy / Property-Based (`fast-check` + mutaciones):** ✅ **34/34 pruebas aprobadas (2/2 suites)** — `npm --prefix backend run test:fuzz` ([`reporte-pruebas-fuzzy.html`](./backend/reports/fuzzy-testing/reporte-pruebas-fuzzy.html)).
+* **Suite Completa Backend (Jest 30):** ✅ **28/28 suites · 318/318 pruebas aprobadas** (Cobertura global: **70.40%** sentencias, **71.24%** líneas, **69.97%** funciones).
+* **Suite Completa Frontend (Vitest 4):** ✅ **18/18 archivos · 114/114 pruebas aprobadas**.
+* **Análisis Estático (`tsc`, `ngc`, `oxlint`):** ✅ **0 errores y 0 advertencias** (137 archivos backend + 89 archivos frontend).
+* **Auditoría DAST Complementaria:** 📂 [`reports/INFORME_CVSS_OWASP_ZAP.md`](./reports/INFORME_CVSS_OWASP_ZAP.md).

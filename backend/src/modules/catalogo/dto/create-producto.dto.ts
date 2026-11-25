@@ -6,6 +6,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -38,6 +39,7 @@ export class CreateProductoDto {
   })
   @IsNumber({ maxDecimalPlaces: 2 }, { message: 'El precio de venta debe ser un número válido.' })
   @Min(0, { message: 'El precio de venta no puede ser negativo.' })
+  @Max(99999999, { message: 'El precio de venta excede el máximo permitido.' })
   precio_venta!: number;
 
   @ApiProperty({
@@ -47,6 +49,7 @@ export class CreateProductoDto {
   })
   @IsNumber({ maxDecimalPlaces: 2 }, { message: 'El costo debe ser un número válido.' })
   @Min(0, { message: 'El costo no puede ser negativo.' })
+  @Max(99999999, { message: 'El costo excede el máximo permitido.' })
   costo!: number;
 
   @ApiPropertyOptional({

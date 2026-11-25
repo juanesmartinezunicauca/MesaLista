@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEmail, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 import { EstadoPedido } from '@prisma/client';
 
 export class UpdateDomicilioDto {
@@ -17,7 +17,7 @@ export class UpdateDomicilioDto {
     example: 'laura@gmail.com',
   })
   @IsOptional()
-  @IsString()
+  @IsEmail({}, { message: 'El correo del cliente no tiene un formato válido.' })
   @MaxLength(100)
   cliente_email?: string;
 
@@ -27,7 +27,7 @@ export class UpdateDomicilioDto {
   })
   @IsOptional()
   @IsString()
-  @MaxLength(30)
+  @MaxLength(20)
   cliente_telefono?: string;
 
   @ApiPropertyOptional({

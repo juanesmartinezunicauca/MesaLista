@@ -20,6 +20,7 @@ describe('PedidosService', () => {
     producto: {
       findMany: jest.Mock;
       update: jest.Mock;
+      updateMany: jest.Mock;
     };
     pedido: {
       findFirst: jest.Mock;
@@ -44,6 +45,7 @@ describe('PedidosService', () => {
       producto: {
         findMany: jest.fn(),
         update: jest.fn(),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       pedido: {
         findFirst: jest.fn(),
@@ -354,6 +356,67 @@ describe('PedidosService', () => {
         }),
       );
       expect(res.estado).toBe(EstadoPedido.cancelada);
+    });
+  });
+
+  describe('Integridad de stock concurrente y máquina de estados', () => {
+    it('debe rechazar crear pedido si el decremento condicional de stock falla por concurrencia (count === 0)', async () => {
+      prisma.mesa.findUnique.mockResolvedValue({ id_mesa: 1, numero: 1, estado: EstadoMesa.libre });
+      prisma.producto.findMany.mockResolvedValue([
+        {
+          id_producto: 1,
+          nombre: 'Cerveza',
+          disponible: true,
+          controla_inventario: true,
+          cantidad_inventario: 2,
+          precio_venta: 8000,
+        },
+      ]);
+      prisma.producto.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(
+        service.crear({ tipo: TipoPedido.salon, id_mesa: 1, items: [{ id_producto: 1, cantidad: 2 }] }, 1),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.pedido.create).not.toHaveBeenCalled();
+    });
+
+    it('debe impedir cerrar manualmente una comanda que no tiene factura emitida (id_factura = null)', async () => {
+      prisma.pedido.findUnique.mockResolvedValue({
+        id_pedido: 10,
+        id_factura: null,
+        estado: EstadoPedido.enviada,
+        items: [],
+      });
+
+      await expect(
+        service.cambiarEstado(10, { estado: EstadoPedido.cerrada }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('debe impedir cancelar desde pedidos una comanda que ya tiene factura emitida', async () => {
+      prisma.pedido.findUnique.mockResolvedValue({
+        id_pedido: 11,
+        id_factura: 99,
+        factura: { estado: 'emitida' },
+        estado: EstadoPedido.enviada,
+        items: [],
+      });
+
+      await expect(
+        service.cambiarEstado(11, { estado: EstadoPedido.cancelada }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('debe impedir reabrir un pedido cancelado vía actualizar (previene devolución duplicada de stock)', async () => {
+      prisma.pedido.findUnique.mockResolvedValue({
+        id_pedido: 12,
+        estado: EstadoPedido.cancelada,
+        id_factura: null,
+      });
+
+      await expect(
+        service.actualizar(12, { estado: EstadoPedido.enviada }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

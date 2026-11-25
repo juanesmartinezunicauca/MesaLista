@@ -39,14 +39,37 @@ export class PrismaExceptionFilter implements ExceptionFilter {
       error = 'BadRequest';
       code = 'VALIDATION_ERROR';
     } else if (exception instanceof Prisma.PrismaClientUnknownRequestError) {
-      status = HttpStatus.BAD_REQUEST;
-      message = 'La petición contiene caracteres, secuencias de bytes o parámetros no admitidos por la base de datos.';
-      error = 'BadRequest';
-      code = 'DB_REQUEST_ERROR';
+      this.logger.error(
+        `Error desconocido de Prisma: ${exception.message}`,
+        exception.stack,
+      );
+      const msgLower = (exception.message || '').toLowerCase();
+      const esErrorCodificacion =
+        msgLower.includes('0x00') ||
+        msgLower.includes('invalid byte sequence') ||
+        msgLower.includes('utf8') ||
+        msgLower.includes('encoding');
+
+      if (esErrorCodificacion) {
+        status = HttpStatus.BAD_REQUEST;
+        message =
+          'La petición contiene caracteres, secuencias de bytes o parámetros no admitidos por la base de datos.';
+        error = 'BadRequest';
+        code = 'DB_REQUEST_ERROR';
+      } else {
+        status = HttpStatus.INTERNAL_SERVER_ERROR;
+        message = 'Error interno en la base de datos.';
+        error = 'DatabaseError';
+        code = 'DB_REQUEST_ERROR';
+      }
     } else if (exception instanceof Prisma.PrismaClientRustPanicError) {
-      status = HttpStatus.BAD_REQUEST;
-      message = 'Error en el motor de consulta por datos anómalos o fuera de rango.';
-      error = 'BadRequest';
+      this.logger.error(
+        `Pánico interno del motor Prisma: ${exception.message}`,
+        exception.stack,
+      );
+      status = HttpStatus.INTERNAL_SERVER_ERROR;
+      message = 'Error interno en el motor de base de datos.';
+      error = 'DatabaseError';
       code = 'DB_PANIC_ERROR';
     } else {
       code = exception.code;

@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -17,6 +17,7 @@ describe('UsuariosService', () => {
       update: jest.fn(),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       delete: jest.fn(),
+      count: jest.fn().mockResolvedValue(2),
     },
   };
   const mockMailService = {
@@ -55,6 +56,7 @@ describe('UsuariosService', () => {
     prisma.usuario.update.mockReset();
     prisma.usuario.updateMany.mockReset().mockResolvedValue({ count: 1 });
     prisma.usuario.delete.mockReset();
+    prisma.usuario.count.mockReset().mockResolvedValue(2);
     mockMailService.enviarCodigoInvitacion.mockReset();
 
     prisma.usuario.findUnique.mockResolvedValue(null);
@@ -336,6 +338,164 @@ describe('UsuariosService', () => {
       expect(prisma.usuario.delete).toHaveBeenCalledWith({
         where: { id_usuario: 2 },
       });
+    });
+  });
+
+  describe('vincularOGuardarGoogleUsuario', () => {
+    it('debe vincular colaborador por código de invitación guardando solo googleId y dejando email en null', async () => {
+      prisma.usuario.findFirst
+        .mockResolvedValueOnce({
+          id_usuario: 7,
+          nombre: 'Laura Mesera',
+          usuario: 'laura_mesera',
+          rol: RolUsuario.mesero,
+          codigoInvitacion: 'INV-ABCD2345',
+          codigoInvitacionExpira: new Date(Date.now() + 3600_000),
+          email: null,
+        })
+        .mockResolvedValueOnce(null);
+
+      prisma.usuario.update.mockResolvedValue({
+        id_usuario: 7,
+        nombre: 'Laura Mesera',
+        usuario: 'laura_mesera',
+        rol: RolUsuario.mesero,
+        googleId: 'google-sub-laura',
+        email: null,
+        codigoInvitacion: null,
+      });
+
+      const res = await service.vincularOGuardarGoogleUsuario({
+        googleId: 'google-sub-laura',
+        email: 'laura.personal@gmail.com',
+        nombre: 'Laura Mesera',
+        codigoInvitacion: 'INV-ABCD2345',
+      });
+
+      expect(prisma.usuario.update).toHaveBeenCalledWith({
+        where: { id_usuario: 7 },
+        data: {
+          googleId: 'google-sub-laura',
+          email: null,
+          codigoInvitacion: null,
+          codigoInvitacionExpira: null,
+        },
+      });
+      expect(res.email).toBeNull();
+    });
+
+    it('debe conservar el correo del cliente al registrarlo por primera vez con Google', async () => {
+      prisma.usuario.findFirst.mockResolvedValue(null);
+      prisma.usuario.findUnique.mockResolvedValue(null);
+      prisma.usuario.create.mockResolvedValue({
+        id_usuario: 25,
+        nombre: 'Sofía Cliente',
+        usuario: 'sofia.cliente',
+        email: 'sofia.cliente@gmail.com',
+        googleId: 'google-sub-sofia',
+        rol: RolUsuario.cliente,
+        estado: EstadoUsuario.activo,
+      });
+
+      const res = await service.vincularOGuardarGoogleUsuario({
+        googleId: 'google-sub-sofia',
+        email: 'Sofia.Cliente@gmail.com',
+        nombre: 'Sofía Cliente',
+      });
+
+      expect(prisma.usuario.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            email: 'sofia.cliente@gmail.com',
+            googleId: 'google-sub-sofia',
+            rol: RolUsuario.cliente,
+          }),
+        }),
+      );
+      expect(res.email).toBe('sofia.cliente@gmail.com');
+    });
+
+    it('debe rechazar el canje de código sin quemarlo si el colaborador invitado está inactivo', async () => {
+      prisma.usuario.findFirst.mockResolvedValueOnce({
+        id_usuario: 9,
+        nombre: 'Empleado Inactivo',
+        rol: RolUsuario.mesero,
+        estado: EstadoUsuario.inactivo,
+        codigoInvitacion: 'INV-INACT123',
+      });
+
+      await expect(
+        service.vincularOGuardarGoogleUsuario({
+          googleId: 'google-sub-inactivo',
+          email: 'inactivo@gmail.com',
+          nombre: 'Empleado Inactivo',
+          codigoInvitacion: 'INV-INACT123',
+        }),
+      ).rejects.toThrow(UnauthorizedException);
+      expect(prisma.usuario.updateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('protección anti-lockout de administradores y privacidad en actualización', () => {
+    it('debe impedir que un administrador se desactive, degrade o elimine a sí mismo', async () => {
+      prisma.usuario.findUnique.mockResolvedValue({
+        id_usuario: 1,
+        nombre: 'Admin',
+        usuario: 'admin',
+        rol: RolUsuario.administrador,
+        estado: EstadoUsuario.activo,
+      });
+
+      await expect(
+        service.cambiarEstado(1, EstadoUsuario.inactivo, 1),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        service.actualizar(1, { rol: RolUsuario.mesero }, 1),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(service.eliminar(1, 1)).rejects.toThrow(BadRequestException);
+    });
+
+    it('debe impedir desactivar o degradar al último administrador activo del sistema', async () => {
+      prisma.usuario.findUnique.mockResolvedValue({
+        id_usuario: 1,
+        nombre: 'Único Admin',
+        usuario: 'admin',
+        rol: RolUsuario.administrador,
+        estado: EstadoUsuario.activo,
+      });
+      prisma.usuario.count.mockResolvedValue(0);
+
+      await expect(
+        service.cambiarEstado(1, EstadoUsuario.inactivo, 99),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        service.actualizar(1, { rol: RolUsuario.cajero }, 99),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('no debe persistir email al actualizar un colaborador operativo (regla de privacidad)', async () => {
+      prisma.usuario.findUnique.mockResolvedValue({
+        id_usuario: 4,
+        nombre: 'Pedro',
+        usuario: 'pedro',
+        rol: RolUsuario.mesero,
+        estado: EstadoUsuario.activo,
+      });
+      prisma.usuario.update.mockResolvedValue({
+        id_usuario: 4,
+        nombre: 'Pedro Editado',
+        usuario: 'pedro',
+        email: null,
+        rol: RolUsuario.mesero,
+        estado: EstadoUsuario.activo,
+      });
+
+      await service.actualizar(4, { nombre: 'Pedro Editado', email: 'pedro@gmail.com' }, 1);
+      const data = prisma.usuario.update.mock.calls[0][0].data;
+      expect(data.email).toBeUndefined();
     });
   });
 });

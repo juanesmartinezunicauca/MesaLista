@@ -1,5 +1,10 @@
 <header class="app-outer-header">
-  <div class="header-left"></div>
+  <div class="header-left">
+    <a class="btn-vista-cliente" routerLink="/cliente" title="Abrir vista de cliente para pedir a domicilio">
+      <mat-icon>storefront</mat-icon>
+      <span>Vista Cliente</span>
+    </a>
+  </div>
 
   <div class="user-session-container">
     <div class="user-meta">
@@ -21,6 +26,11 @@
       <button type="button" mat-menu-item (click)="abrirMiPerfil()">
         <mat-icon>account_circle</mat-icon>
         <span>Mi Perfil</span>
+      </button>
+
+      <button type="button" mat-menu-item routerLink="/cliente">
+        <mat-icon>storefront</mat-icon>
+        <span>Pedir como Cliente</span>
       </button>
 
       @if (currentUser().rol === 'administrador') {

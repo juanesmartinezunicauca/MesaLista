@@ -4,7 +4,7 @@ import { AuthService } from '../services/auth/auth.service';
 
 /**
  * Guard para proteger el acceso a la vista dedicada del carrito (/cliente/carrito):
- * Requiere estrictamente que el usuario se encuentre autenticado (rol 'cliente').
+ * Requiere que el usuario se encuentre autenticado (cualquier rol: cliente o colaborador).
  * Si no está autenticado, redirige a /cliente con query param ?auth=required para abrir el diálogo de login.
  */
 export const clienteCarritoGuard: CanActivateFn = () => {
@@ -20,11 +20,6 @@ export const clienteCarritoGuard: CanActivateFn = () => {
     });
   }
 
-  // Si es un cliente autenticado, permite el acceso al carrito
-  if (currentUser.rol === 'cliente') {
-    return true;
-  }
-
-  // Si es un empleado o administrador, redirige a su área operativa (mesas)
-  return router.createUrlTree(['/mesas']);
+  // Cualquier usuario autenticado (cliente o empleado) puede usar el carrito para pedir domicilios
+  return true;
 };

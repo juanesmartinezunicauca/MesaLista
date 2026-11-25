@@ -150,13 +150,17 @@ export class AuthService {
     });
 
     if (usuario.estado !== EstadoUsuario.activo) {
-      this.logger.warn(`[SECURITY_AUDIT] Acceso denegado con Google: cuenta inactiva '${usuario.email}'.`);
+      this.logger.warn(
+        `[SECURITY_AUDIT] Acceso denegado con Google: cuenta inactiva '${usuario.email ?? usuario.usuario}'.`,
+      );
       throw new UnauthorizedException(
         'El usuario se encuentra inactivo en el sistema. Contacte a la administración.',
       );
     }
 
-    this.logger.log(`[SECURITY_AUDIT] Inicio de sesión exitoso con Google: '${usuario.email}' (Rol: ${usuario.rol}, ID: ${usuario.id_usuario})`);
+    this.logger.log(
+      `[SECURITY_AUDIT] Inicio de sesión exitoso con Google: '${usuario.email ?? usuario.usuario}' (Rol: ${usuario.rol}, ID: ${usuario.id_usuario})`,
+    );
 
     const jwtPayload: JwtPayload = {
       sub: usuario.id_usuario,

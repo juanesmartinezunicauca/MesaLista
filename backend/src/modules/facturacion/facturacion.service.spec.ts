@@ -1,6 +1,6 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { EstadoCaja, EstadoFactura, EstadoPedido } from '@prisma/client';
+import { EstadoCaja, EstadoFactura, EstadoPedido, RolUsuario } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { FacturacionService } from './facturacion.service';
 
@@ -197,6 +197,97 @@ describe('FacturacionService', () => {
       const createData = prisma.factura.create.mock.calls[0][0].data;
       expect(Number(createData.valor)).toBe(24000);
       expect(Number(createData.valor_total)).toBe(24000);
+    });
+
+    it('debe permitir venta directa con propina descontando la propina del subtotal', async () => {
+      prisma.caja.findFirst.mockResolvedValue({ id_caja: 1, estado: EstadoCaja.abierta });
+      prisma.factura.create.mockResolvedValue({ id_venta: 60 });
+      prisma.medioPago.findUnique.mockResolvedValue({ id_medio_pago: 1, nombre: 'Efectivo' });
+      prisma.pago.create.mockResolvedValue({});
+      prisma.factura.findUnique.mockResolvedValue({ id_venta: 60, valor: 20000, propina: 2000, valor_total: 22000 });
+
+      await service.crearFactura(
+        {
+          propina: 2000,
+          pagos: [{ medio_pago: 'Efectivo', monto: 22000 }],
+        },
+        1,
+      );
+
+      const createData = prisma.factura.create.mock.calls[0][0].data;
+      expect(Number(createData.valor)).toBe(20000);
+      expect(Number(createData.propina)).toBe(2000);
+      expect(Number(createData.valor_total)).toBe(22000);
+    });
+
+    it('debe lanzar ConflictException si se intenta facturar un pedido que ya tiene factura (previene bypass de rol)', async () => {
+      prisma.caja.findFirst.mockResolvedValue({ id_caja: 1, estado: EstadoCaja.abierta });
+      prisma.pedido.findUnique.mockResolvedValue({
+        id_pedido: 25,
+        id_factura: 99,
+        estado: EstadoPedido.enviada,
+        items: [{ id_producto: 1, cantidad: 1, precio_unitario: 15000 }],
+      });
+
+      await expect(
+        service.crearFactura(
+          { id_pedido: 25, pagos: [{ medio_pago: 'Efectivo', monto: 15000 }] },
+          3,
+        ),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('debe lanzar ConflictException si un pedido fue facturado concurrentemente (updateMany count !== pedidos.length)', async () => {
+      prisma.caja.findFirst.mockResolvedValue({ id_caja: 1, estado: EstadoCaja.abierta });
+      prisma.pedido.findUnique.mockResolvedValue({
+        id_pedido: 26,
+        id_factura: null,
+        estado: EstadoPedido.enviada,
+        items: [{ id_producto: 1, cantidad: 1, precio_unitario: 15000 }],
+      });
+      prisma.factura.create.mockResolvedValue({ id_venta: 61 });
+      prisma.medioPago.findUnique.mockResolvedValue({ id_medio_pago: 1, nombre: 'Efectivo' });
+      prisma.pago.create.mockResolvedValue({});
+      prisma.pedido.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(
+        service.crearFactura(
+          { id_pedido: 26, pagos: [{ medio_pago: 'Efectivo', monto: 15000 }] },
+          1,
+        ),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('debe prohibir a un cajero modificar precio_unitario distinto al del catálogo al actualizar factura', async () => {
+      prisma.factura.findUnique.mockResolvedValue({
+        id_venta: 70,
+        estado: EstadoFactura.emitida,
+        valor: 20000,
+        propina: 0,
+        valor_total: 20000,
+        id_caja: 1,
+        id_mesa: 1,
+        id_usuario: 1,
+        caja: { id_caja: 1, estado: EstadoCaja.abierta },
+        pagos: [{ id_pago: 1, monto: 20000, medioPago: { nombre: 'Efectivo' } }],
+        pedidos: [{ id_pedido: 30, observacion: null, items: [{ id_producto: 1, cantidad: 1 }] }],
+      });
+      prisma.producto.findMany = jest.fn().mockResolvedValue([
+        { id_producto: 1, nombre: 'Hamburguesa', precio_venta: 20000, controla_inventario: false },
+      ]);
+      prisma.itemPedido = { deleteMany: jest.fn(), create: jest.fn() };
+
+      await expect(
+        service.actualizarFactura(
+          70,
+          { items: [{ id_producto: 1, cantidad: 1, precio_unitario: 0 }] },
+          { id_usuario: 2, rol: RolUsuario.cajero },
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('debe rechazar filtro estado inválido en obtenerTodas', async () => {
+      await expect(service.obtenerTodas({ estado: 'invalido' })).rejects.toThrow(BadRequestException);
     });
   });
 });

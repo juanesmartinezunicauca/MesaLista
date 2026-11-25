@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { EstadoUsuario, RolUsuario } from './dto';
 import { UsuariosController } from './usuarios.controller';
 import { UsuariosService } from './usuarios.service';
@@ -34,7 +35,10 @@ describe('UsuariosController', () => {
           useValue: service,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(ThrottlerGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<UsuariosController>(UsuariosController);
   });
@@ -99,8 +103,8 @@ describe('UsuariosController', () => {
     const updateDto = { nombre: 'Ana Actualizada' };
     service.actualizar.mockResolvedValue({ id_usuario: 5, ...updateDto });
 
-    const res = await controller.actualizar(5, updateDto);
-    expect(service.actualizar).toHaveBeenCalledWith(5, updateDto);
+    const res = await controller.actualizar(5, updateDto, 1);
+    expect(service.actualizar).toHaveBeenCalledWith(5, updateDto, 1);
     expect(res.nombre).toBe('Ana Actualizada');
   });
 
@@ -110,12 +114,17 @@ describe('UsuariosController', () => {
       estado: EstadoUsuario.inactivo,
     });
 
-    const res = await controller.cambiarEstado(5, {
-      estado: EstadoUsuario.inactivo,
-    });
+    const res = await controller.cambiarEstado(
+      5,
+      {
+        estado: EstadoUsuario.inactivo,
+      },
+      1,
+    );
     expect(service.cambiarEstado).toHaveBeenCalledWith(
       5,
       EstadoUsuario.inactivo,
+      1,
     );
     expect(res.estado).toBe(EstadoUsuario.inactivo);
   });
@@ -126,8 +135,8 @@ describe('UsuariosController', () => {
       tipo: 'soft-delete',
     });
 
-    const res = await controller.eliminar(5);
-    expect(service.eliminar).toHaveBeenCalledWith(5);
+    const res = await controller.eliminar(5, 1);
+    expect(service.eliminar).toHaveBeenCalledWith(5, 1);
     expect(res.tipo).toBe('soft-delete');
   });
 });

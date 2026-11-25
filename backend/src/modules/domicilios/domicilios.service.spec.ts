@@ -206,6 +206,32 @@ describe('DomiciliosService', () => {
 
       await expect(service.crear(dto, 1)).rejects.toThrow(BadRequestException);
     });
+
+    it('debe rechazar con BadRequestException si el descuento atómico de stock falla por concurrencia (updateMany count=0)', async () => {
+      prisma.producto.findMany.mockResolvedValue([
+        {
+          id_producto: 1,
+          nombre: 'Hamburguesa',
+          disponible: true,
+          controla_inventario: true,
+          cantidad_inventario: 2,
+          precio_venta: 18000,
+        },
+      ]);
+      const updateManyMock = jest.fn().mockResolvedValue({ count: 0 });
+      (prisma.producto as any).updateMany = updateManyMock;
+
+      await expect(service.crear(dto, 1)).rejects.toThrow(BadRequestException);
+      expect(updateManyMock).toHaveBeenCalledWith({
+        where: {
+          id_producto: 1,
+          cantidad_inventario: { gte: 2 },
+        },
+        data: {
+          cantidad_inventario: { decrement: 2 },
+        },
+      });
+    });
   });
 
   describe('obtenerTodos', () => {
@@ -536,6 +562,90 @@ describe('DomiciliosService', () => {
       const resultado = await service.obtenerPorId(50, usuarioStaff);
 
       expect(resultado.id_pedido).toBe(50);
+    });
+
+    it('debe arrojar ForbiddenException si un usuario de cocina intenta acceder a un domicilio ajeno (IDOR)', async () => {
+      prisma.pedido.findUnique.mockResolvedValue({
+        id_pedido: 51,
+        id_usuario: 1,
+        tipo: TipoPedido.domicilio,
+        estado: EstadoPedido.enviada,
+        items: [],
+      });
+
+      await expect(
+        service.obtenerPorId(51, { id_usuario: 88, rol: RolUsuario.cocina }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('Empleados actuando como clientes (Portal Cliente)', () => {
+    it('debe marcar con [PORTAL_CLIENTE] los pedidos hechos por empleados desde el portal y ocultarlo en la respuesta', async () => {
+      prisma.producto.findMany.mockResolvedValue([
+        {
+          id_producto: 1,
+          nombre: 'Hamburguesa',
+          disponible: true,
+          controla_inventario: false,
+          precio_venta: 18000,
+        },
+      ]);
+      prisma.usuario.findUnique.mockResolvedValue({
+        id_usuario: 12,
+        nombre: 'Pedro Mesero',
+        email: null,
+        rol: RolUsuario.mesero,
+      });
+      prisma.pedido.findFirst.mockResolvedValue(null);
+      prisma.pedido.create.mockResolvedValue({
+        id_pedido: 201,
+        numero_pedido: 5,
+        tipo: TipoPedido.domicilio,
+        estado: EstadoPedido.enviada,
+        observacion: '[PENDIENTE] [PORTAL_CLIENTE] [PAGO: Efectivo] Sin cebolla',
+        items: [{ id_producto: 1, cantidad: 1, precio_unitario: 18000 }],
+      });
+
+      const res = await service.crear(
+        {
+          cliente: {
+            nombre: 'Pedro Mesero',
+            telefono: '3101234567',
+            direccion: 'Calle 5 # 10-20',
+          },
+          items: [{ id_producto: 1, cantidad: 1 }],
+          observacion: 'Sin cebolla',
+          es_pedido_cliente: true,
+        },
+        12,
+      );
+
+      const createArgs = prisma.pedido.create.mock.calls[0][0];
+      expect(createArgs.data.observacion).toContain('[PORTAL_CLIENTE]');
+      expect(res.observacion).toBe('Sin cebolla');
+    });
+
+    it('debe filtrar obtenerMisPedidos por [PORTAL_CLIENTE] para empleados pero no para rol cliente', async () => {
+      prisma.pedido.findMany.mockResolvedValue([]);
+
+      await service.obtenerMisPedidos({ id_usuario: 12, rol: RolUsuario.mesero });
+      expect(prisma.pedido.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id_usuario: 12,
+            AND: expect.arrayContaining([
+              { observacion: { contains: '[PORTAL_CLIENTE]' } },
+            ]),
+          }),
+        }),
+      );
+
+      prisma.pedido.findMany.mockClear();
+
+      await service.obtenerMisPedidos({ id_usuario: 50, rol: RolUsuario.cliente });
+      const whereCliente = prisma.pedido.findMany.mock.calls[0][0].where;
+      expect(whereCliente.id_usuario).toBe(50);
+      expect(whereCliente.AND).toBeUndefined();
     });
   });
 });

@@ -39,12 +39,15 @@ import { MailModule } from './modules/mail/mail.module';
         SMTP_USER: Joi.string().optional().allow(''),
         SMTP_PASS: Joi.string().optional().allow(''),
         SMTP_FROM: Joi.string().optional().allow(''),
+        SMTP_FROM_NAME: Joi.string().optional().allow(''),
+        BREVO_API_KEY: Joi.string().optional().allow(''),
+        BREVO_SENDER_EMAIL: Joi.string().optional().allow(''),
         RESEND_API_KEY: Joi.string().optional().allow(''),
       }),
     }),
 
-    // M-02: ThrottlerModule — Rate limiting global (10 req / 60 seg por IP)
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10 }]),
+    // M-02: ThrottlerModule — Rate limiting configurable (por defecto 30 req / 60 seg por IP real)
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 30 }]),
 
     PrismaModule,
     AuthModule,

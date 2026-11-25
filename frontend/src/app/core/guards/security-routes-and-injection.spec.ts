@@ -176,9 +176,9 @@ describe('🛡️ BATERÍA DE PRUEBAS DE SEGURIDAD FRONTEND: FUGA DE ROLES, RUTA
         expect(result.commands).toEqual(['/mesas']);
       });
 
-      it('[FE-R12] Mesero autenticado que intenta entrar a vista de clientes es redirigido a /mesas', () => {
-        const result = runClienteViewGuard() as any;
-        expect(result.commands).toEqual(['/mesas']);
+      it('[FE-R12] Mesero autenticado también puede acceder a la vista de clientes y carrito para pedidos personales', () => {
+        expect(runClienteViewGuard()).toBe(true);
+        expect(runClienteCarritoGuard()).toBe(true);
       });
     });
 

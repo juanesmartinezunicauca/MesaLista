@@ -46,4 +46,28 @@ describe('JwtAuthGuard', () => {
     expect(result).toBe(true);
     superSpy.mockRestore();
   });
+
+  it('debe intentar poblar req.user en rutas @Public() cuando viene Authorization Bearer y permitir acceso aunque el token falle', async () => {
+    reflector.getAllAndOverride.mockReturnValue(true);
+
+    const superSpy = jest
+      .spyOn(Object.getPrototypeOf(Object.getPrototypeOf(guard)), 'canActivate')
+      .mockRejectedValue(new Error('Token expirado'));
+
+    const context = {
+      getHandler: jest.fn(),
+      getClass: jest.fn(),
+      switchToHttp: jest.fn().mockReturnValue({
+        getRequest: jest.fn().mockReturnValue({
+          headers: { authorization: 'Bearer token-vencido' },
+        }),
+        getResponse: jest.fn().mockReturnValue({}),
+      }),
+    } as unknown as ExecutionContext;
+
+    const result = await guard.canActivate(context);
+    expect(superSpy).toHaveBeenCalledWith(context);
+    expect(result).toBe(true);
+    superSpy.mockRestore();
+  });
 });

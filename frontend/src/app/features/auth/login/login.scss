@@ -37,9 +37,18 @@
   }
 
   .logo-box {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 12px;
+    width: fit-content;
+    text-decoration: none;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+
+    &:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
 
     .brand-icon {
       color: $brand-orange;

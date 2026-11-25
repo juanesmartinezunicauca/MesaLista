@@ -64,7 +64,7 @@ describe('clienteViewGuard', () => {
     expect(result).toBe(true);
   });
 
-  it('debe redirigir a /mesas si el usuario autenticado es administrador', () => {
+  it('debe permitir acceso a la vista cliente si el usuario autenticado es administrador', () => {
     mockCurrentUserSignal.set({
       id_usuario: 2,
       nombre: 'Admin General',
@@ -74,12 +74,11 @@ describe('clienteViewGuard', () => {
       iniciales: 'AG',
     });
 
-    const result = executeGuard() as UrlTree;
-    expect(result).toBeTruthy();
-    expect((result as any).commands).toEqual(['/mesas']);
+    const result = executeGuard();
+    expect(result).toBe(true);
   });
 
-  it('debe redirigir a /mesas si el usuario autenticado es mesero, cajero o cocina', () => {
+  it('debe permitir acceso a la vista cliente si el usuario autenticado es mesero, cajero o cocina', () => {
     const rolesStaff = ['mesero', 'cajero', 'cocina'] as const;
 
     rolesStaff.forEach((rol) => {
@@ -92,8 +91,8 @@ describe('clienteViewGuard', () => {
         iniciales: 'PS',
       });
 
-      const result = executeGuard() as UrlTree;
-      expect((result as any).commands).toEqual(['/mesas']);
+      const result = executeGuard();
+      expect(result).toBe(true);
     });
   });
 });

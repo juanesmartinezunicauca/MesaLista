@@ -1,6 +1,6 @@
 import { Component, inject, signal, OnInit, AfterViewInit, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { environment } from '../../../../environments/environment';
 
 // Angular Material Modules
@@ -15,6 +15,7 @@ import { AuthService } from '../../../core/services/auth/auth.service';
   standalone: true,
   imports: [
     CommonModule,
+    RouterLink,
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
@@ -57,11 +58,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
 
   onCodigoInvitacionInput(event: Event): void {
     const input = event.target as HTMLInputElement;
-    let val = input.value.toUpperCase().replace(/\s+/g, '');
-    // Si el usuario escribe solo los dígitos (ej. 482910), formatear amigablemente como INV-482910
-    if (/^\d{4,6}$/.test(val)) {
-      val = `INV-${val}`;
-    }
+    const val = input.value.toUpperCase().replace(/\s+/g, '');
     this.codigoInvitacion.set(val);
   }
 
@@ -123,7 +120,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
   triggerGooglePrompt(): void {
     // Si está en modo registro de colaborador y no ha escrito el código, advertirle antes de abrir Google
     if (this.modo() === 'registro' && !this.codigoInvitacion().trim()) {
-      this.errorMessage.set('Por favor ingresa tu código de invitación (ej. INV-821943) para activar tu perfil de colaborador.');
+      this.errorMessage.set('Por favor ingresa tu código de invitación (ej. INV-ABCD2345) para activar tu perfil de colaborador.');
       return;
     }
 
@@ -151,14 +148,17 @@ export class LoginComponent implements OnInit, AfterViewInit {
 
     // Validación preventiva en modo registro
     if (this.modo() === 'registro' && !this.codigoInvitacion().trim()) {
-      this.errorMessage.set('Por favor ingresa tu código de invitación (ej. INV-821943) antes de continuar con Google.');
+      this.errorMessage.set('Por favor ingresa tu código de invitación (ej. INV-ABCD2345) antes de continuar con Google.');
       return;
     }
 
     this.errorMessage.set(null);
     this.isLoading.set(true);
 
-    const codigo = this.codigoInvitacion().trim() || undefined;
+    let codigo = this.codigoInvitacion().trim().toUpperCase() || undefined;
+    if (codigo && !codigo.startsWith('INV-')) {
+      codigo = `INV-${codigo}`;
+    }
     this.authService.loginGoogle(response.credential, codigo).subscribe({
       next: () => {
         this.isLoading.set(false);
@@ -184,10 +184,11 @@ export class LoginComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Enruta al usuario según su rol:
-   * - 'cliente': va a la vista de cliente /cliente.
-   * - Roles del personal ('administrador', 'cajero', 'mesero', 'cocina'): NUNCA van a la vista de cliente;
-   *   son dirigidos directamente a /mesas (o a su returnUrl operativa).
+   * Enruta al usuario según su rol y returnUrl:
+   * - 'cliente': siempre va a /cliente (o a su subruta /cliente/... solicitada).
+   * - Roles del personal ('administrador', 'cajero', 'mesero', 'cocina'):
+   *   Si vienen explícitamente desde un flujo de compra en /cliente (ej. /cliente/carrito), respetan ese returnUrl;
+   *   en acceso normal van directo a su estación de trabajo (/cocina o /mesas).
    */
   private redirigirSegunRol(): void {
     const rol = this.authService.currentUser()?.rol;
@@ -195,10 +196,12 @@ export class LoginComponent implements OnInit, AfterViewInit {
 
     if (rol === 'cliente') {
       this.router.navigateByUrl(returnUrl && returnUrl.startsWith('/cliente') ? returnUrl : '/cliente');
+    } else if (returnUrl && returnUrl.startsWith('/cliente')) {
+      this.router.navigateByUrl(returnUrl);
     } else if (rol === 'cocina') {
-      this.router.navigateByUrl(returnUrl && !returnUrl.startsWith('/cliente') ? returnUrl : '/cocina');
+      this.router.navigateByUrl(returnUrl && returnUrl !== '/' ? returnUrl : '/cocina');
     } else {
-      if (!returnUrl || returnUrl === '/cliente' || returnUrl === '/') {
+      if (!returnUrl || returnUrl === '/') {
         returnUrl = '/mesas';
       }
       this.router.navigateByUrl(returnUrl);

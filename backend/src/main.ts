@@ -4,10 +4,18 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { json, urlencoded } from 'express';
 import helmet from 'helmet';
 import { PrismaExceptionFilter } from './common/filters';
+import { esOrigenCorsPermitido } from './common/utils/contabilidad.util';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Confiar en el primer proxy inverso (Render / Nginx) para obtener IP real en rate limiting
+  const httpAdapter = app.getHttpAdapter();
+  const instance = httpAdapter?.getInstance?.();
+  if (typeof instance?.set === 'function') {
+    instance.set('trust proxy', 1);
+  }
 
   // OWASP A05: Protección de cabeceras HTTP de seguridad con Helmet
   // Configuración de CSP compatible con Swagger UI en /api/docs
@@ -54,14 +62,7 @@ async function bootstrap() {
       origin: string | undefined,
       callback: (err: Error | null, allow?: boolean) => void,
     ) => {
-      if (!origin) return callback(null, true);
-
-      if (
-        origin.includes('localhost') ||
-        origin.includes('127.0.0.1') ||
-        origin.endsWith('.vercel.app') ||
-        configuredOrigins.includes(origin)
-      ) {
+      if (esOrigenCorsPermitido(origin, configuredOrigins)) {
         return callback(null, true);
       }
 

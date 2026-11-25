@@ -56,16 +56,17 @@ describe('UsuarioDialogComponent', () => {
     vi.clearAllMocks();
   });
 
-  it('debe inicializar el formulario exigiendo nombre y rol, con correo opcional para delegación OAuth', async () => {
+  it('debe inicializar el formulario exigiendo nombre, rol y correo efímero para envío del código', async () => {
     await configureTestBed();
 
     expect(component.usuarioForm.get('nombre')?.valid).toBe(false); // nombre es obligatorio
-    expect(component.usuarioForm.get('email')?.valid).toBe(true); // correo es opcional
+    expect(component.usuarioForm.get('correoEnvioCodigo')?.valid).toBe(false); // correo para enviar código es obligatorio
+    expect(component.usuarioForm.contains('email')).toBe(false); // no se almacena correo de empleados en BD
     expect(component.usuarioForm.contains('password')).toBe(false); // sin contraseña local
 
     component.usuarioForm.patchValue({
       nombre: 'Carlos Mesero',
-      email: 'carlos.mesero@gmail.com',
+      correoEnvioCodigo: 'carlos.mesero@gmail.com',
       rol: 'mesero',
     });
 

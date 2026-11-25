@@ -213,7 +213,7 @@ describe('🔬 BATERÍA DE PRUEBAS FUZZY Y RESILIENCIA DE SISTEMA (FUZZ TESTING 
       for (const cantFuzzed of numerosInvalidos) {
         const dtoInstance = plainToInstance(CreatePedidoDto, {
           id_mesa: 1,
-          tipo: TipoPedido.mesa,
+          tipo: TipoPedido.salon,
           items: [
             {
               id_producto: 1,

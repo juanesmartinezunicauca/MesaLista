@@ -200,7 +200,8 @@ describe('ReportesService', () => {
       expect(res.kpis.cuentas_pagadas).toBe(1);
       expect(res.kpis.ticket_promedio).toBe(50000);
       expect(res.kpis.total_gastos).toBe(15000);
-      expect(res.kpis.balance_operativo).toBe(35000);
+      // balance_operativo usa ventas_netas (sin propinas): 45000 - 15000 = 30000
+      expect(res.kpis.balance_operativo).toBe(30000);
       expect(res.kpis.productos_bajo_stock).toBe(1);
       expect(res.kpis.productos_agotados).toBe(1);
       expect(res.kpis.cajas_con_diferencia).toBe(1);
@@ -422,6 +423,119 @@ describe('ReportesService', () => {
       expect(res.productos[0].utilidad_bruta).toBe(52000);
       expect(res.productos[0].margen_bruto_porcentaje).toBe(52);
       expect(res.nota_metodologica).toContain('costo unitario actualmente registrado');
+    });
+  });
+
+  describe('auditoría de casos borde en ReportesService', () => {
+    it('resolverRangoFechas debe usar el día 1 del mes de fecha_fin si falta fecha_inicio y rechazar rangos > 366 días', () => {
+      const { inicio, fin } = resolverRangoFechas(undefined, '2025-05-15');
+      expect(inicio.getTime()).toBeLessThan(fin.getTime());
+      expect(inicio.toISOString()).toContain('2025-05-01');
+
+      expect(() => resolverRangoFechas('2020-01-01', '2026-01-01')).toThrow(BadRequestException);
+    });
+
+    it('obtenerReporteVentas debe filtrar el resumen cuando se aplica filtro de categoria y calcular % sobre ítems', async () => {
+      prisma.factura.findMany.mockResolvedValue([
+        {
+          id_venta: 1,
+          id_mesa: null,
+          valor: '24000.00', // 20000 pizza + 4000 envío
+          propina: '0.00',
+          valor_total: '24000.00',
+          fecha_hora: new Date('2026-10-02T14:00:00-05:00'),
+          pagos: [{ monto: '24000.00', medioPago: { nombre: 'Efectivo' } }],
+          pedidos: [
+            {
+              tipo: 'domicilio',
+              items: [
+                {
+                  id_producto: 1,
+                  cantidad: 1,
+                  precio_unitario: '20000.00',
+                  producto: { id_producto: 1, nombre: 'Pizza', categoria: 'Pizzas' },
+                },
+              ],
+            },
+          ],
+        },
+        {
+          id_venta: 2,
+          id_mesa: 1,
+          valor: '10000.00',
+          propina: '0.00',
+          valor_total: '10000.00',
+          fecha_hora: new Date('2026-10-02T15:00:00-05:00'),
+          pagos: [{ monto: '10000.00', medioPago: { nombre: 'Efectivo' } }],
+          pedidos: [
+            {
+              tipo: 'salon',
+              items: [
+                {
+                  id_producto: 2,
+                  cantidad: 2,
+                  precio_unitario: '5000.00',
+                  producto: { id_producto: 2, nombre: 'Jugo', categoria: 'Bebidas' },
+                },
+              ],
+            },
+          ],
+        },
+      ]);
+
+      const res = await service.obtenerReporteVentas({
+        fecha_inicio: '2026-10-01',
+        fecha_fin: '2026-10-05',
+        categoria: 'Pizzas',
+      });
+
+      expect(res.resumen.cuentas_pagadas).toBe(1);
+      expect(res.resumen.total_ventas).toBe(24000);
+      expect(res.categorias).toHaveLength(1);
+      expect(res.categorias[0].porcentaje).toBe(100);
+    });
+
+    it('obtenerReporteGastos debe agrupar medios normalizados evitando duplicados por mayúsculas o alias', async () => {
+      prisma.gasto.findMany.mockResolvedValue([
+        { id_gasto: 1, id_caja: 1, fecha_hora: new Date(), descripcion: 'Hielo', total: '10000', tipoGasto: { nombre: 'Insumos' }, medioPago: { nombre: 'efectivo' }, usuario: { nombre: 'A' } },
+        { id_gasto: 2, id_caja: 1, fecha_hora: new Date(), descripcion: 'Agua', total: '5000', tipoGasto: { nombre: 'Insumos' }, medioPago: { nombre: 'Efectivo' }, usuario: { nombre: 'A' } },
+        { id_gasto: 3, id_caja: 1, fecha_hora: new Date(), descripcion: 'Gas', total: '20000', tipoGasto: { nombre: 'Servicios' }, medioPago: { nombre: 'Nequi' }, usuario: { nombre: 'A' } },
+      ]);
+
+      const res = await service.obtenerReporteGastos({
+        fecha_inicio: '2026-10-01',
+        fecha_fin: '2026-10-05',
+      });
+
+      expect(res.desglose_por_medio).toHaveLength(2);
+      const efectivo = res.desglose_por_medio.find((m) => m.medio === 'Efectivo');
+      const transf = res.desglose_por_medio.find((m) => m.medio === 'Transferencia');
+      expect(efectivo?.total).toBe(15000);
+      expect(transf?.total).toBe(20000);
+    });
+
+    it('obtenerReporteOperacion debe exponer el motivo de anulación de factura en pedidos cancelados por anulación', async () => {
+      prisma.pedido.findMany.mockResolvedValue([
+        {
+          id_pedido: 10,
+          numero_pedido: 3,
+          fecha_hora: new Date('2026-10-02T12:00:00-05:00'),
+          tipo: 'salon',
+          estado: 'cancelada',
+          observacion: null,
+          mesa: { numero: 2 },
+          usuario: { nombre: 'Mesero' },
+          factura: { estado: EstadoFactura.anulada, motivo_anulacion: 'Cobro duplicado' },
+          items: [],
+        },
+      ]);
+
+      const res = await service.obtenerReporteOperacion({
+        fecha_inicio: '2026-10-01',
+        fecha_fin: '2026-10-05',
+      });
+
+      expect(res.pedidos_cancelados_detalle[0].observacion).toBe('Factura anulada: Cobro duplicado');
     });
   });
 });

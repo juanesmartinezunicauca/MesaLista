@@ -68,18 +68,21 @@ describe('clienteCarritoGuard', () => {
     expect(result).toBe(true);
   });
 
-  it('debe redirigir a /mesas si el usuario autenticado es parte del staff (no es cliente)', () => {
-    mockCurrentUserSignal.set({
-      id_usuario: 2,
-      nombre: 'Carlos Cajero',
-      usuario: 'cajero',
-      rol: 'cajero',
-      token: 'jwt-token-sample',
-      iniciales: 'CC',
-    });
+  it('debe permitir acceso al carrito si el usuario autenticado es parte del staff (puede pedir como cliente)', () => {
+    const rolesStaff = ['administrador', 'cajero', 'mesero', 'cocina'] as const;
 
-    const result = executeGuard() as any;
-    expect(result).toBeTruthy();
-    expect(result.commands).toEqual(['/mesas']);
+    rolesStaff.forEach((rol) => {
+      mockCurrentUserSignal.set({
+        id_usuario: 2,
+        nombre: 'Personal Staff',
+        usuario: rol,
+        rol,
+        token: 'jwt-token-sample',
+        iniciales: 'PS',
+      });
+
+      const result = executeGuard();
+      expect(result).toBe(true);
+    });
   });
 });

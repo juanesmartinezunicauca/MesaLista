@@ -298,6 +298,7 @@ export class VistaCarritoComponent implements OnInit {
       metodo_pago: this.metodoPago(),
       costo_envio: this.costoEnvio(),
       zona_entrega: barrio ? `${barrio} (${zona.nombre})` : zona.nombre,
+      es_pedido_cliente: true,
     };
 
     this.enviandoPedido.set(true);

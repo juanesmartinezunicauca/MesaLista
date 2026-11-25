@@ -70,6 +70,10 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
 
   currentUser = this.authService.currentUser;
   isAuthenticated = this.authService.isAuthenticated;
+  esPersonalOperativo = computed(() => {
+    const rol = this.currentUser()?.rol;
+    return !!rol && rol !== 'cliente';
+  });
 
   // Navegación de secciones del cliente: Carta vs Mis Pedidos
   vistaActiva = signal<'carta' | 'mis-pedidos'>('carta');
@@ -337,12 +341,16 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
   }
 
   irAInicio(): void {
+    this.vistaActiva.set('carta');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  volverAlPos(): void {
     const rol = this.currentUser()?.rol;
-    if (rol && rol !== 'cliente') {
+    if (rol === 'cocina') {
+      this.router.navigate(['/cocina']);
+    } else if (rol && rol !== 'cliente') {
       this.router.navigate(['/mesas']);
-    } else {
-      this.vistaActiva.set('carta');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
 
@@ -628,6 +636,7 @@ export class VistaClienteComponent implements OnInit, OnDestroy {
       metodo_pago: this.metodoPago(),
       costo_envio: this.costoEnvio(),
       zona_entrega: barrio ? `${barrio} (${zona.nombre})` : zona.nombre,
+      es_pedido_cliente: true,
     };
 
     this.enviandoPedido.set(true);

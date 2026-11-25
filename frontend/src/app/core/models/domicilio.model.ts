@@ -66,6 +66,7 @@ export interface CreateDomicilioPayload {
   metodo_pago?: string;
   costo_envio?: number;
   zona_entrega?: string;
+  es_pedido_cliente?: boolean;
 }
 
 export interface EstadoServicioDomicilio {

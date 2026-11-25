@@ -12,6 +12,7 @@ describe('CajaService', () => {
     prisma = {
       caja: {
         findFirst: jest.fn(),
+        findUnique: jest.fn(),
         findMany: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
@@ -33,6 +34,7 @@ describe('CajaService', () => {
         count: jest.fn().mockResolvedValue(0),
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
+      $transaction: jest.fn((cb) => cb(prisma)),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -381,6 +383,18 @@ describe('CajaService', () => {
 
     it('debe rechazar actualizar base con valor negativo', async () => {
       await expect(service.actualizarBaseCaja(-5000)).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('actualizarObservacionTurno', () => {
+    it('debe truncar observaciones a 255 caracteres para coincidir con VarChar(255) en Prisma', async () => {
+      prisma.caja.findUnique.mockResolvedValue({ id_caja: 1 });
+      prisma.caja.update.mockResolvedValue({ id_caja: 1, observacion: 'a'.repeat(255) });
+
+      await service.actualizarObservacionTurno(1, 'a'.repeat(400));
+
+      const data = prisma.caja.update.mock.calls[0][0].data;
+      expect(data.observacion.length).toBe(255);
     });
   });
 });

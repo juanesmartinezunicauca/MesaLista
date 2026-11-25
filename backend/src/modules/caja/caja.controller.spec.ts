@@ -43,8 +43,8 @@ describe('CajaController (Unit Tests)', () => {
 
   describe('abrir', () => {
     it('debe invocar cajaService.abrirCaja con el DTO y el id del usuario', async () => {
-      const dto: AbrirCajaDto = { monto_apertura: 100000 };
-      const mockResult = { id_caja: 1, monto_apertura: 100000, estado: 'abierta' };
+      const dto: AbrirCajaDto = { valor_inicial: 100000 };
+      const mockResult = { id_caja: 1, valor_inicial: 100000, estado: 'abierta' };
       mockCajaService.abrirCaja.mockResolvedValue(mockResult as any);
 
       const result = await controller.abrir(dto, 1);
@@ -81,8 +81,12 @@ describe('CajaController (Unit Tests)', () => {
 
   describe('registrarGasto', () => {
     it('debe invocar cajaService.registrarGasto con el DTO y el id del usuario', async () => {
-      const dto: CreateGastoDto = { monto: 20000, concepto: 'Compra de hielo', categoria: 'Insumos' };
-      const mockResult = { id_gasto: 1, monto: 20000, concepto: 'Compra de hielo' };
+      const dto: CreateGastoDto = {
+        total: 20000,
+        descripcion: 'Compra de hielo',
+        tipo_gasto: 'Insumos',
+      };
+      const mockResult = { id_gasto: 1, total: 20000, descripcion: 'Compra de hielo' };
       mockCajaService.registrarGasto.mockResolvedValue(mockResult as any);
 
       const result = await controller.registrarGasto(dto, 1);
@@ -106,8 +110,8 @@ describe('CajaController (Unit Tests)', () => {
 
   describe('actualizarGasto', () => {
     it('debe invocar cajaService.actualizarGasto con id, dto y usuario autenticado', async () => {
-      const dto: UpdateGastoDto = { monto: 25000 };
-      const mockResult = { id_gasto: 3, monto: 25000 };
+      const dto: UpdateGastoDto = { total: 25000 };
+      const mockResult = { id_gasto: 3, total: 25000 };
       const authUser = { id_usuario: 1, rol: 'administrador' };
       mockCajaService.actualizarGasto.mockResolvedValue(mockResult as any);
 
@@ -132,8 +136,8 @@ describe('CajaController (Unit Tests)', () => {
 
   describe('cerrar', () => {
     it('debe invocar cajaService.cerrarCaja con el DTO y el id de usuario', async () => {
-      const dto: CerrarCajaDto = { monto_cierre_real: 250000, observaciones: 'Sin novedades' };
-      const mockResult = { id_caja: 1, estado: 'cerrada', monto_cierre: 250000 };
+      const dto: CerrarCajaDto = { valor_final_fisico: 250000, observacion: 'Sin novedades' };
+      const mockResult = { id_caja: 1, estado: 'cerrada', valor_final_fisico: 250000 };
       mockCajaService.cerrarCaja.mockResolvedValue(mockResult as any);
 
       const result = await controller.cerrar(dto, 2);

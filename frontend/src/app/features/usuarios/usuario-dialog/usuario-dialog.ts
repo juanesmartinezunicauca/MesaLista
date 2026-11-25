@@ -97,10 +97,11 @@ export class UsuarioDialogComponent {
           Validators.pattern(/^[a-zA-Z0-9._-]+$/),
         ],
       ],
-      // Correo efímero para envío del código (no se almacena en base de datos)
-      correoEnvioCodigo: ['', [Validators.email]],
-      // Solo relevante si es edición de un usuario existente
-      email: [u?.email || '', [Validators.email]],
+      // Correo efímero obligatorio al crear para despachar el código (no se almacena en base de datos)
+      correoEnvioCodigo: [
+        '',
+        u ? [Validators.email] : [Validators.required, Validators.email],
+      ],
       rol: [u?.rol || 'mesero', [Validators.required]],
       estado: [u?.estado ? u.estado === 'activo' : true],
     });
@@ -197,7 +198,6 @@ export class UsuarioDialogComponent {
     if (this.esEdicion() && this.data?.usuario) {
       const payload: UpdateUsuarioPayload = {
         nombre: val.nombre.trim(),
-        email: val.email?.trim() ? val.email.trim().toLowerCase() : undefined,
         rol: val.rol,
         estado: val.estado ? 'activo' : 'inactivo',
       };

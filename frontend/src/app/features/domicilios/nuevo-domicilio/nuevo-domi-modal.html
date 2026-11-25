@@ -43,9 +43,11 @@
                     <mat-form-field appearance="outline" class="modern-field">
                         <input matInput formControlName="telefono" placeholder="Ej. 3101234567">
                         <mat-icon matSuffix>phone</mat-icon>
-                        @if (deliveryForm.get('telefono')?.hasError('required') && deliveryForm.get('telefono')?.touched) {
+                        @if (deliveryForm.get('telefono')?.hasError('required') &&
+                        deliveryForm.get('telefono')?.touched) {
                         <mat-error>El teléfono es obligatorio</mat-error>
-                        } @else if (deliveryForm.get('telefono')?.hasError('pattern') && deliveryForm.get('telefono')?.touched) {
+                        } @else if (deliveryForm.get('telefono')?.hasError('pattern') &&
+                        deliveryForm.get('telefono')?.touched) {
                         <mat-error>Ingrese un número válido (mínimo 7 dígitos)</mat-error>
                         }
                     </mat-form-field>
@@ -57,7 +59,8 @@
                     <mat-form-field appearance="outline" class="modern-field">
                         <input matInput formControlName="nombreCompleto" placeholder="Ej. Andrea Pérez">
                         <mat-icon matSuffix>person</mat-icon>
-                        @if (deliveryForm.get('nombreCompleto')?.hasError('required') && deliveryForm.get('nombreCompleto')?.touched) {
+                        @if (deliveryForm.get('nombreCompleto')?.hasError('required') &&
+                        deliveryForm.get('nombreCompleto')?.touched) {
                         <mat-error>El nombre es obligatorio</mat-error>
                         }
                     </mat-form-field>
@@ -81,7 +84,8 @@
                     <mat-form-field appearance="outline" class="modern-field">
                         <mat-select formControlName="metodoPago">
                             <mat-option value="Efectivo">💵 Efectivo</mat-option>
-                            <mat-option value="Transferencia">📱 Transferencia (Nequi / Daviplata / Bancolombia)</mat-option>
+                            <mat-option value="Transferencia">📱 Transferencia (Nequi / Daviplata /
+                                Bancolombia)</mat-option>
                             <mat-option value="Tarjeta">💳 Tarjeta (Datáfono)</mat-option>
                         </mat-select>
                         <mat-icon matSuffix>payments</mat-icon>
@@ -92,20 +96,18 @@
                 <div class="field-group">
                     <label>Barrio en Popayán *</label>
                     <mat-form-field appearance="outline" class="modern-field">
-                        <mat-select
-                            [ngModel]="barrioSeleccionado()"
-                            (ngModelChange)="cambiarBarrio($event)"
-                            [ngModelOptions]="{ standalone: true }"
-                            placeholder="Seleccione el barrio">
+                        <mat-select [ngModel]="barrioSeleccionado()" (ngModelChange)="cambiarBarrio($event)"
+                            [ngModelOptions]="{ standalone: true }" placeholder="Seleccione el barrio">
                             @for (b of barriosPopayan; track b.nombre) {
-                                <mat-option [value]="b.nombre">{{ b.nombre }}</mat-option>
+                            <mat-option [value]="b.nombre">{{ b.nombre }}</mat-option>
                             }
                         </mat-select>
                         <mat-icon matSuffix>near_me</mat-icon>
                         @if (barrioSeleccionado()) {
-                            <mat-hint>
-                                Zona automática: <strong>{{ zonaDetectada().nombre }}</strong> — Envío: <strong>$ {{ costoEnvio() | number:'1.0-0' }}</strong>
-                            </mat-hint>
+                        <mat-hint>
+                            Zona automática: <strong>{{ zonaDetectada().nombre }}</strong> — Envío: <strong>$ {{
+                                costoEnvio() | number:'1.0-0' }}</strong>
+                        </mat-hint>
                         }
                     </mat-form-field>
                 </div>
@@ -116,7 +118,8 @@
                     <mat-form-field appearance="outline" class="modern-field">
                         <input matInput formControlName="direccion" placeholder="Ej. Calle 10 # 5-23">
                         <mat-icon matSuffix>location_on</mat-icon>
-                        @if (deliveryForm.get('direccion')?.hasError('required') && deliveryForm.get('direccion')?.touched) {
+                        @if (deliveryForm.get('direccion')?.hasError('required') &&
+                        deliveryForm.get('direccion')?.touched) {
                         <mat-error>La dirección de entrega es obligatoria (mínimo 5 caracteres)</mat-error>
                         }
                     </mat-form-field>
@@ -137,7 +140,7 @@
 
         <!-- Sección 2: Selector del Menú y Productos Agregados -->
         <div class="order-section">
-            
+
             <!-- Columna Izquierda: Menú / Catálogo -->
             <div class="catalog-column">
                 <div class="column-header">
@@ -145,8 +148,7 @@
                     <!-- Buscador de productos -->
                     <div class="search-box">
                         <mat-icon>search</mat-icon>
-                        <input type="text" placeholder="Buscar producto..." 
-                            [ngModel]="busquedaProducto()" 
+                        <input type="text" placeholder="Buscar producto..." [ngModel]="busquedaProducto()"
                             (ngModelChange)="busquedaProducto.set($event)">
                     </div>
                 </div>
@@ -154,8 +156,7 @@
                 <!-- Chips de Categorías -->
                 <div class="categories-scroll">
                     @for (cat of categorias(); track cat) {
-                    <button type="button" class="category-chip" 
-                        [class.active]="filtroCategoria() === cat"
+                    <button type="button" class="category-chip" [class.active]="filtroCategoria() === cat"
                         (click)="filtroCategoria.set(cat)">
                         {{ cat }}
                     </button>
@@ -170,25 +171,25 @@
                         <span>Cargando carta...</span>
                     </div>
                     } @else {
-                        @for (prod of productosFiltrados(); track prod.id_producto) {
-                        <div class="product-item" (click)="agregarProducto(prod)">
-                            <div class="prod-info">
-                                <span class="prod-name">{{ prod.nombre }}</span>
-                                <span class="prod-category">{{ prod.categoria }}</span>
-                            </div>
-                            <div class="prod-price-add">
-                                <span class="prod-price">$ {{ prod.precio_venta | number:'1.0-0' }}</span>
-                                <button type="button" class="btn-add-mini" matTooltip="Agregar producto">
-                                    <mat-icon>add</mat-icon>
-                                </button>
-                            </div>
+                    @for (prod of productosFiltrados(); track prod.id_producto) {
+                    <div class="product-item" (click)="agregarProducto(prod)">
+                        <div class="prod-info">
+                            <span class="prod-name">{{ prod.nombre }}</span>
+                            <span class="prod-category">{{ prod.categoria }}</span>
                         </div>
-                        } @empty {
-                        <div class="empty-products">
-                            <mat-icon>restaurant_menu</mat-icon>
-                            <span>No se encontraron productos disponibles.</span>
+                        <div class="prod-price-add">
+                            <span class="prod-price">$ {{ prod.precio_venta | number:'1.0-0' }}</span>
+                            <button type="button" class="btn-add-mini" matTooltip="Agregar producto">
+                                <mat-icon>add</mat-icon>
+                            </button>
                         </div>
-                        }
+                    </div>
+                    } @empty {
+                    <div class="empty-products">
+                        <mat-icon>restaurant_menu</mat-icon>
+                        <span>No se encontraron productos disponibles.</span>
+                    </div>
+                    }
                     }
                 </div>
             </div>
@@ -204,7 +205,8 @@
                     <div class="cart-item">
                         <div class="item-header">
                             <span class="item-title">{{ item.nombre }}</span>
-                            <span class="item-total">$ {{ (item.cantidad * item.precio_unitario) | number:'1.0-0' }}</span>
+                            <span class="item-total">$ {{ (item.cantidad * item.precio_unitario) | number:'1.0-0'
+                                }}</span>
                         </div>
 
                         <!-- Selector de cantidad -->
@@ -221,7 +223,8 @@
 
                             <span class="unit-price">$ {{ item.precio_unitario | number:'1.0-0' }} c/u</span>
 
-                            <button type="button" class="btn-remove" (click)="eliminarItem(item.id_producto)" matTooltip="Eliminar del pedido">
+                            <button type="button" class="btn-remove" (click)="eliminarItem(item.id_producto)"
+                                matTooltip="Eliminar del pedido">
                                 <mat-icon>close</mat-icon>
                             </button>
                         </div>
@@ -233,20 +236,22 @@
                         </div>
 
                         <!-- Ingredientes removibles -->
-                        @if (item.ingredientes_removibles_disponibles && item.ingredientes_removibles_disponibles.length > 0) {
-                            <div class="removable-ingredients-bar">
-                                <span class="removable-label">Quitar:</span>
-                                <div class="removable-chips">
-                                    @for (ing of item.ingredientes_removibles_disponibles; track ing) {
-                                        <button type="button" class="btn-chip-removable"
-                                            [class.is-removed]="isIngredienteRemovido(item, ing)"
-                                            (click)="toggleIngredienteItem(item, ing)">
-                                            <mat-icon>{{ isIngredienteRemovido(item, ing) ? 'remove_circle' : 'add_circle_outline' }}</mat-icon>
-                                            <span>{{ isIngredienteRemovido(item, ing) ? 'Sin ' + ing : ing }}</span>
-                                        </button>
-                                    }
-                                </div>
+                        @if (item.ingredientes_removibles_disponibles && item.ingredientes_removibles_disponibles.length
+                        > 0) {
+                        <div class="removable-ingredients-bar">
+                            <span class="removable-label">Quitar:</span>
+                            <div class="removable-chips">
+                                @for (ing of item.ingredientes_removibles_disponibles; track ing) {
+                                <button type="button" class="btn-chip-removable"
+                                    [class.is-removed]="isIngredienteRemovido(item, ing)"
+                                    (click)="toggleIngredienteItem(item, ing)">
+                                    <mat-icon>{{ isIngredienteRemovido(item, ing) ? 'remove_circle' :
+                                        'add_circle_outline' }}</mat-icon>
+                                    <span>{{ isIngredienteRemovido(item, ing) ? 'Sin ' + ing : ing }}</span>
+                                </button>
+                                }
                             </div>
+                        </div>
                         }
                     </div>
                     } @empty {
@@ -262,7 +267,8 @@
                 <div class="cart-total-bar">
                     <div class="total-info">
                         <span class="total-label">
-                            Total a cobrar @if (barrioSeleccionado()) { (incl. envío {{ zonaDetectada().nombre }}: ${{ costoEnvio() | number:'1.0-0' }}) }:
+                            Total a cobrar @if (barrioSeleccionado()) { (incl. envío {{ zonaDetectada().nombre }}: ${{
+                            costoEnvio() | number:'1.0-0' }}) }:
                         </span>
                         <span class="total-amount">$ {{ totalConEnvio() | number:'1.0-0' }}</span>
                     </div>
@@ -280,7 +286,7 @@
         <button mat-stroked-button class="btn-cancel" (click)="onCancel()" [disabled]="guardando()">
             Cancelar
         </button>
-        <button mat-flat-button color="primary" class="btn-save" (click)="onSave()" 
+        <button mat-flat-button color="primary" class="btn-save" (click)="onSave()"
             [disabled]="guardando() || itemsSeleccionados().length === 0">
             @if (guardando()) {
             <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>

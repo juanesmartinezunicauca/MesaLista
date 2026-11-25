@@ -82,6 +82,7 @@ export class FacturacionController {
       '**Roles autorizados:** `administrador`, `cajero`, `mesero`.',
   })
   @ApiQuery({ name: 'tipo', required: false, description: 'Canal de venta (salon o domicilio)' })
+  @ApiQuery({ name: 'estado', required: false, description: 'Estado de factura (emitida o anulada)' })
   @ApiQuery({ name: 'fecha', required: false, description: 'Fecha exacta YYYY-MM-DD' })
   @ApiQuery({ name: 'fecha_inicio', required: false, description: 'Fecha inicial del rango (YYYY-MM-DD)' })
   @ApiQuery({ name: 'fecha_fin', required: false, description: 'Fecha final del rango (YYYY-MM-DD)' })
@@ -100,12 +101,14 @@ export class FacturacionController {
     @Query('id_caja') id_caja?: number,
     @Query('fecha_inicio') fecha_inicio?: string,
     @Query('fecha_fin') fecha_fin?: string,
+    @Query('estado') estado?: string,
   ) {
     return this.facturacionService.obtenerTodas({
       tipo,
       fecha,
       buscar,
       id_caja,
+      ...(estado ? { estado } : {}),
       ...(fecha_inicio ? { fecha_inicio } : {}),
       ...(fecha_fin ? { fecha_fin } : {}),
     });
@@ -224,7 +227,7 @@ export class FacturacionController {
     return this.facturacionService.anularFactura(
       id,
       'Anulación solicitada por terminal de cobro',
-      id_usuario || 1,
+      id_usuario,
     );
   }
 }

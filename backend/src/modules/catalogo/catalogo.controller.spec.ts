@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TipoAjuste } from '@prisma/client';
+import { RolUsuario, TipoAjuste } from '@prisma/client';
 import { CatalogoController } from './catalogo.controller';
 import { CatalogoService } from './catalogo.service';
 
@@ -73,14 +73,23 @@ describe('CatalogoController', () => {
     expect(res).toEqual(mockProducto);
   });
 
-  it('obtenerProductos debe delegar a service.obtenerTodos', async () => {
+  it('obtenerProductos debe ocultar costo (incluirCosto=false) para visitantes públicos y clientes', async () => {
     service.obtenerTodos.mockResolvedValue([mockProducto]);
 
     const query = { categoria: 'Hamburguesas' };
     const res = await controller.obtenerProductos(query);
 
-    expect(service.obtenerTodos).toHaveBeenCalledWith(query);
+    expect(service.obtenerTodos).toHaveBeenCalledWith(query, false);
     expect(res).toEqual([mockProducto]);
+  });
+
+  it('obtenerProductos debe incluir costo (incluirCosto=true) para administrador y cajero', async () => {
+    service.obtenerTodos.mockResolvedValue([mockProducto]);
+
+    const query = { categoria: 'Hamburguesas' };
+    await controller.obtenerProductos(query, { rol: RolUsuario.administrador });
+
+    expect(service.obtenerTodos).toHaveBeenCalledWith(query, true);
   });
 
   it('obtenerCategorias debe delegar a service.obtenerCategorias', async () => {

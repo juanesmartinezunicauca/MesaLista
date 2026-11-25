@@ -82,6 +82,7 @@ export class MailService {
             htmlContent: contenidoHtml,
             textContent: contenidoTexto,
           }),
+          signal: AbortSignal.timeout(8000),
         });
 
         if (response.ok) {
@@ -128,6 +129,7 @@ export class MailService {
             html: contenidoHtml,
             text: contenidoTexto,
           }),
+          signal: AbortSignal.timeout(8000),
         });
 
         if (response.ok) {
@@ -528,6 +530,12 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
       senderEmail = from.substring(ltIndex + 1, gtIndex).trim();
     }
 
+    const sanitizeHeader = (val: string) => val.replace(/[\r\n]+/g, ' ').trim();
+    const destinatarioSeguro = sanitizeHeader(destinatario);
+    const fromSeguro = sanitizeHeader(from);
+    const senderEmailSeguro = sanitizeHeader(senderEmail);
+    const asuntoSeguro = sanitizeHeader(asunto);
+
     return new Promise<void>((resolve, reject) => {
       this.logger.log(`[SMTP_CONNECT] Conectando a ${host}:${port} (TLS: ${useTls})...`);
 
@@ -579,7 +587,7 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
               send(`AUTH LOGIN`);
             } else {
               step = 5;
-              send(`MAIL FROM:<${senderEmail}>`);
+              send(`MAIL FROM:<${senderEmailSeguro}>`);
             }
           } else if (step === 2 && code === 334) {
             step = 3;
@@ -589,10 +597,10 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
             send(Buffer.from(pass!).toString('base64'));
           } else if (step === 4 && (code === 235 || code === 250)) {
             step = 5;
-            send(`MAIL FROM:<${senderEmail}>`);
+            send(`MAIL FROM:<${senderEmailSeguro}>`);
           } else if (step === 5 && code === 250 && esLineaFinal) {
             step = 6;
-            send(`RCPT TO:<${destinatario}>`);
+            send(`RCPT TO:<${destinatarioSeguro}>`);
           } else if (step === 6 && code === 250 && esLineaFinal) {
             step = 7;
             send(`DATA`);
@@ -601,15 +609,22 @@ Este correo electrónico se utilizó únicamente para la entrega de este mensaje
             const boundary = `----=_Part_${Date.now()}`;
             const messageId = `<${Date.now()}.${Math.random().toString(36).substring(2)}@${host || 'mesalista.local'}>`;
             const dateHeader = new Date().toUTCString();
-            const safeText = texto.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
-            const safeHtml = html.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
+            // RFC 5321 §4.5.2 dot-stuffing: duplicar punto al inicio de línea
+            const safeText = texto
+              .replace(/\r\n/g, '\n')
+              .replace(/^\./gm, '..')
+              .replace(/\n/g, '\r\n');
+            const safeHtml = html
+              .replace(/\r\n/g, '\n')
+              .replace(/^\./gm, '..')
+              .replace(/\n/g, '\r\n');
 
             const message = [
               `Date: ${dateHeader}`,
               `Message-ID: ${messageId}`,
-              `From: ${from}`,
-              `To: ${destinatario}`,
-              `Subject: =?UTF-8?B?${Buffer.from(asunto).toString('base64')}?=`,
+              `From: ${fromSeguro}`,
+              `To: ${destinatarioSeguro}`,
+              `Subject: =?UTF-8?B?${Buffer.from(asuntoSeguro).toString('base64')}?=`,
               `MIME-Version: 1.0`,
               `Content-Type: multipart/alternative; boundary="${boundary}"`,
               ``,

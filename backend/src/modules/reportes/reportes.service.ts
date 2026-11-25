@@ -6,6 +6,7 @@ import {
   TipoPedido,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { normalizarMedioPago, redondearMoneda } from '../../common/utils/contabilidad.util';
 import { resolverRangoFechaOpcional } from '../../common/utils/date-range.util';
 import {
   FiltroFechasDto,
@@ -16,44 +17,16 @@ import {
   FiltroVentasDto,
 } from './dto';
 
-/**
- * Normaliza medios de pago para consolidación contable uniforme con CajaService.
- */
-function normalizarMedioPago(nombre?: string | null): 'efectivo' | 'tarjeta' | 'transferencia' {
-  const norm = (nombre || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim();
-  if (norm.includes('efectivo')) return 'efectivo';
-  if (
-    norm.includes('tarjeta') ||
-    norm.includes('datafono') ||
-    norm.includes('debito') ||
-    norm.includes('credito') ||
-    norm.includes('pos')
-  ) {
-    return 'tarjeta';
-  }
-  if (
-    norm.includes('transferencia') ||
-    norm.includes('transf') ||
-    norm.includes('nequi') ||
-    norm.includes('daviplata') ||
-    norm.includes('bancolombia') ||
-    norm.includes('pse') ||
-    norm.includes('qr')
-  ) {
-    return 'transferencia';
-  }
-  return 'efectivo';
-}
+const MAX_DIAS_RANGO_REPORTE = 366;
 
 /**
- * Redondea valores a 2 decimales para precisión contable.
+ * Etiqueta legible estándar para un medio de pago normalizado.
  */
-function redondearMoneda(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
+function etiquetaMedioPago(nombre?: string | null): 'Efectivo' | 'Tarjeta' | 'Transferencia' {
+  const met = normalizarMedioPago(nombre);
+  if (met === 'tarjeta') return 'Tarjeta';
+  if (met === 'transferencia') return 'Transferencia';
+  return 'Efectivo';
 }
 
 /**
@@ -71,21 +44,6 @@ export function resolverRangoFechas(
   const inicioTrim = fechaInicioStr?.trim();
   const finTrim = fechaFinStr?.trim();
 
-  if (inicioTrim) {
-    if (inicioTrim.includes('T')) {
-      inicio = new Date(inicioTrim);
-    } else {
-      inicio = new Date(`${inicioTrim}T00:00:00.000-05:00`);
-    }
-  } else {
-    // Si no se especifica, toma desde el 1er día del mes actual en Colombia
-    esMesPorDefecto = true;
-    const ahoraCol = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }));
-    const y = ahoraCol.getFullYear();
-    const m = String(ahoraCol.getMonth() + 1).padStart(2, '0');
-    inicio = new Date(`${y}-${m}-01T00:00:00.000-05:00`);
-  }
-
   if (finTrim) {
     if (finTrim.includes('T')) {
       fin = new Date(finTrim);
@@ -93,11 +51,22 @@ export function resolverRangoFechas(
       fin = new Date(`${finTrim}T23:59:59.999-05:00`);
     }
   } else {
-    const ahoraCol = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }));
-    const y = ahoraCol.getFullYear();
-    const m = String(ahoraCol.getMonth() + 1).padStart(2, '0');
-    const d = String(ahoraCol.getDate()).padStart(2, '0');
-    fin = new Date(`${y}-${m}-${d}T23:59:59.999-05:00`);
+    const hoyStr = formatoFechaCol(new Date());
+    fin = new Date(`${hoyStr}T23:59:59.999-05:00`);
+  }
+
+  if (inicioTrim) {
+    if (inicioTrim.includes('T')) {
+      inicio = new Date(inicioTrim);
+    } else {
+      inicio = new Date(`${inicioTrim}T00:00:00.000-05:00`);
+    }
+  } else {
+    // Si no se especifica inicio, toma el 1er día del mes de `fin` en Colombia (evita error al filtrar meses pasados)
+    esMesPorDefecto = true;
+    const refFecha = Number.isNaN(fin.getTime()) ? new Date() : fin;
+    const refCol = formatoFechaCol(refFecha);
+    inicio = new Date(`${refCol.slice(0, 7)}-01T00:00:00.000-05:00`);
   }
 
   if (Number.isNaN(inicio.getTime()) || Number.isNaN(fin.getTime())) {
@@ -115,6 +84,13 @@ export function resolverRangoFechas(
 
   if (inicio > fin) {
     throw new BadRequestException('La fecha inicial no puede ser posterior a la fecha final.');
+  }
+
+  const diffDias = (fin.getTime() - inicio.getTime()) / (24 * 60 * 60 * 1000);
+  if (diffDias > MAX_DIAS_RANGO_REPORTE) {
+    throw new BadRequestException(
+      `El rango máximo permitido para reportes es de ${MAX_DIAS_RANGO_REPORTE} días.`,
+    );
   }
 
   return { inicio, fin, esMesPorDefecto };
@@ -139,9 +115,22 @@ function obtenerHoraCol(d: Date): number {
   const horaStr = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/Bogota',
     hour: 'numeric',
-    hour12: false,
+    hourCycle: 'h23',
   }).format(d);
-  return Number.parseInt(horaStr, 10);
+  const h = Number.parseInt(horaStr, 10);
+  return Number.isNaN(h) ? 0 : h % 24;
+}
+
+/**
+ * Determina el canal real de una factura ('salon' vs 'domicilio') priorizando el tipo de sus pedidos.
+ */
+function resolverCanalFactura(factura: { id_mesa?: number | null; pedidos?: Array<{ tipo?: TipoPedido }> }): 'salon' | 'domicilio' {
+  if (factura.id_mesa) return 'salon';
+  if (Array.isArray(factura.pedidos) && factura.pedidos.length > 0) {
+    if (factura.pedidos.some((p) => p.tipo === TipoPedido.salon)) return 'salon';
+    if (factura.pedidos.every((p) => p.tipo === TipoPedido.domicilio)) return 'domicilio';
+  }
+  return 'domicilio';
 }
 
 @Injectable()
@@ -224,10 +213,13 @@ export class ReportesService {
     ).length;
     const productosAgotados = productosStock.filter((p) => p.cantidad_inventario <= 0).length;
 
-    // 5. Cajas del periodo y estado actual
+    // 5. Cajas del periodo (apertura o cierre en el rango) y estado actual
     const cajasPeriodo = await this.prisma.caja.findMany({
       where: {
-        fecha_apertura: { gte: inicio, lte: fin },
+        OR: [
+          { fecha_apertura: { gte: inicio, lte: fin } },
+          { fecha_cierre: { gte: inicio, lte: fin } },
+        ],
       },
       select: {
         id_caja: true,
@@ -237,7 +229,10 @@ export class ReportesService {
     });
 
     const cajasConDescuadre = cajasPeriodo.filter(
-      (c) => c.estado === EstadoCaja.cerrada && c.diferencia !== null && Number(c.diferencia) !== 0,
+      (c) =>
+        c.estado === EstadoCaja.cerrada &&
+        c.diferencia !== null &&
+        Math.abs(Number(c.diferencia)) >= 0.01,
     );
     const sumaDiferenciasCaja = redondearMoneda(
       cajasConDescuadre.reduce((acc, c) => acc + Number(c.diferencia || 0), 0),
@@ -275,7 +270,7 @@ export class ReportesService {
       totalPropinas += vPropina;
 
       // Salón vs Domicilio
-      if (f.id_mesa) {
+      if (resolverCanalFactura(f) === 'salon') {
         totalSalon += vTotal;
       } else {
         totalDomicilio += vTotal;
@@ -419,7 +414,7 @@ export class ReportesService {
         cuentas_pagadas: cuentasPagadas,
         ticket_promedio: ticketPromedio,
         total_gastos: totalGastos,
-        balance_operativo: redondearMoneda(totalVentas - totalGastos),
+        balance_operativo: redondearMoneda(totalVentasNetas - totalGastos),
         productos_bajo_stock: productosBajoStock,
         productos_agotados: productosAgotados,
         cajas_con_diferencia: cajasConDescuadre.length,
@@ -488,6 +483,8 @@ export class ReportesService {
     let totalPropinas = 0;
     let totalSalon = 0;
     let totalDomicilio = 0;
+    let totalItemsCategorias = 0;
+    let cuentasPagadas = 0;
 
     const serieDiaMap = new Map<string, { total: number; cuentas: number }>();
     const categoriasMap = new Map<string, { total: number; unidades: number }>();
@@ -499,15 +496,26 @@ export class ReportesService {
     const detalleFacturas: any[] = [];
 
     for (const f of facturas) {
+      if (filtro.categoria) {
+        const tieneCategoria = (f.pedidos || []).some((ped) =>
+          (ped.items || []).some(
+            (it) => it.producto?.categoria.toLowerCase() === filtro.categoria!.toLowerCase(),
+          ),
+        );
+        if (!tieneCategoria) continue;
+      }
+
+      cuentasPagadas++;
       const vTotal = Number(f.valor_total);
       const vSubtotal = Number(f.valor);
       const vPropina = Number(f.propina);
+      const canal = resolverCanalFactura(f);
 
       totalVentas += vTotal;
       totalSubtotal += vSubtotal;
       totalPropinas += vPropina;
 
-      if (f.id_mesa) totalSalon += vTotal;
+      if (canal === 'salon') totalSalon += vTotal;
       else totalDomicilio += vTotal;
 
       const diaKey = formatoFechaCol(f.fecha_hora);
@@ -528,6 +536,7 @@ export class ReportesService {
           const subtotalItem = it.cantidad * Number(it.precio_unitario);
           catData.total += subtotalItem;
           catData.unidades += it.cantidad;
+          totalItemsCategorias += subtotalItem;
           categoriasMap.set(cat, catData);
 
           const prodId = it.id_producto;
@@ -548,7 +557,7 @@ export class ReportesService {
         id_venta: f.id_venta,
         fecha_hora: f.fecha_hora,
         cliente_nombre: f.cliente_nombre || 'Cliente General',
-        tipo_servicio: f.id_mesa ? 'salon' : 'domicilio',
+        tipo_servicio: canal,
         mesa_numero: f.mesa?.numero || null,
         subtotal: vSubtotal,
         propina: vPropina,
@@ -564,8 +573,8 @@ export class ReportesService {
     totalPropinas = redondearMoneda(totalPropinas);
     totalSalon = redondearMoneda(totalSalon);
     totalDomicilio = redondearMoneda(totalDomicilio);
+    totalItemsCategorias = redondearMoneda(totalItemsCategorias);
 
-    const cuentasPagadas = facturas.length;
     const ticketPromedio = cuentasPagadas > 0 ? redondearMoneda(totalVentas / cuentasPagadas) : 0;
 
     const serieTemporal = Array.from(serieDiaMap.entries())
@@ -581,7 +590,8 @@ export class ReportesService {
         categoria,
         total: redondearMoneda(datos.total),
         unidades: datos.unidades,
-        porcentaje: totalSubtotal > 0 ? redondearMoneda((datos.total / totalSubtotal) * 100) : 0,
+        porcentaje:
+          totalItemsCategorias > 0 ? redondearMoneda((datos.total / totalItemsCategorias) * 100) : 0,
       }))
       .sort((a, b) => b.total - a.total);
 
@@ -620,19 +630,27 @@ export class ReportesService {
   async obtenerReporteCajaMedios(filtro: FiltroFechasDto) {
     const { inicio, fin } = resolverRangoFechas(filtro.fecha_inicio, filtro.fecha_fin);
 
-    // 1. Cajas aperturadas o cerradas en el rango
+    // 1. Cajas con actividad o solapamiento dentro del rango (incluye turnos abiertos que iniciaron antes del rango)
     const cajas = await this.prisma.caja.findMany({
       where: {
-        OR: [
-          { fecha_apertura: { gte: inicio, lte: fin } },
-          { fecha_cierre: { gte: inicio, lte: fin } },
+        AND: [
+          { fecha_apertura: { lte: fin } },
+          {
+            OR: [
+              { fecha_cierre: { gte: inicio } },
+              { estado: EstadoCaja.abierta },
+            ],
+          },
         ],
       },
       include: {
         usuarioApertura: { select: { nombre: true } },
         usuarioCierre: { select: { nombre: true } },
         facturas: {
-          where: { estado: EstadoFactura.emitida },
+          where: {
+            estado: EstadoFactura.emitida,
+            fecha_hora: { gte: inicio, lte: fin },
+          },
           include: {
             pagos: { include: { medioPago: true } },
             pedidos: {
@@ -647,6 +665,9 @@ export class ReportesService {
           },
         },
         gastos: {
+          where: {
+            fecha_hora: { gte: inicio, lte: fin },
+          },
           include: { medioPago: true, tipoGasto: true },
         },
       },
@@ -1028,7 +1049,7 @@ export class ReportesService {
       tData.movimientos += 1;
       tiposMap.set(tipo, tData);
 
-      const medio = g.medioPago?.nombre || 'Efectivo';
+      const medio = etiquetaMedioPago(g.medioPago?.nombre);
       const mData = mediosMap.get(medio) || { total: 0, movimientos: 0 };
       mData.total += monto;
       mData.movimientos += 1;
@@ -1217,9 +1238,10 @@ export class ReportesService {
       include: {
         mesa: true,
         usuario: { select: { nombre: true } },
+        factura: { select: { estado: true, motivo_anulacion: true } },
         items: {
           include: {
-            producto: { select: { nombre: true, categoria: true } },
+            producto: { select: { id_producto: true, nombre: true, categoria: true } },
           },
         },
       },
@@ -1239,7 +1261,7 @@ export class ReportesService {
       etiqueta: `${String(hora).padStart(2, '0')}:00`,
     }));
 
-    const productosCocinaMap = new Map<string, { nombre: string; categoria: string; cantidad: number }>();
+    const productosCocinaMap = new Map<number, { nombre: string; categoria: string; cantidad: number }>();
     const canceladosDetalle: any[] = [];
 
     for (const ped of pedidos) {
@@ -1247,6 +1269,11 @@ export class ReportesService {
       else if (ped.estado === EstadoPedido.cerrada) pedidosCerrados++;
       else if (ped.estado === EstadoPedido.cancelada) {
         pedidosCancelados++;
+        const motivoAnulacionFactura =
+          (ped as any).factura?.estado === EstadoFactura.anulada &&
+          (ped as any).factura?.motivo_anulacion
+            ? `Factura anulada: ${(ped as any).factura.motivo_anulacion}`
+            : null;
         canceladosDetalle.push({
           id_pedido: ped.id_pedido,
           numero_pedido: ped.numero_pedido,
@@ -1254,7 +1281,7 @@ export class ReportesService {
           tipo: ped.tipo,
           mesa_numero: ped.mesa?.numero || null,
           usuario: ped.usuario?.nombre || 'Mesero',
-          observacion: ped.observacion || 'Sin motivo especificado',
+          observacion: motivoAnulacionFactura || ped.observacion || 'Sin motivo especificado',
         });
       }
 
@@ -1267,17 +1294,17 @@ export class ReportesService {
         distribucionHoraria[h].pedidos += 1;
       }
 
-      // Demanda en cocina (no cancelados)
+      // Demanda en cocina (no cancelados) agrupada por id_producto
       if (ped.estado !== EstadoPedido.cancelada) {
         for (const it of ped.items) {
-          const key = it.producto?.nombre || 'Producto';
-          const p = productosCocinaMap.get(key) || {
-            nombre: key,
+          const prodKey = it.id_producto;
+          const p = productosCocinaMap.get(prodKey) || {
+            nombre: it.producto?.nombre || `Producto #${prodKey}`,
             categoria: it.producto?.categoria || 'General',
             cantidad: 0,
           };
           p.cantidad += it.cantidad;
-          productosCocinaMap.set(key, p);
+          productosCocinaMap.set(prodKey, p);
         }
       }
     }

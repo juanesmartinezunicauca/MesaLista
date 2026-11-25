@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 
 export class CreateItemPedidoDto {
   @ApiProperty({
@@ -22,6 +22,7 @@ export class CreateItemPedidoDto {
   @IsNotEmpty({ message: 'La cantidad es requerida.' })
   @IsInt({ message: 'La cantidad debe ser un número entero.' })
   @Min(1, { message: 'La cantidad debe ser al menos 1 unidad.' })
+  @Max(1000, { message: 'La cantidad por ítem no puede superar 1000 unidades.' })
   @Type(() => Number)
   cantidad!: number;
 
