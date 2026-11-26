@@ -109,9 +109,32 @@ export class VistaCarritoComponent implements OnInit {
 
   // Estado del envío
   enviandoPedido = signal<boolean>(false);
+  resumenPreConfirmacion = signal<{
+    nombre: string;
+    telefono: string;
+    direccion: string;
+    zonaNombre: string;
+    metodoPago: 'Efectivo' | 'Transferencia';
+    observaciones: string;
+    items: Array<{
+      nombre: string;
+      cantidad: number;
+      precioUnitario: number;
+      subtotal: number;
+      ingredientesRemovidos: string[];
+      observacion?: string;
+    }>;
+    totalItems: number;
+    subtotalProductos: number;
+    costoEnvio: number;
+    total: number;
+    payload: CreateDomicilioPayload;
+  } | null>(null);
   pedidoConfirmado = signal<{
     codigo: string;
     total: number;
+    costoEnvio: number;
+    zonaNombre: string;
     direccion: string;
     metodoPago: string;
   } | null>(null);
@@ -218,12 +241,12 @@ export class VistaCarritoComponent implements OnInit {
   // CONFIRMACIÓN Y ENVÍO DEL PEDIDO A DOMICILIO
   // ================================================================
 
-  confirmarPedido(): void {
+  private construirResumenYValidar() {
     if (this.carritoService.carrito().length === 0) {
       this.snackBar.open('Tu carrito está vacío. Agrega platos para ordenar.', 'Cerrar', {
         duration: 3500,
       });
-      return;
+      return null;
     }
 
     const nombre = this.nombreCliente().trim();
@@ -232,37 +255,37 @@ export class VistaCarritoComponent implements OnInit {
 
     if (!nombre) {
       this.snackBar.open('Por favor ingresa tu nombre completo.', 'Cerrar', { duration: 3500 });
-      return;
+      return null;
     }
 
     if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]{2,100}$/.test(nombre)) {
       this.snackBar.open('El nombre solo debe contener letras y espacios (sin números ni símbolos especiales).', 'Cerrar', {
         duration: 4000,
       });
-      return;
+      return null;
     }
 
     if (!tel) {
       this.snackBar.open('Por favor ingresa tu número de celular de contacto.', 'Cerrar', { duration: 3500 });
-      return;
+      return null;
     }
 
     if (!/^[0-9]{10}$/.test(tel)) {
       this.snackBar.open('El teléfono celular debe tener exactamente 10 dígitos numéricos (ej. 3123456789).', 'Cerrar', {
         duration: 4500,
       });
-      return;
+      return null;
     }
 
     if (!dir || dir.length < 5) {
       this.snackBar.open('Por favor ingresa una dirección de entrega completa (mínimo 5 caracteres).', 'Cerrar', {
         duration: 4000,
       });
-      return;
+      return null;
     }
 
-    // Armar items para la API
-    const itemsPayload = this.carritoService.carrito().map((it) => ({
+    const carritoActual = this.carritoService.carrito();
+    const itemsPayload = carritoActual.map((it) => ({
       id_producto: it.producto.id_producto,
       cantidad: it.cantidad,
       ingredientes_removidos:
@@ -278,13 +301,18 @@ export class VistaCarritoComponent implements OnInit {
       ? zona.nombre.split('(')[0].trim()
       : zona.nombre.split(':')[0].trim();
 
-    // Combinar dirección, barrio, zona y referencia
     const yaIncluyeBarrio = barrio && dir.toLowerCase().includes(barrio.toLowerCase());
     const dirConBarrio = barrio && !yaIncluyeBarrio ? `${dir}, Barrio ${barrio}` : dir;
     let direccionCompleta = `${dirConBarrio} [${zonaCorta}]`;
     if (this.referenciaUbicacion().trim()) {
       direccionCompleta += ` (${this.referenciaUbicacion().trim()})`;
     }
+
+    const costoEnvio = this.costoEnvio();
+    const subtotalProductos = this.carritoService.totalPrecio();
+    const total = subtotalProductos + costoEnvio;
+    const metodoPago = this.metodoPago();
+    const observaciones = this.observaciones().trim();
 
     const payload: CreateDomicilioPayload = {
       cliente: {
@@ -294,23 +322,65 @@ export class VistaCarritoComponent implements OnInit {
         email: this.currentUser()?.email || undefined,
       },
       items: itemsPayload,
-      observacion: this.observaciones().trim() || undefined,
-      metodo_pago: this.metodoPago(),
-      costo_envio: this.costoEnvio(),
+      observacion: observaciones || undefined,
+      metodo_pago: metodoPago,
+      costo_envio: costoEnvio,
       zona_entrega: barrio ? `${barrio} (${zona.nombre})` : zona.nombre,
       es_pedido_cliente: true,
     };
 
+    return {
+      nombre,
+      telefono: tel,
+      direccion: direccionCompleta,
+      zonaNombre: zona.nombre,
+      metodoPago,
+      observaciones,
+      items: carritoActual.map((it) => ({
+        nombre: it.producto.nombre,
+        cantidad: it.cantidad,
+        precioUnitario: it.producto.precio_venta,
+        subtotal: it.cantidad * it.producto.precio_venta,
+        ingredientesRemovidos: [...(it.ingredientes_removidos || [])],
+        observacion: it.observacion,
+      })),
+      totalItems: this.carritoService.totalItems(),
+      subtotalProductos,
+      costoEnvio,
+      total,
+      payload,
+    };
+  }
+
+  abrirResumenConfirmacion(): void {
+    const resumen = this.construirResumenYValidar();
+    if (!resumen) return;
+    this.resumenPreConfirmacion.set(resumen);
+  }
+
+  cerrarResumenConfirmacion(): void {
+    if (this.enviandoPedido()) return;
+    this.resumenPreConfirmacion.set(null);
+  }
+
+  confirmarPedido(): void {
+    if (this.enviandoPedido()) return;
+
+    const resumen = this.resumenPreConfirmacion() || this.construirResumenYValidar();
+    if (!resumen) return;
+
     this.enviandoPedido.set(true);
 
-    this.domiciliosApi.crear(payload).subscribe({
+    this.domiciliosApi.crear(resumen.payload).subscribe({
       next: (domicilioCreado) => {
         this.enviandoPedido.set(false);
+        this.resumenPreConfirmacion.set(null);
+
         const codigo = domicilioCreado?.numero_pedido
           ? `DOM-${domicilioCreado.numero_pedido}`
           : 'CONFIRMADO';
 
-        const totalCalculado = Number(domicilioCreado?.totalCalculado || this.totalConEnvio());
+        const totalCalculado = Number(domicilioCreado?.totalCalculado || resumen.total);
 
         // Guardar para seguimiento en tiempo real
         try {
@@ -328,8 +398,10 @@ export class VistaCarritoComponent implements OnInit {
         this.pedidoConfirmado.set({
           codigo,
           total: totalCalculado,
-          direccion: direccionCompleta,
-          metodoPago: this.metodoPago(),
+          costoEnvio: resumen.costoEnvio,
+          zonaNombre: resumen.zonaNombre,
+          direccion: resumen.direccion,
+          metodoPago: resumen.metodoPago,
         });
 
         this.snackBar.open(
@@ -353,10 +425,17 @@ export class VistaCarritoComponent implements OnInit {
     this.router.navigate(['/cliente'], { queryParams: { tab: 'mis-pedidos' } });
   }
 
-  generarUrlWhatsApp(codigo?: string): string {
+  generarUrlWhatsApp(
+    codigo?: string,
+    totalOverride?: number,
+    costoEnvioOverride?: number,
+    zonaNombreOverride?: string,
+  ): string {
     const cod = codigo || 'PEDIDO';
-    const total = this.totalConEnvio();
-    const texto = `Hola Luigie's Restaurante, adjunto mi comprobante de transferencia para el pedido #${cod} por valor de $${total.toLocaleString('es-CO')} COP (incluye envío de $${this.costoEnvio().toLocaleString('es-CO')} COP para ${this.zonaSeleccionada().nombre}).`;
+    const total = totalOverride ?? this.totalConEnvio();
+    const envio = costoEnvioOverride ?? this.costoEnvio();
+    const zona = zonaNombreOverride ?? this.zonaSeleccionada().nombre;
+    const texto = `Hola Luigie's Restaurante, adjunto mi comprobante de transferencia para el pedido #${cod} por valor de $${total.toLocaleString('es-CO')} COP (incluye envío de $${envio.toLocaleString('es-CO')} COP para ${zona}).`;
     return `https://wa.me/${this.WHATSAPP_NUMERO_CLEAN}?text=${encodeURIComponent(texto)}`;
   }
 }

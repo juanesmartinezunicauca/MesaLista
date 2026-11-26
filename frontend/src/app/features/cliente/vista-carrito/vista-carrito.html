@@ -19,7 +19,7 @@
           <span>Vaciar Carrito</span>
         </button>
         <button type="button" mat-flat-button class="btn-submit-order-header"
-          [disabled]="enviandoPedido() || carritoService.carrito().length === 0" (click)="confirmarPedido()">
+          [disabled]="enviandoPedido() || carritoService.carrito().length === 0" (click)="abrirResumenConfirmacion()">
           @if (enviandoPedido()) {
           <ng-container>
             <mat-spinner diameter="18" class="order-spinner"></mat-spinner>
@@ -28,7 +28,7 @@
           } @else {
           <ng-container>
             <mat-icon>check_circle</mat-icon>
-            <span>Enviar Domicilio (${{ carritoService.totalPrecio() | number:'1.0-0' }} COP)</span>
+            <span>Enviar Domicilio (${{ totalConEnvio() | number:'1.0-0' }} COP)</span>
           </ng-container>
           }
         </button>
@@ -411,6 +411,137 @@
   }
 
   <!-- ============================================================== -->
+  <!-- MODAL: RESUMEN PREVIO PARA CONFIRMAR EL PEDIDO A DOMICILIO     -->
+  <!-- ============================================================== -->
+  @if (resumenPreConfirmacion(); as resumen) {
+  <div class="modal-overlay" (click)="cerrarResumenConfirmacion()">
+    <div class="modal-window confirm-summary-window" (click)="$event.stopPropagation()">
+      <div class="confirm-modal-header">
+        <div class="header-icon-box">
+          <mat-icon>delivery_dining</mat-icon>
+        </div>
+        <div class="header-titles">
+          <h2>Confirma tu Pedido a Domicilio</h2>
+          <p>Revisa los platos, datos de entrega y valor total antes de enviar</p>
+        </div>
+        <button type="button" class="btn-window-close" [disabled]="enviandoPedido()" (click)="cerrarResumenConfirmacion()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <div class="confirm-modal-body">
+        <!-- Lista de Productos -->
+        <div class="confirm-section">
+          <div class="confirm-section-title">
+            <mat-icon>restaurant_menu</mat-icon>
+            <span>Platos del pedido ({{ resumen.totalItems }})</span>
+          </div>
+          <div class="confirm-items-list">
+            @for (it of resumen.items; track $index) {
+            <div class="confirm-item-row">
+              <div class="confirm-item-main">
+                <span class="confirm-item-qty">{{ it.cantidad }}x</span>
+                <div class="confirm-item-info">
+                  <span class="confirm-item-name">{{ it.nombre }}</span>
+                  @if (it.ingredientesRemovidos.length > 0) {
+                  <span class="confirm-item-meta meta-sin">Sin {{ it.ingredientesRemovidos.join(', ') }}</span>
+                  }
+                  @if (it.observacion) {
+                  <span class="confirm-item-meta meta-note">Nota: "{{ it.observacion }}"</span>
+                  }
+                </div>
+              </div>
+              <span class="confirm-item-subtotal">${{ it.subtotal | number:'1.0-0' }} COP</span>
+            </div>
+            }
+          </div>
+        </div>
+
+        <!-- Datos de Entrega y Pago -->
+        <div class="confirm-section">
+          <div class="confirm-section-title">
+            <mat-icon>location_on</mat-icon>
+            <span>Datos de entrega y pago</span>
+          </div>
+          <div class="confirm-details-card">
+            <div class="confirm-detail-line">
+              <mat-icon>person</mat-icon>
+              <div>
+                <span class="detail-label">Cliente y contacto</span>
+                <span class="detail-val">{{ resumen.nombre }} · {{ resumen.telefono }}</span>
+              </div>
+            </div>
+            <div class="confirm-detail-line">
+              <mat-icon>home</mat-icon>
+              <div>
+                <span class="detail-label">Dirección de entrega</span>
+                <span class="detail-val">{{ resumen.direccion }}</span>
+              </div>
+            </div>
+            <div class="confirm-detail-line">
+              <mat-icon>{{ resumen.metodoPago === 'Transferencia' ? 'account_balance_wallet' : 'payments' }}</mat-icon>
+              <div>
+                <span class="detail-label">Método de pago</span>
+                <span class="detail-val">
+                  {{ resumen.metodoPago === 'Transferencia' ? 'Transferencia (Nequi / Bancolombia)' : 'Efectivo (Pagas al recibir)' }}
+                </span>
+              </div>
+            </div>
+            @if (resumen.observaciones) {
+            <div class="confirm-detail-line">
+              <mat-icon>edit_note</mat-icon>
+              <div>
+                <span class="detail-label">Notas para el restaurante</span>
+                <span class="detail-val">{{ resumen.observaciones }}</span>
+              </div>
+            </div>
+            }
+          </div>
+        </div>
+
+        <!-- Liquidación Total -->
+        <div class="confirm-totals-box">
+          <div class="confirm-total-row">
+            <span>Subtotal productos ({{ resumen.totalItems }}):</span>
+            <span>${{ resumen.subtotalProductos | number:'1.0-0' }} COP</span>
+          </div>
+          <div class="confirm-total-row">
+            <span>Domicilio ({{ resumen.zonaNombre }}):</span>
+            <span class="confirm-shipping-val">+${{ resumen.costoEnvio | number:'1.0-0' }} COP</span>
+          </div>
+          <mat-divider></mat-divider>
+          <div class="confirm-total-row confirm-grand-total">
+            <span>Total a Pagar:</span>
+            <span class="grand-total-val">${{ resumen.total | number:'1.0-0' }} COP</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="confirm-modal-footer">
+        <button type="button" mat-stroked-button class="btn-back-edit" [disabled]="enviandoPedido()"
+          (click)="cerrarResumenConfirmacion()">
+          <span>Volver y Editar</span>
+        </button>
+        <button type="button" mat-flat-button class="btn-confirm-send" [disabled]="enviandoPedido()"
+          (click)="confirmarPedido()">
+          @if (enviandoPedido()) {
+          <ng-container>
+            <mat-spinner diameter="18" class="order-spinner"></mat-spinner>
+            <span>Enviando Pedido...</span>
+          </ng-container>
+          } @else {
+          <ng-container>
+            <mat-icon>send</mat-icon>
+            <span>Confirmar y Enviar</span>
+          </ng-container>
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- ============================================================== -->
   <!-- MODAL: CONFIRMACIÓN EXITOSA DE PEDIDO                          -->
   <!-- ============================================================== -->
   @if (pedidoConfirmado(); as conf) {
@@ -448,7 +579,7 @@
             <p>Para agilizar la aprobación de tu pedido, adjunta tu comprobante por WhatsApp.</p>
           </div>
         </div>
-        <a [href]="generarUrlWhatsApp(conf.codigo)" target="_blank" rel="noopener noreferrer" class="btn-send-receipt">
+        <a [href]="generarUrlWhatsApp(conf.codigo, conf.total, conf.costoEnvio, conf.zonaNombre)" target="_blank" rel="noopener noreferrer" class="btn-send-receipt">
           <mat-icon>chat</mat-icon>
           <span>Enviar Comprobante al WhatsApp</span>
         </a>
