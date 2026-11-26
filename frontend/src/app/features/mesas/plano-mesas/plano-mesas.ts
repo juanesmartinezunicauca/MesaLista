@@ -19,6 +19,10 @@ import { BorradorPedidoComponent } from '../borrador-pedido/borrador-pedido';
 import { DetalleMesaComponent } from '../detalle-mesa/detalle-mesa';
 import { AuthService } from '../../../core/services/auth/auth.service';
 import { FacturacionApiService } from '../../../core/services/api/facturacion-api.service';
+import {
+  ImpresionTermicaService,
+  ItemTicketTermico,
+} from '../../../core/services/print/impresion-termica.service';
 
 @Component({
   selector: 'app-plano-mesas',
@@ -43,6 +47,7 @@ import { FacturacionApiService } from '../../../core/services/api/facturacion-ap
 export class PlanoMesasComponent implements OnInit {
   mesasService = inject(MesasService);
   authService = inject(AuthService);
+  private impresionTermica = inject(ImpresionTermicaService);
   private dialog = inject(MatDialog);
   private facturacionApi = inject(FacturacionApiService);
   private snackBar = inject(MatSnackBar);
@@ -138,8 +143,17 @@ export class PlanoMesasComponent implements OnInit {
   generarFacturaMesa(mesa: Mesa, event?: MouseEvent): void {
     if (event) event.stopPropagation();
 
+    // Capturar instantánea inmutable de la mesa antes de que el cobro/polling limpie los pedidos
+    const mesaSnapshot: Mesa = {
+      ...mesa,
+      pedidos: (mesa.pedidos || []).map((p) => ({
+        ...p,
+        items: (p.items || []).map((it) => ({ ...it })),
+      })),
+    };
+
     const dialogRef = this.dialog.open(FacturaDialogComponent, {
-      data: { mesa },
+      data: { mesa: mesaSnapshot },
       width: '460px',
       maxWidth: '95vw',
       maxHeight: '90vh',
@@ -159,19 +173,20 @@ export class PlanoMesasComponent implements OnInit {
 
         this.facturacionApi
           .crearFactura({
-            id_mesa: mesa.id_mesa,
+            id_mesa: mesaSnapshot.id_mesa,
             propina: resultado.propina,
             pagos: pagosPayload,
           })
           .subscribe({
             next: (factura) => {
-              this.mesasService.liberarMesa(mesa.id_mesa);
+              this.imprimirTicketsMesa(mesaSnapshot, factura?.id_venta, resultado, pagosPayload);
+              this.mesasService.liberarMesa(mesaSnapshot.id_mesa);
               this.snackBar.open(
                 `Factura #${factura.id_venta} registrada e ingresada a Caja.`,
                 'Entendido',
                 { duration: 3500 }
               );
-              if (this.mesaActivaId() === mesa.id_mesa) {
+              if (this.mesaActivaId() === mesaSnapshot.id_mesa) {
                 this.volverAlPlano();
               }
             },
@@ -180,14 +195,71 @@ export class PlanoMesasComponent implements OnInit {
               const msg = err.error?.message || 'Error al registrar la factura en el servidor.';
               this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
               if (!err.error?.message?.toLowerCase().includes('caja')) {
-                this.mesasService.liberarMesa(mesa.id_mesa);
-                if (this.mesaActivaId() === mesa.id_mesa) {
+                this.mesasService.liberarMesa(mesaSnapshot.id_mesa);
+                if (this.mesaActivaId() === mesaSnapshot.id_mesa) {
                   this.volverAlPlano();
                 }
               }
             },
           });
       }
+    });
+  }
+
+  private imprimirTicketsMesa(
+    mesa: Mesa,
+    numeroFactura: number | undefined,
+    resultado: FacturaCobroResult,
+    pagosPayload: Array<{ medio_pago: string; monto: number }>,
+  ): void {
+    if (!resultado.imprimirCliente && !resultado.imprimirCocina) return;
+
+    const itemsTicket: ItemTicketTermico[] = [];
+    const notasGenerales: string[] = [];
+
+    for (const pedido of mesa.pedidos || []) {
+      if (pedido.observacion) notasGenerales.push(pedido.observacion);
+      for (const item of pedido.items || []) {
+        itemsTicket.push({
+          nombre: item.nombre || `Producto #${item.id_producto}`,
+          cantidad: item.cantidad,
+          precio_unitario: item.precio_unitario,
+          subtotal: item.subtotal,
+          ingredientes_removidos: item.ingredientes_removidos,
+          observacion: item.observacion,
+        });
+      }
+    }
+
+    this.impresionTermica.imprimirLote({
+      cliente: resultado.imprimirCliente
+        ? {
+            tipo: 'salon',
+            numeroFactura: numeroFactura ?? null,
+            numeroMesa: mesa.numero,
+            mesero: mesa.mesero_actual || null,
+            fecha: new Date(),
+            items: itemsTicket,
+            subtotal: resultado.subtotal,
+            propina: resultado.propina,
+            total: resultado.total,
+            formaPago: pagosPayload.map((p) => p.medio_pago).join(' + '),
+            pagosDetalle: pagosPayload.map((p) => ({ metodo: p.medio_pago, monto: p.monto })),
+            efectivoRecibido: resultado.efectivoRecibido,
+            cambio: resultado.cambio,
+          }
+        : null,
+      cocina: resultado.imprimirCocina
+        ? {
+            tipo: 'salon',
+            numeroPedido: mesa.pedidos?.[0]?.numero_pedido ?? null,
+            numeroMesa: mesa.numero,
+            mesero: mesa.mesero_actual || null,
+            fecha: new Date(),
+            items: itemsTicket,
+            observacionGeneral: notasGenerales.join(' | ') || null,
+          }
+        : null,
     });
   }
 }

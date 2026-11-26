@@ -373,14 +373,14 @@ export class ImpresionTermicaService {
         font-weight: 600;
         margin-top: 6px;
       }
+      .ticket-page-break {
+        page-break-after: always;
+        break-after: page;
+      }
     `;
   }
 
-  /**
-   * Genera el documento HTML térmico completo para la factura / comprobante del cliente
-   * (diseño inspirado en el comprobante de Love Bites / OlaClick, adaptado para Luigie's).
-   */
-  generarHtmlFacturaCliente(data: TicketClienteData): string {
+  private generarCuerpoFacturaCliente(data: TicketClienteData): string {
     const cfg = this.config();
     const fechaTxt = this.formatearFechaHora(data.fecha);
 
@@ -496,42 +496,30 @@ export class ImpresionTermicaService {
         ? `<div class="note-box">NOTA: ${this.escapeHtml(data.observacion.trim())}</div>`
         : '';
 
-    return `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <title>Factura ${this.escapeHtml(cfg.nombreComercio)}</title>
-  <style>${this.construirEstilosTermicos(cfg.anchoPapel)}</style>
-</head>
-<body>
-  <div class="ticket">
-    <div class="brand">${this.escapeHtml(cfg.nombreComercio)}</div>
-    <div class="sub-header">${this.escapeHtml(cfg.direccionYNit)}</div>
-    <hr class="sep" />
-    <div class="center-block">${lineasDestino.join('')}</div>
-    <hr class="sep" />
-    <div class="items">${itemsHtml}</div>
-    <hr class="sep" />
-    <div class="totals">${lineasTotales.join('')}</div>
-    <div class="grand-total">
-      <span>TOTAL</span>
-      <span>${this.escapeHtml(this.formatearPesos(data.total))}</span>
-    </div>
-    ${lineasPago.join('')}
-    ${obsHtml}
-    <div class="disclaimer">Este documento no tiene valor fiscal.</div>
-    <hr class="sep" />
-    <div class="footer">${this.escapeHtml(cfg.piePagina)}</div>
-  </div>
-</body>
-</html>`;
+    return `
+      <div class="ticket">
+        <div class="brand">${this.escapeHtml(cfg.nombreComercio)}</div>
+        <div class="sub-header">${this.escapeHtml(cfg.direccionYNit)}</div>
+        <hr class="sep" />
+        <div class="center-block">${lineasDestino.join('')}</div>
+        <hr class="sep" />
+        <div class="items">${itemsHtml}</div>
+        <hr class="sep" />
+        <div class="totals">${lineasTotales.join('')}</div>
+        <div class="grand-total">
+          <span>TOTAL</span>
+          <span>${this.escapeHtml(this.formatearPesos(data.total))}</span>
+        </div>
+        ${lineasPago.join('')}
+        ${obsHtml}
+        <div class="disclaimer">Este documento no tiene valor fiscal.</div>
+        <hr class="sep" />
+        <div class="footer">${this.escapeHtml(cfg.piePagina)}</div>
+      </div>
+    `;
   }
 
-  /**
-   * Genera el documento HTML térmico optimizado para la impresora de comandas de cocina
-   * (sin precios, cantidades e ítems grandes en negrita, ingredientes removidos y notas destacados).
-   */
-  generarHtmlComandaCocina(data: TicketCocinaData): string {
+  private generarCuerpoComandaCocina(data: TicketCocinaData): string {
     const cfg = this.config();
     const fechaTxt = this.formatearFechaHora(data.fecha);
 
@@ -591,30 +579,59 @@ export class ImpresionTermicaService {
         ? `<div class="note-box">NOTA GENERAL: ${this.escapeHtml(data.observacionGeneral.trim())}</div>`
         : '';
 
+    return `
+      <div class="ticket">
+        <div class="kitchen-banner">*** COMANDA COCINA ***</div>
+        <div class="brand" style="font-size: 18px; margin-bottom: 2px;">${this.escapeHtml(cfg.nombreComercio)}</div>
+        <hr class="sep-solid" />
+        <div class="dest-big">${this.escapeHtml(destinoTitulo)}</div>
+        <div class="center-block">${metaLineas.join('')}</div>
+        <hr class="sep-solid" />
+        <div class="items">${itemsHtml}</div>
+        ${notaGeneralHtml}
+        <hr class="sep" />
+        <div class="center-block">TOTAL ÍTEMS: ${totalUnidades} ${totalUnidades === 1 ? 'UNIDAD' : 'UNIDADES'}</div>
+        <hr class="sep" />
+        <div class="footer">${this.escapeHtml(cfg.piePagina)}</div>
+      </div>
+    `;
+  }
+
+  private envolverDocumentoTermico(titulo: string, contenidoHtml: string): string {
+    const cfg = this.config();
     return `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Comanda Cocina ${this.escapeHtml(cfg.nombreComercio)}</title>
+  <title>${this.escapeHtml(titulo)}</title>
   <style>${this.construirEstilosTermicos(cfg.anchoPapel)}</style>
 </head>
-<body>
-  <div class="ticket">
-    <div class="kitchen-banner">*** COMANDA COCINA ***</div>
-    <div class="brand" style="font-size: 18px; margin-bottom: 2px;">${this.escapeHtml(cfg.nombreComercio)}</div>
-    <hr class="sep-solid" />
-    <div class="dest-big">${this.escapeHtml(destinoTitulo)}</div>
-    <div class="center-block">${metaLineas.join('')}</div>
-    <hr class="sep-solid" />
-    <div class="items">${itemsHtml}</div>
-    ${notaGeneralHtml}
-    <hr class="sep" />
-    <div class="center-block">TOTAL ÍTEMS: ${totalUnidades} ${totalUnidades === 1 ? 'UNIDAD' : 'UNIDADES'}</div>
-    <hr class="sep" />
-    <div class="footer">${this.escapeHtml(cfg.piePagina)}</div>
-  </div>
-</body>
+<body>${contenidoHtml}</body>
 </html>`;
+  }
+
+  /**
+   * Genera el documento HTML térmico completo para la factura / comprobante del cliente
+   * (diseño inspirado en el comprobante de Love Bites / OlaClick, adaptado para Luigie's).
+   */
+  generarHtmlFacturaCliente(data: TicketClienteData): string {
+    const cfg = this.config();
+    return this.envolverDocumentoTermico(
+      `Factura ${cfg.nombreComercio}`,
+      this.generarCuerpoFacturaCliente(data),
+    );
+  }
+
+  /**
+   * Genera el documento HTML térmico optimizado para la impresora de comandas de cocina
+   * (sin precios, cantidades e ítems grandes en negrita, ingredientes removidos y notas destacados).
+   */
+  generarHtmlComandaCocina(data: TicketCocinaData): string {
+    const cfg = this.config();
+    return this.envolverDocumentoTermico(
+      `Comanda Cocina ${cfg.nombreComercio}`,
+      this.generarCuerpoComandaCocina(data),
+    );
   }
 
   imprimirFacturaCliente(data: TicketClienteData): void {
@@ -628,21 +645,57 @@ export class ImpresionTermicaService {
   }
 
   /**
-   * Envía un documento HTML térmico directamente al diálogo de impresión del sistema
-   * mediante un iframe aislado de tamaño térmico (80mm / 58mm), sin imprimir la interfaz web.
+   * Imprime en un solo trabajo (con corte de página entre tickets) la copia del cliente
+   * y/o la comanda de cocina, evitando que Chrome bloquee un segundo diálogo print().
+   */
+  imprimirLote(opciones: {
+    cliente?: TicketClienteData | null;
+    cocina?: TicketCocinaData | null;
+  }): void {
+    const partes: string[] = [];
+    if (opciones.cliente) {
+      partes.push(this.generarCuerpoFacturaCliente(opciones.cliente));
+    }
+    if (opciones.cocina) {
+      partes.push(this.generarCuerpoComandaCocina(opciones.cocina));
+    }
+    if (partes.length === 0) return;
+
+    const contenido = partes
+      .map((parte, idx) =>
+        idx < partes.length - 1 ? `<div class="ticket-page-break">${parte}</div>` : parte,
+      )
+      .join('');
+
+    const cfg = this.config();
+    this.enviarAImpresora(this.envolverDocumentoTermico(`Tickets ${cfg.nombreComercio}`, contenido));
+  }
+
+  /**
+   * Envía un documento HTML térmico al diálogo de impresión del sistema mediante un iframe
+   * posicionado fuera de pantalla (con dimensiones reales de 80mm/58mm y sin visibility:hidden)
+   * para garantizar renderizado y apertura en Chrome, Edge, Firefox y Safari.
    */
   private enviarAImpresora(htmlDocumento: string): void {
     if (typeof document === 'undefined') return;
 
+    const FRAME_ID = 'mesalista-thermal-print-frame';
+    const previo = document.getElementById(FRAME_ID);
+    if (previo?.parentNode) {
+      previo.parentNode.removeChild(previo);
+    }
+
     const iframe = document.createElement('iframe');
+    iframe.id = FRAME_ID;
     iframe.setAttribute('aria-hidden', 'true');
     iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
+    iframe.style.left = '-10000px';
+    iframe.style.top = '0';
+    iframe.style.width = this.config().anchoPapel;
+    iframe.style.height = '1px';
     iframe.style.border = '0';
-    iframe.style.visibility = 'hidden';
+    iframe.style.opacity = '0.01';
+    iframe.style.pointerEvents = 'none';
 
     document.body.appendChild(iframe);
 
@@ -668,21 +721,33 @@ export class ImpresionTermicaService {
     doc.write(htmlDocumento);
     doc.close();
 
+    let impreso = false;
     const ejecutarImpresion = () => {
+      if (impreso) return;
+      impreso = true;
       try {
         win.focus();
         win.print();
       } catch {
-        // Fallback si el navegador restringe print() en iframe
+        // Fallback: abrir ventana emergente si el navegador bloqueó print() en iframe
+        const popup = typeof window !== 'undefined' ? window.open('', '_blank', 'width=360,height=640') : null;
+        if (popup) {
+          popup.document.open();
+          popup.document.write(htmlDocumento);
+          popup.document.close();
+          popup.focus();
+          setTimeout(() => popup.print(), 150);
+        }
       } finally {
-        setTimeout(limpiar, 1500);
+        // Dar margen amplio (60s) para no destruir el iframe mientras el usuario elige impresora
+        setTimeout(limpiar, 60_000);
       }
     };
 
     if (typeof win.addEventListener === 'function') {
-      win.addEventListener('afterprint', limpiar, { once: true });
+      win.addEventListener('afterprint', () => setTimeout(limpiar, 300), { once: true });
     }
 
-    setTimeout(ejecutarImpresion, 80);
+    setTimeout(ejecutarImpresion, 150);
   }
 }

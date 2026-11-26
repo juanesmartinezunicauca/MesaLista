@@ -11,15 +11,24 @@
 
   <nav class="sidebar-nav">
     @for (item of navItemsFiltrados(); track item.route) {
+      @let badge = obtenerBadge(item.route);
       <a
         [routerLink]="item.route"
         routerLinkActive="active"
         class="nav-item"
-        [matTooltip]="isCollapsed() ? item.label : ''"
+        [matTooltip]="obtenerTooltip(item)"
         matTooltipPosition="right"
       >
         <mat-icon>{{ item.icon }}</mat-icon>
-        <span>{{ item.label }}</span>
+        <span class="nav-label">{{ item.label }}</span>
+        @if (badge > 0) {
+          <span
+            class="nav-badge"
+            [attr.aria-label]="badge + (badge === 1 ? ' solicitud pendiente' : ' solicitudes pendientes')"
+          >
+            {{ formatearBadge(badge) }}
+          </span>
+        }
       </a>
     }
   </nav>

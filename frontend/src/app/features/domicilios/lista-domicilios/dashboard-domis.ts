@@ -19,6 +19,7 @@ import { FacturaDialogComponent } from '../../mesas/dialogs/factura-dialog';
 import { DomiciliosApiService } from '../../../core/services/api/domicilios-api.service';
 import { FacturacionApiService } from '../../../core/services/api/facturacion-api.service';
 import { ImpresionTermicaService } from '../../../core/services/print/impresion-termica.service';
+import { DomiciliosNotificacionService } from '../../../core/services/events/domicilios-notificacion.service';
 import { Domicilio, EstadoServicioDomicilio } from '../../../core/models';
 
 @Component({
@@ -44,6 +45,7 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
   private domiciliosApi = inject(DomiciliosApiService);
   private facturacionApi = inject(FacturacionApiService);
   private impresionTermica = inject(ImpresionTermicaService);
+  private domiciliosNotificacion = inject(DomiciliosNotificacionService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
 
@@ -126,6 +128,7 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
           (p) => p.etapaOperativa !== 'Entregado' && p.etapaOperativa !== 'Cancelado'
         );
         this.pedidos.set(activos);
+        this.domiciliosNotificacion.sincronizarDesdeLista(activos);
         this.cargando.set(false);
       },
       error: () => {
@@ -545,13 +548,19 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
   }
 
   private actualizarPedidoEnLista(actualizado: Domicilio): void {
-    this.pedidos.update((lista) =>
-      lista.map((p) => (p.id_pedido === actualizado.id_pedido ? actualizado : p))
-    );
+    this.pedidos.update((lista) => {
+      const nuevaLista = lista.map((p) => (p.id_pedido === actualizado.id_pedido ? actualizado : p));
+      this.domiciliosNotificacion.sincronizarDesdeLista(nuevaLista);
+      return nuevaLista;
+    });
   }
 
   private removerPedidoDeLista(id_pedido: number): void {
-    this.pedidos.update((lista) => lista.filter((p) => p.id_pedido !== id_pedido));
+    this.pedidos.update((lista) => {
+      const nuevaLista = lista.filter((p) => p.id_pedido !== id_pedido);
+      this.domiciliosNotificacion.sincronizarDesdeLista(nuevaLista);
+      return nuevaLista;
+    });
   }
 
 
@@ -631,23 +640,63 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
   ): void {
     if (!resultado?.imprimirCliente && !resultado?.imprimirCocina) return;
     const pagos = pagosPayload.map((p) => ({ metodo: p.medio_pago, monto: p.monto }));
+    const costoEnvio = Number(pedido.costo_envio ?? 0);
+    const items = (pedido.items || []).map((it) => {
+      const unit = Number(it.precio_unitario || it.producto?.precio_venta || 0);
+      return {
+        nombre: it.producto?.nombre || `Producto #${it.id_producto}`,
+        cantidad: it.cantidad,
+        precio_unitario: unit,
+        subtotal: it.cantidad * unit,
+        ingredientes_removidos: it.ingredientes_removidos,
+        observacion: it.observacion,
+      };
+    });
+    const subtotalProductos =
+      pedido.subtotalProductos !== undefined
+        ? Number(pedido.subtotalProductos)
+        : items.reduce((acc, it) => acc + it.subtotal, 0);
+    const propina = Number(resultado.propina ?? pedido.factura?.propina ?? 0);
+    const total = Number(resultado.total ?? pedido.totalCalculado ?? subtotalProductos + costoEnvio + propina);
 
-    if (resultado.imprimirCliente) {
-      this.imprimirTicketClienteDomicilio(
-        pedido,
-        numeroFactura,
-        pagos,
-        resultado.efectivoRecibido,
-        resultado.cambio,
-      );
-    }
-    if (resultado.imprimirCocina) {
-      if (resultado.imprimirCliente) {
-        setTimeout(() => this.imprimirComandaCocinaDomicilio(pedido), 650);
-      } else {
-        this.imprimirComandaCocinaDomicilio(pedido);
-      }
-    }
+    this.impresionTermica.imprimirLote({
+      cliente: resultado.imprimirCliente
+        ? {
+            tipo: 'domicilio',
+            numeroFactura: numeroFactura ?? pedido.id_factura ?? null,
+            numeroPedido: pedido.numero_pedido,
+            fecha: pedido.fecha_hora || new Date(),
+            cliente: {
+              nombre: pedido.cliente?.nombre,
+              telefono: pedido.cliente?.telefono,
+              direccion: pedido.cliente?.direccion,
+              zona: pedido.zona_nombre || undefined,
+            },
+            items,
+            subtotal: subtotalProductos,
+            costoEnvio,
+            propina,
+            total,
+            formaPago: pedido.metodo_pago || 'Efectivo',
+            pagosDetalle: pagos,
+            efectivoRecibido: resultado.efectivoRecibido,
+            cambio: resultado.cambio,
+            observacion: pedido.observacion || null,
+            esPrecuenta: !(numeroFactura ?? pedido.id_factura),
+          }
+        : null,
+      cocina: resultado.imprimirCocina
+        ? {
+            tipo: 'domicilio',
+            numeroPedido: pedido.numero_pedido,
+            clienteNombre: pedido.cliente?.nombre || null,
+            zona: pedido.zona_nombre || null,
+            fecha: pedido.fecha_hora || new Date(),
+            items,
+            observacionGeneral: pedido.observacion || null,
+          }
+        : null,
+    });
   }
 
   formatearHora(fecha: string | Date): string {
