@@ -16,13 +16,25 @@
     width: 72px;
 
     .sidebar-brand .brand-info,
-    .sidebar-nav .nav-item span {
+    .sidebar-nav .nav-item .nav-label {
       display: none;
     }
 
     .sidebar-nav .nav-item {
       justify-content: center;
       padding: 12px;
+
+      .nav-badge {
+        position: absolute;
+        top: 4px;
+        right: 6px;
+        margin-left: 0;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 4px;
+        font-size: 0.68rem;
+        box-shadow: 0 0 0 2px #0f172a;
+      }
     }
   }
 
@@ -46,8 +58,20 @@
         justify-content: center !important;
         padding: 12px 6px !important;
 
-        span {
+        .nav-label {
           display: none !important;
+        }
+
+        .nav-badge {
+          position: absolute;
+          top: 4px;
+          right: 6px;
+          margin-left: 0;
+          min-width: 18px;
+          height: 18px;
+          padding: 0 4px;
+          font-size: 0.68rem;
+          box-shadow: 0 0 0 2px #0f172a;
         }
       }
     }
@@ -73,6 +97,15 @@
           font-size: 20px;
           width: 20px;
           height: 20px;
+        }
+
+        .nav-badge {
+          top: 2px;
+          right: 2px;
+          min-width: 17px;
+          height: 17px;
+          padding: 0 3px;
+          font-size: 0.65rem;
         }
       }
     }
@@ -132,6 +165,7 @@
     flex: 1;
 
     .nav-item {
+      position: relative;
       display: flex;
       align-items: center;
       gap: 12px;
@@ -148,6 +182,27 @@
         font-size: 22px;
         width: 22px;
         height: 22px;
+        flex-shrink: 0;
+      }
+
+      .nav-badge {
+        margin-left: auto;
+        min-width: 22px;
+        height: 22px;
+        padding: 0 6px;
+        border-radius: 9999px;
+        background-color: #ef4444;
+        color: #ffffff;
+        font-size: 0.75rem;
+        font-weight: 800;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        flex-shrink: 0;
+        box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.28);
+        animation: navBadgePulse 2s ease-in-out infinite;
       }
 
       &:hover {
@@ -163,7 +218,23 @@
         mat-icon {
           color: #ffffff;
         }
+
+        .nav-badge {
+          background-color: #dc2626;
+          box-shadow: 0 0 0 2px #ffffff;
+        }
       }
     }
+  }
+}
+
+@keyframes navBadgePulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.35);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.12);
   }
 }

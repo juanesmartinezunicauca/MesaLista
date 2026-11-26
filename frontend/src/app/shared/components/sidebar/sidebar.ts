@@ -1,4 +1,4 @@
-import { Component, signal, inject, computed } from '@angular/core';
+import { Component, OnDestroy, signal, inject, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 
@@ -9,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { AuthService } from '../../../core/services/auth/auth.service';
+import { DomiciliosNotificacionService } from '../../../core/services/events/domicilios-notificacion.service';
 import { RolUsuario } from '../../../core/models/usuario.model';
 
 export interface NavItem {
@@ -33,11 +34,15 @@ export interface NavItem {
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.scss'
 })
-export class SidebarComponent {
+export class SidebarComponent implements OnDestroy {
   private authService = inject(AuthService);
+  private domiciliosNotificacion = inject(DomiciliosNotificacionService);
 
   // Signal para el estado colapsado (modo Riel en escritorio)
   isCollapsed = signal<boolean>(false);
+
+  // Contador reactivo de solicitudes de domicilio pendientes por aceptar
+  domiciliosPendientes = this.domiciliosNotificacion.pendientesCount;
 
   // Menú de navegación adaptado a Luigie's POS con roles permitidos
   navItems: NavItem[] = [
@@ -57,6 +62,46 @@ export class SidebarComponent {
     if (!rol) return [];
     return this.navItems.filter(item => !item.roles || item.roles.includes(rol));
   });
+
+  private puedeVerDomicilios = computed(() =>
+    this.navItemsFiltrados().some(item => item.route === '/domicilios')
+  );
+
+  constructor() {
+    effect(() => {
+      if (this.puedeVerDomicilios()) {
+        this.domiciliosNotificacion.iniciarMonitoreo();
+      } else {
+        this.domiciliosNotificacion.detenerMonitoreo();
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.domiciliosNotificacion.detenerMonitoreo();
+  }
+
+  obtenerBadge(route: string): number {
+    return route === '/domicilios' ? this.domiciliosPendientes() : 0;
+  }
+
+  formatearBadge(cantidad: number): string {
+    return cantidad > 99 ? '99+' : String(cantidad);
+  }
+
+  obtenerTooltip(item: NavItem): string {
+    const badge = this.obtenerBadge(item.route);
+    if (this.isCollapsed()) {
+      if (badge > 0) {
+        return `${item.label} (${badge} ${badge === 1 ? 'solicitud pendiente' : 'solicitudes pendientes'})`;
+      }
+      return item.label;
+    }
+    if (badge > 0) {
+      return `${badge} ${badge === 1 ? 'solicitud de domicilio por aceptar' : 'solicitudes de domicilio por aceptar'}`;
+    }
+    return '';
+  }
 
   toggleCollapse(): void {
     this.isCollapsed.update(val => !val);

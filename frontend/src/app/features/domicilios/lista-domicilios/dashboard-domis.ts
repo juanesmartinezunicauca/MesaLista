@@ -19,6 +19,7 @@ import { FacturaDialogComponent } from '../../mesas/dialogs/factura-dialog';
 import { DomiciliosApiService } from '../../../core/services/api/domicilios-api.service';
 import { FacturacionApiService } from '../../../core/services/api/facturacion-api.service';
 import { ImpresionTermicaService } from '../../../core/services/print/impresion-termica.service';
+import { DomiciliosNotificacionService } from '../../../core/services/events/domicilios-notificacion.service';
 import { Domicilio, EstadoServicioDomicilio } from '../../../core/models';
 
 @Component({
@@ -44,6 +45,7 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
   private domiciliosApi = inject(DomiciliosApiService);
   private facturacionApi = inject(FacturacionApiService);
   private impresionTermica = inject(ImpresionTermicaService);
+  private domiciliosNotificacion = inject(DomiciliosNotificacionService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
 
@@ -126,6 +128,7 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
           (p) => p.etapaOperativa !== 'Entregado' && p.etapaOperativa !== 'Cancelado'
         );
         this.pedidos.set(activos);
+        this.domiciliosNotificacion.sincronizarDesdeLista(activos);
         this.cargando.set(false);
       },
       error: () => {
@@ -545,13 +548,19 @@ export class DashboardDomisComponent implements OnInit, OnDestroy {
   }
 
   private actualizarPedidoEnLista(actualizado: Domicilio): void {
-    this.pedidos.update((lista) =>
-      lista.map((p) => (p.id_pedido === actualizado.id_pedido ? actualizado : p))
-    );
+    this.pedidos.update((lista) => {
+      const nuevaLista = lista.map((p) => (p.id_pedido === actualizado.id_pedido ? actualizado : p));
+      this.domiciliosNotificacion.sincronizarDesdeLista(nuevaLista);
+      return nuevaLista;
+    });
   }
 
   private removerPedidoDeLista(id_pedido: number): void {
-    this.pedidos.update((lista) => lista.filter((p) => p.id_pedido !== id_pedido));
+    this.pedidos.update((lista) => {
+      const nuevaLista = lista.filter((p) => p.id_pedido !== id_pedido);
+      this.domiciliosNotificacion.sincronizarDesdeLista(nuevaLista);
+      return nuevaLista;
+    });
   }
 
 

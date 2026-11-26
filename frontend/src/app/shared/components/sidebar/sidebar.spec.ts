@@ -3,15 +3,22 @@ import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
 import { SidebarComponent } from './sidebar';
 import { AuthService } from '../../../core/services/auth/auth.service';
+import { DomiciliosNotificacionService } from '../../../core/services/events/domicilios-notificacion.service';
 import { UsuarioSesion } from '../../../core/models/usuario.model';
 
 describe('SidebarComponent', () => {
   let component: SidebarComponent;
   let fixture: ComponentFixture<SidebarComponent>;
   let mockCurrentUser = signal<UsuarioSesion | null>(null);
+  let mockPendientesCount = signal<number>(0);
+  let iniciarMonitoreoMock: ReturnType<typeof vi.fn>;
+  let detenerMonitoreoMock: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     mockCurrentUser.set(null);
+    mockPendientesCount.set(0);
+    iniciarMonitoreoMock = vi.fn();
+    detenerMonitoreoMock = vi.fn();
 
     await TestBed.configureTestingModule({
       imports: [SidebarComponent],
@@ -21,6 +28,14 @@ describe('SidebarComponent', () => {
           provide: AuthService,
           useValue: {
             currentUser: mockCurrentUser,
+          },
+        },
+        {
+          provide: DomiciliosNotificacionService,
+          useValue: {
+            pendientesCount: mockPendientesCount,
+            iniciarMonitoreo: iniciarMonitoreoMock,
+            detenerMonitoreo: detenerMonitoreoMock,
           },
         },
       ],
@@ -97,5 +112,30 @@ describe('SidebarComponent', () => {
     expect(rutas).toContain('/catalogo');
     expect(rutas).not.toContain('/usuarios');
     expect(rutas).not.toContain('/reportes');
+  });
+
+  it('debe mostrar el círculo numérico de notificación en Domicilios cuando existen solicitudes pendientes', () => {
+    mockCurrentUser.set({
+      id_usuario: 2,
+      nombre: 'Administrador Principal',
+      usuario: 'admin',
+      rol: 'administrador',
+    });
+    mockPendientesCount.set(0);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.nav-badge')).toBeNull();
+    expect(iniciarMonitoreoMock).toHaveBeenCalled();
+
+    mockPendientesCount.set(4);
+    fixture.detectChanges();
+
+    const badges = fixture.nativeElement.querySelectorAll('.nav-badge');
+    expect(badges.length).toBe(1);
+    expect(badges[0].textContent.trim()).toBe('4');
+
+    mockPendientesCount.set(120);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.nav-badge')?.textContent.trim()).toBe('99+');
   });
 });
